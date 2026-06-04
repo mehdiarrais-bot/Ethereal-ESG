@@ -1,0 +1,41 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-primary: #1B3A6B;
+  --blue-secondary: #2E86C1;
+  --accent: #F39C12;
+  --env: #27AE60;
+  --social: #2E86C1;
+  --gov: #8E44AD;
+  --bg: #F4F7FD;
+  --card: #FFFFFF;
+  --text: #2C3E50;
+  --border: #DDE4EE;
+  --shadow: 0 2px 16px rgba(27,58,107,0.10);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+h1, h2, h3 { font-weight: 700; line-height: 1.3; }
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+button { font-family: inherit; cursor: pointer; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
