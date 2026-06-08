@@ -55,7 +55,7 @@ function ListItems({ items, icon, color }) {
   )
 }
 
-export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, loading, inline }) {
+export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, onDownloadDocx, loading, inline }) {
   if (!scores) return null
 
   return (
@@ -94,21 +94,14 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, lo
       )}
 
       <div className="download-actions">
-        <button
-          className="btn btn-pptx"
-          onClick={onDownloadPptx}
-          disabled={loading}
-          style={{ flex: 1 }}
-        >
+        <button className="btn btn-pptx" onClick={onDownloadPptx} disabled={loading} style={{ flex: 1 }}>
           {loading ? '⏳' : '📑'} PowerPoint
         </button>
-        <button
-          className="btn btn-pdf"
-          onClick={onDownloadPdf}
-          disabled={loading}
-          style={{ flex: 1 }}
-        >
-          {loading ? '⏳' : '📄'} Rapport PDF
+        <button className="btn btn-pdf" onClick={onDownloadPdf} disabled={loading} style={{ flex: 1 }}>
+          {loading ? '⏳' : '📄'} PDF
+        </button>
+        <button className="btn btn-docx" onClick={onDownloadDocx} disabled={loading} style={{ flex: 1 }}>
+          {loading ? '⏳' : '📝'} Word
         </button>
       </div>
 

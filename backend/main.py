@@ -10,6 +10,7 @@ from esg_calculator import calculate_esg_scores
 from chart_generator import radar_chart, score_bars_chart, emissions_breakdown_chart, gauge_chart
 from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
+from docx_generator import generate_word_report
 from ai_content import generate_esg_content
 
 app = FastAPI(title="ESG Platform API", version="1.0.0")
@@ -121,6 +122,25 @@ def generate_all(request: ESGRequest):
         "company": request.company.name,
         "reporting_year": request.company.reporting_year,
     }
+
+
+@app.post("/api/generate/docx")
+def generate_word(request: ESGRequest):
+    """Generate Word document report."""
+    scores = calculate_esg_scores(request)
+    content = generate_esg_content(request, scores)
+    docx_bytes = generate_word_report(request, scores, content)
+    type_suffix = {
+        "white_paper": "Livre_Blanc",
+        "full_report": "Rapport_ESG",
+        "executive_summary_pdf": "Synthèse_Exécutive",
+    }.get(request.report_type.value, "Rapport")
+    filename = f"{type_suffix}_{request.company.name.replace(' ', '_')}_{request.company.reporting_year}.docx"
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # Serve frontend static files
