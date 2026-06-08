@@ -108,16 +108,17 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
       <style>{`
         .results-panel {
           background: white;
-          border-left: 1px solid var(--border);
           display: flex;
           flex-direction: column;
-          gap: 20px;
-          overflow-y: auto;
+          gap: 16px;
         }
         .results-sidebar {
-          width: 340px;
+          width: 320px;
           flex-shrink: 0;
-          padding: 24px 20px;
+          padding: 20px 16px;
+          overflow-y: auto;
+          max-height: 100%;
+          border-left: 1px solid var(--border);
         }
         .results-inline {
           border: 1px solid var(--border);

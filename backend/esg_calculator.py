@@ -185,44 +185,62 @@ def get_rating(score: float) -> str:
 def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalData, social: SocialData, gov: GovernanceData) -> List[str]:
     strengths = []
     if env_score >= 70:
-        strengths.append("Excellente performance environnementale")
+        strengths.append("Excellente performance environnementale globale")
     if env.renewable_energy_percent and env.renewable_energy_percent >= 50:
-        strengths.append(f"Fort taux d'énergie renouvelable ({env.renewable_energy_percent}%)")
+        strengths.append(f"Fort taux d'énergie renouvelable ({env.renewable_energy_percent:.0f}%)")
+    if env.waste_recycled_percent and env.waste_recycled_percent >= 65:
+        strengths.append(f"Taux de recyclage élevé ({env.waste_recycled_percent:.0f}%)")
     if social.female_employees_percent and social.female_employees_percent >= 40:
-        strengths.append("Bonne parité homme-femme dans les effectifs")
-    if social.training_hours_per_employee and social.training_hours_per_employee >= 30:
-        strengths.append("Investissement significatif dans la formation")
+        strengths.append(f"Bonne parité homme-femme dans les effectifs ({social.female_employees_percent:.0f}%)")
+    if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
+        strengths.append(f"Investissement significatif dans la formation ({social.training_hours_per_employee:.0f} h/an)")
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate < 3:
+        strengths.append(f"Excellent taux de sécurité au travail (TF {social.accident_frequency_rate:.1f})")
     if gov.esg_audit_conducted:
-        strengths.append("Audit ESG conduit — transparence renforcée")
+        strengths.append("Audit ESG indépendant conduit — transparence renforcée")
     if gov.sustainability_committee:
-        strengths.append("Comité de durabilité opérationnel")
+        strengths.append("Comité de durabilité opérationnel au niveau du CA")
+    if gov.female_board_percent and gov.female_board_percent >= 40:
+        strengths.append(f"Parité exemplaire au Conseil d'Administration ({gov.female_board_percent:.0f}%)")
     if social_score >= 70:
-        strengths.append("Politique sociale exemplaire")
-    if gov_score >= 70:
-        strengths.append("Gouvernance de haute qualité")
+        strengths.append("Politique sociale exemplaire — capital humain valorisé")
+    if gov_score >= 75:
+        strengths.append("Gouvernance de haute qualité et transparente")
+    if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
+        strengths.append("Reporting complet des émissions Scope 1, 2 et 3")
     if not strengths:
-        strengths.append("Démarche ESG en cours de structuration")
+        strengths.append("Démarche ESG en cours de structuration et de formalisation")
     return strengths[:5]
 
 
 def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalData, social: SocialData, gov: GovernanceData) -> List[str]:
     weaknesses = []
     if env_score < 50:
-        weaknesses.append("Performance environnementale à améliorer")
-    if env.renewable_energy_percent and env.renewable_energy_percent < 30:
-        weaknesses.append("Faible part d'énergie renouvelable")
+        weaknesses.append("Performance environnementale globale insuffisante")
+    if env.renewable_energy_percent is not None and env.renewable_energy_percent < 30:
+        weaknesses.append(f"Faible part d'énergie renouvelable ({env.renewable_energy_percent:.0f}%)")
+    elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
+        weaknesses.append(f"Énergie renouvelable à renforcer (actuellement {env.renewable_energy_percent:.0f}%, objectif 50%)")
     if env.scope3_emissions is None:
-        weaknesses.append("Scope 3 non mesuré — angle mort carbone")
-    if social.female_employees_percent and social.female_employees_percent < 30:
-        weaknesses.append("Déséquilibre de genre dans les effectifs")
-    if social.accident_frequency_rate and social.accident_frequency_rate > 5:
-        weaknesses.append("Taux d'accidents supérieur aux standards sectoriels")
-    if gov.ethics_violations and gov.ethics_violations > 0:
-        weaknesses.append("Incidents éthiques à traiter")
+        weaknesses.append("Scope 3 non mesuré — angle mort important dans le bilan carbone")
+    if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
+        weaknesses.append(f"Taux de recyclage faible ({env.waste_recycled_percent:.0f}%)")
+    if social.female_employees_percent is not None and social.female_employees_percent < 40:
+        weaknesses.append(f"Déséquilibre de genre dans les effectifs ({social.female_employees_percent:.0f}% femmes — objectif 40%)")
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
+        weaknesses.append(f"Taux d'accidents supérieur aux standards sectoriels (TF {social.accident_frequency_rate:.1f})")
+    if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
+        weaknesses.append(f"Volume de formation insuffisant ({social.training_hours_per_employee:.0f} h/an, objectif 20 h)")
+    if gov.ethics_violations is not None and gov.ethics_violations > 0:
+        weaknesses.append(f"{gov.ethics_violations} incident(s) éthique(s) enregistré(s)")
+    if gov.data_breaches is not None and gov.data_breaches > 0:
+        weaknesses.append(f"{gov.data_breaches} violation(s) de données — cybersécurité à renforcer")
     if not gov.esg_audit_conducted:
         weaknesses.append("Absence d'audit ESG indépendant")
+    if not gov.sustainability_committee:
+        weaknesses.append("Pas de comité de durabilité au niveau du Conseil")
     if gov_score < 50:
-        weaknesses.append("Structure de gouvernance à renforcer")
+        weaknesses.append("Structure de gouvernance à renforcer significativement")
     return weaknesses[:5]
 
 

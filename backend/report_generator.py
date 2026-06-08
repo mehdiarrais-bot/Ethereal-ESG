@@ -394,6 +394,35 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         f"© {request.company.reporting_year} {request.company.name} — Document généré automatiquement par la Plateforme ESG",
         styles["footer"]))
 
+    # ── Section spécifique White Paper : Vision Stratégique ──────────────
+    if request.report_type.value == "white_paper":
+        story.append(Spacer(1, 0.5 * cm))
+        story.append(Paragraph("9. Vision Stratégique & Perspectives", styles["h1"]))
+        story.append(HRFlowable(width="100%", thickness=2, color=pal["accent"]))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph(
+            "Ce livre blanc a vocation à documenter la trajectoire ESG de l'organisation sur le long terme. "
+            "Il constitue un document de référence stratégique, destiné à éclairer les décisions "
+            "d'investissement et à démontrer la maturité extra-financière de l'entreprise. "
+            "Les engagements formulés dans ce document s'inscrivent dans une perspective de transformation "
+            "durable, alignée sur l'Accord de Paris et les Objectifs de Développement Durable (ODD).",
+            styles["body"]))
+        story.append(Spacer(1, 0.3 * cm))
+        # Objectifs 2027
+        obj_data = [
+            [Paragraph("<b>Horizon 2027 — Objectifs ESG cibles</b>",
+                       ParagraphStyle("ot", fontSize=11, fontName="Helvetica-Bold",
+                                      textColor=pal["primary"]))],
+        ]
+        pillars_obj = [
+            ("Environnement", f"Score E cible : {min(100, scores.environmental_score + 15):.0f}/100 | +50% renouvelable | Scope 3 mesuré"),
+            ("Social", f"Score S cible : {min(100, scores.social_score + 10):.0f}/100 | Parité 40% | 30h formation/an"),
+            ("Gouvernance", f"Score G cible : {min(100, scores.governance_score + 5):.0f}/100 | Audit annuel | Comité durable"),
+        ]
+        for label, obj in pillars_obj:
+            p = story[-1] if False else None
+            story.append(Paragraph(f"<b>• {label} :</b> {obj}", styles["bullet"]))
+
     doc.build(story)
     buf.seek(0)
     return buf.read()

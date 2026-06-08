@@ -1,4 +1,4 @@
-export default function Header({ onLoadDemo, onReset }) {
+export default function Header({ onLoadDemo, onReset, scores, showResults, onToggleResults }) {
   return (
     <header className="header">
       <div className="header-inner">
@@ -16,6 +16,11 @@ export default function Header({ onLoadDemo, onReset }) {
             <span className="badge badge-gov">⚖️ Gouvernance</span>
           </div>
           <div className="header-actions">
+            {scores && (
+              <button className="hdr-btn hdr-btn-score" onClick={onToggleResults}>
+                📊 {scores.total_esg_score?.toFixed(1)} · {scores.rating} {showResults ? '◀' : '▶'}
+              </button>
+            )}
             <button className="hdr-btn hdr-btn-demo" onClick={onLoadDemo}>
               🎯 Données exemple
             </button>
@@ -65,6 +70,8 @@ export default function Header({ onLoadDemo, onReset }) {
           border: none; font-size: 12px; font-weight: 600;
           cursor: pointer; transition: all 0.15s;
         }
+        .hdr-btn-score { background: rgba(39,174,96,0.25); color: #fff; border: 1px solid rgba(39,174,96,0.5); font-size: 13px; font-weight: 700; }
+        .hdr-btn-score:hover { background: rgba(39,174,96,0.4); }
         .hdr-btn-demo { background: #F39C12; color: #1B3A6B; }
         .hdr-btn-demo:hover { background: #e08e0b; }
         .hdr-btn-reset { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }

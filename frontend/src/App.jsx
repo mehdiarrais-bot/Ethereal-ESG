@@ -62,7 +62,7 @@ export default function App() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showResults, setShowResults] = useState(false)
+  const [showResults, setShowResults] = useState(true)
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
@@ -124,7 +124,7 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <Header onLoadDemo={loadDemo} onReset={resetForm} />
+      <Header onLoadDemo={loadDemo} onReset={resetForm} scores={scores} showResults={showResults} onToggleResults={() => setShowResults(r => !r)} />
       <div className="app-body">
         <Sidebar steps={STEPS} current={step} onChange={setStep} scores={scores} />
         <div className="main-column">
@@ -164,18 +164,17 @@ export default function App() {
                 </button>
               ) : (
                 <button
-                  className="btn btn-success"
+                  className="btn btn-ghost"
                   onClick={() => setShowResults(r => !r)}
-                  disabled={!scores}
                 >
-                  {showResults ? '📊 Masquer résultats' : '📊 Voir résultats'}
+                  {showResults ? '◀ Masquer panneau' : '▶ Afficher résultats'}
                 </button>
               )}
             </div>
           </main>
           <MiniScorebar scores={scores} loading={scoreLoading} />
         </div>
-        {(showResults || step === STEPS.length - 1) && scores && (
+        {showResults && scores && (
           <ResultsPanel
             scores={scores}
             onDownloadPptx={() => handleDownload('pptx')}

@@ -1,7 +1,8 @@
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-body {
@@ -10,6 +11,7 @@
   gap: 0;
   min-height: 0;
   overflow: hidden;
+  height: 0; /* force flex children to respect overflow */
 }
 
 .main-column {

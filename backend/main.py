@@ -1,5 +1,6 @@
 import os
 import io
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -12,6 +13,12 @@ from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
 from docx_generator import generate_word_report
 from ai_content import generate_esg_content
+
+SAFE_NAME_RE = re.compile(r'[^\w\-]')
+
+def safe_name(name: str) -> str:
+    return SAFE_NAME_RE.sub('_', name)
+
 
 app = FastAPI(title="ESG Platform API", version="1.0.0")
 
@@ -64,7 +71,7 @@ def generate_presentation(request: ESGRequest):
 
     pptx_bytes = generate_pptx(request, scores, content, chart_images)
 
-    filename = f"ESG_{request.company.name.replace(' ', '_')}_{request.company.reporting_year}.pptx"
+    filename = f"ESG_{safe_name(request.company.name)}_{request.company.reporting_year}.pptx"
     return StreamingResponse(
         io.BytesIO(pptx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -102,7 +109,7 @@ def generate_report(request: ESGRequest):
         "executive_summary_pdf": "Synthèse_Exécutive",
     }.get(request.report_type.value, "Rapport")
 
-    filename = f"{type_suffix}_{request.company.name.replace(' ', '_')}_{request.company.reporting_year}.pdf"
+    filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -135,7 +142,7 @@ def generate_word(request: ESGRequest):
         "full_report": "Rapport_ESG",
         "executive_summary_pdf": "Synthèse_Exécutive",
     }.get(request.report_type.value, "Rapport")
-    filename = f"{type_suffix}_{request.company.name.replace(' ', '_')}_{request.company.reporting_year}.docx"
+    filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.docx"
     return StreamingResponse(
         io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
