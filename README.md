@@ -1,100 +1,103 @@
 # Plateforme ESG / RSE — Générateur Automatique de Livrables
 
-Application web complète pour générer automatiquement des rapports ESG/RSE professionnels (PDF, livres blancs) et des présentations PowerPoint esthétiques à partir de données ESG saisies.
+Application web **100% locale** pour générer automatiquement des rapports ESG/RSE professionnels et des présentations PowerPoint à partir de vos données ESG.
+
+**Aucune API externe. Aucun abonnement. Fonctionne hors-ligne.**
+
+---
+
+## Démarrage rapide
+
+### Windows
+1. Installer [Python 3.10+](https://www.python.org/downloads/) *(cocher "Add Python to PATH")*
+2. Installer [Node.js 18+](https://nodejs.org/)
+3. **Double-cliquer sur `start.bat`**
+
+### Mac / Linux
+```bash
+# Rendre le script exécutable (une seule fois)
+chmod +x start.sh
+
+# Lancer l'application
+./start.sh
+```
+
+L'application s'ouvre automatiquement sur **http://localhost:8000**
+
+> Le script installe les dépendances automatiquement à la première exécution.
+
+---
 
 ## Fonctionnalités
 
-- **Saisie guidée** des données ESG (Environnement, Social, Gouvernance)
-- **Calcul automatique** des scores ESG par pilier et score global avec notation (AAA → CCC)
-- **Génération IA** du contenu narratif via Claude (Anthropic)
-- **PowerPoint** professionnel avec 4 thèmes et 5 types de présentation
-- **PDF** (rapport complet, livre blanc, synthèse exécutive)
-- **Graphiques** automatiques : radar, barres, camembert émissions, jauges
-- **Alignement** ODD, GRI, TCFD, CSRD intégré
+| Fonctionnalité | Détail |
+|---|---|
+| **Saisie guidée** | Formulaire 5 étapes : Entreprise → E → S → G → Livrables |
+| **Score temps réel** | Calcul automatique pendant la saisie |
+| **PowerPoint** | 9 slides professionnelles, 4 thèmes, 5 types |
+| **PDF** | Rapport complet, Livre Blanc, Synthèse exécutive |
+| **Word (.docx)** | Même contenu, format Word éditable |
+| **Données exemple** | Bouton pour pré-remplir avec EcoGroup Industries |
+| **Zéro API** | 100% local, fonctionne sans internet |
+
+---
 
 ## Thèmes disponibles
 
-| Thème | Usage |
-|-------|-------|
-| **Corporate Blue** | Finance, industrie, reporting classique |
-| **Green Nature** | RSE impact-first, environnement |
-| **Dark Premium** | Investisseurs, haut de gamme |
-| **Minimal White** | Moderne, focus data |
+| Thème | Style |
+|---|---|
+| **Corporate Blue** | Finance & industrie, sobre et professionnel |
+| **Green Nature** | RSE impact, tons verts |
+| **Dark Premium** | Haut de gamme, pour les investisseurs |
+| **Minimal White** | Épuré, focus sur les données |
 
-## Types de présentation PowerPoint
+---
 
-- Synthèse Exécutive
-- Investor Deck ESG
-- Rapport Détaillé
-- Communication Parties Prenantes
-- Rapport Annuel RSE
+## Types de livrables
 
-## Installation
+**PowerPoint :** Synthèse Exécutive · Investor Deck · Rapport Détaillé · Parties Prenantes · Rapport Annuel
 
-### Avec Docker (recommandé)
+**PDF / Word :** Rapport Complet · Livre Blanc · Synthèse PDF
 
-```bash
-export ANTHROPIC_API_KEY=your_key_here
-docker-compose up --build
-```
+---
 
-Frontend : http://localhost:3000
-API : http://localhost:8000
+## Calcul des scores
 
-### Sans Docker
+| Pilier | Poids | Indicateurs |
+|---|---|---|
+| **Environnement** | 40% | CO₂, énergie renouvelable, eau, déchets, Scope 1/2/3 |
+| **Social** | 35% | Parité, formation, sécurité, satisfaction, communauté |
+| **Gouvernance** | 25% | CA, éthique, cybersécurité, audit, comité RSE |
 
-**Backend :**
-```bash
-cd backend
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY=your_key_here
-uvicorn main:app --reload --port 8000
-```
+**Notation :** AAA · AA · A · BBB · BB · B · CCC
 
-**Frontend :**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+---
 
 ## Architecture
 
 ```
+ici/
+├── start.sh          ← Lancement Mac/Linux
+├── start.bat         ← Lancement Windows
 ├── backend/
-│   ├── main.py              # FastAPI — endpoints
-│   ├── models.py            # Pydantic models
-│   ├── esg_calculator.py    # Moteur de calcul ESG
-│   ├── chart_generator.py   # Graphiques matplotlib
-│   ├── ppt_generator.py     # Générateur PowerPoint (python-pptx)
-│   ├── report_generator.py  # Générateur PDF (reportlab)
-│   └── ai_content.py        # Contenu IA via Claude
+│   ├── main.py               API FastAPI
+│   ├── models.py             Modèles de données
+│   ├── esg_calculator.py     Moteur de calcul des scores
+│   ├── content_generator.py  Génération de texte (100% local)
+│   ├── chart_generator.py    Graphiques matplotlib
+│   ├── ppt_generator.py      Générateur PowerPoint
+│   ├── report_generator.py   Générateur PDF
+│   ├── docx_generator.py     Générateur Word
+│   └── requirements.txt
 └── frontend/
-    └── src/
-        ├── App.jsx
-        ├── components/
-        │   ├── Header.jsx
-        │   ├── Sidebar.jsx
-        │   ├── ResultsPanel.jsx
-        │   ├── FormField.jsx
-        │   └── steps/
-        │       ├── StepCompany.jsx
-        │       ├── StepEnvironmental.jsx
-        │       ├── StepSocial.jsx
-        │       ├── StepGovernance.jsx
-        │       └── StepOutput.jsx
+    └── src/                  Interface React
 ```
 
-## Endpoints API
+---
 
-| Méthode | URL | Description |
-|---------|-----|-------------|
-| POST | `/api/calculate` | Calcul des scores ESG |
-| POST | `/api/generate/pptx` | Génère et télécharge le PowerPoint |
-| POST | `/api/generate/pdf` | Génère et télécharge le PDF |
+## Prérequis
 
-## Calcul des scores
+- **Python 3.10+** — [python.org](https://www.python.org/downloads/)
+- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
 
-- **Environnement (40%)** : émissions, renouvelable, eau, déchets, scope 1/2/3
-- **Social (35%)** : parité, formation, sécurité, satisfaction, communauté
-- **Gouvernance (25%)** : CA, éthique, cybersécurité, audit, comité RSE
+Packages Python installés automatiquement : `fastapi`, `uvicorn`, `python-pptx`, `reportlab`, `python-docx`, `matplotlib`, `pillow`, `numpy`, `pydantic`

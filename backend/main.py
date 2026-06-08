@@ -12,7 +12,7 @@ from chart_generator import radar_chart, score_bars_chart, emissions_breakdown_c
 from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
 from docx_generator import generate_word_report
-from ai_content import generate_esg_content
+from content_generator import generate_esg_content
 
 SAFE_NAME_RE = re.compile(r'[^\w\-]')
 
