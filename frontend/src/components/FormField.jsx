@@ -9,11 +9,19 @@ export function FormField({ label, hint, children }) {
 }
 
 export function NumberInput({ value, onChange, placeholder, min, max, step = 'any' }) {
+  const handleChange = (e) => {
+    if (e.target.value === '') { onChange(''); return }
+    const n = parseFloat(e.target.value)
+    if (!isFinite(n)) return
+    if (min !== undefined && n < min) return
+    if (max !== undefined && n > max) return
+    onChange(e.target.value)
+  }
   return (
     <input
       type="number"
       value={value}
-      onChange={e => onChange(e.target.value === '' ? '' : e.target.value)}
+      onChange={handleChange}
       placeholder={placeholder || '—'}
       min={min}
       max={max}

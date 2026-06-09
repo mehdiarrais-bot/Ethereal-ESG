@@ -30,6 +30,7 @@ export default function StepCompany({ form, updateSection }) {
               value={company.name}
               onChange={e => set('name')(e.target.value)}
               placeholder="Ex: Acme Industries SA"
+              maxLength={200}
             />
           </FormField>
 
