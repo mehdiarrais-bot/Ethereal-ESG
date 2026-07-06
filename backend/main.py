@@ -75,6 +75,30 @@ class SecurityMiddleware:
 
 app = FastAPI(title="ESG Platform API", version="1.0.0")
 
+
+@app.on_event("startup")
+async def warmup():
+    """Pre-warm matplotlib on startup so first download request is fast."""
+    import asyncio, concurrent.futures
+
+    def _warm():
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(1, 1, figsize=(2, 2))
+            ax.plot([0, 1], [0, 1])
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png")
+            plt.close(fig)
+        except Exception:
+            pass
+
+    loop = asyncio.get_event_loop()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    loop.run_in_executor(executor, _warm)
+
+
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -93,6 +117,12 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ESG Platform"}
+
+
+@app.get("/api/warmup")
+def warmup_endpoint():
+    """Endpoint to explicitly trigger matplotlib pre-warming."""
+    return {"status": "warming"}
 
 
 @app.post("/api/calculate")

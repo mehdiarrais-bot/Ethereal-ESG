@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import StepCompany from './components/steps/StepCompany'
@@ -68,6 +68,10 @@ export default function App() {
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
+  useEffect(() => {
+    fetch('/api/warmup').catch(() => {})
+  }, [])
+
   const updateSection = useCallback((section, data) => {
     setForm(f => ({ ...f, [section]: { ...f[section], ...data } }))
   }, [])
@@ -88,7 +92,7 @@ export default function App() {
     const tick = () => {
       const elapsed = Date.now() - start
       // Progression rapide au début, ralentit vers 90%
-      const target = Math.min(90, 5 + 85 * (1 - Math.exp(-elapsed / 4000)))
+      const target = Math.min(90, 5 + 85 * (1 - Math.exp(-elapsed / 12000)))
       setDownloadProgress(Math.round(target))
       if (target < 90) setTimeout(tick, 250)
     }
