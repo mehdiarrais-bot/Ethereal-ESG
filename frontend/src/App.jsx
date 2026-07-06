@@ -62,9 +62,7 @@ export default function App() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
-  const [downloadLink, setDownloadLink] = useState(null) // {url, fname} fallback manuel
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
+  const [downloadLink, setDownloadLink] = useState(null)
   const [error, setError] = useState(null)
   const [showResults, setShowResults] = useState(true)
 
@@ -142,28 +140,6 @@ export default function App() {
     }
   }
 
-  const handlePreview = async () => {
-    setPreviewLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/generate/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload(form)),
-      })
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}))
-        throw new Error(detail.detail || `Erreur ${res.status}`)
-      }
-      const blob = await res.blob()
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-      setPreviewUrl(URL.createObjectURL(blob))
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setPreviewLoading(false)
-    }
-  }
 
   const stepProps = { form, updateSection, setForm }
 
@@ -175,10 +151,7 @@ export default function App() {
     <StepOutput
       {...stepProps}
       onDownload={handleDownload}
-      onPreview={handlePreview}
       loading={downloadLoading}
-      previewLoading={previewLoading}
-      previewUrl={previewUrl}
       progress={downloadProgress}
       downloadLink={downloadLink}
       onClearLink={() => setDownloadLink(null)}

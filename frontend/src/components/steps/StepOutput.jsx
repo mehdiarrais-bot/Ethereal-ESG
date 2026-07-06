@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import PreviewPanel from '../PreviewPanel'
+
 const THEMES = [
   { id: 'corporate_blue', name: 'Corporate Blue', desc: 'Professionnel, sobre — finance & industrie', colors: ['#1B3A6B', '#2E86C1', '#F39C12'] },
   { id: 'green_nature', name: 'Green Nature', desc: 'Verdoyant, impact-first — rapports RSE', colors: ['#1A5C38', '#27AE60', '#F1C40F'] },
@@ -59,9 +62,10 @@ function ProgressBar({ progress, loading }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, onPreview, loading, previewLoading, previewUrl, progress, downloadLink, onClearLink, scores }) {
+export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
-  const busy = loading || previewLoading
+  const [showPreview, setShowPreview] = useState(false)
+  const busy = loading
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -131,8 +135,8 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
           )}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button className="btn btn-preview" onClick={onPreview} disabled={busy || !scores}>
-              {previewLoading ? 'Chargement...' : '👁 Previsualiser PDF'}
+            <button className="btn btn-preview" onClick={() => setShowPreview(p => !p)} disabled={!scores}>
+              {showPreview ? '✕ Fermer la preview' : '👁 Previsualiser'}
             </button>
             <button className="btn btn-pptx btn-lg" onClick={() => onDownload('pptx')} disabled={busy || !scores}>
               📑 PowerPoint
@@ -159,21 +163,19 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
         </div>
       </div>
 
-      {/* Zone de prévisualisation PDF */}
-      {previewUrl && (
+      {/* Preview HTML instantanée */}
+      {showPreview && scores && (
         <div className="preview-card">
           <div className="preview-header">
-            <span className="preview-title">👁 Previsualisation du rapport PDF</span>
-            <span className="preview-hint">Telechargez apres verification ci-dessous</span>
+            <span className="preview-title">👁 Previsualisation du livrable</span>
+            <span className="preview-hint">Mise a jour en temps reel selon vos donnees</span>
           </div>
-          <iframe
-            src={previewUrl}
-            title="Previsualisation PDF"
-            className="preview-iframe"
-          />
+          <div style={{ padding: '20px', maxHeight: 700, overflowY: 'auto' }}>
+            <PreviewPanel scores={scores} form={form} />
+          </div>
           <div className="preview-footer">
             <button className="btn btn-pdf" onClick={() => onDownload('pdf')} disabled={busy}>
-              📄 Telecharger ce PDF
+              📄 Telecharger PDF
             </button>
             <button className="btn btn-pptx" onClick={() => onDownload('pptx')} disabled={busy}>
               📑 Telecharger PowerPoint
@@ -285,7 +287,7 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
           font-size: 12px; color: var(--blue-secondary); font-weight: 600;
         }
 
-        /* Zone preview PDF */
+        /* Zone preview */
         .preview-card {
           background: white; border-radius: 16px;
           border: 2px solid var(--blue-secondary);
@@ -298,9 +300,6 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
         }
         .preview-title { font-weight: 700; color: var(--blue-primary); font-size: 14px; }
         .preview-hint { font-size: 12px; color: #8a9bb0; }
-        .preview-iframe {
-          width: 100%; height: 700px; border: none; display: block;
-        }
         .preview-footer {
           display: flex; gap: 10px; padding: 14px 20px;
           border-top: 1px solid var(--border); background: #f8fafc;
@@ -309,7 +308,6 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
 
         @media (max-width: 900px) {
           .options-grid-4 { grid-template-columns: repeat(2, 1fr); }
-          .preview-iframe { height: 400px; }
         }
       `}</style>
     </div>
