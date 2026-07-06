@@ -53,36 +53,91 @@ PALETTE = {
 }
 
 
-def build_styles(pal: dict) -> dict:
-    base = getSampleStyleSheet()
+# Design language per theme: fonts + header/cover/table styling
+PDF_STYLES = {
+    AestheticTheme.CORPORATE_BLUE: {
+        "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
+        "header": "rule", "cover": "classic", "kpi": "filled", "uppercase": False,
+        "title_size": 28, "h1_size": 20, "body_leading": 16,
+    },
+    AestheticTheme.GREEN_NATURE: {
+        "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
+        "header": "banner", "cover": "banner", "kpi": "filled", "uppercase": False,
+        "title_size": 30, "h1_size": 15, "body_leading": 17,
+    },
+    AestheticTheme.DARK_PREMIUM: {
+        "font": "Times-Roman", "font_bold": "Times-Bold", "font_italic": "Times-Italic",
+        "header": "goldrule", "cover": "luxe", "kpi": "dark", "uppercase": True,
+        "title_size": 30, "h1_size": 19, "body_leading": 17,
+    },
+    AestheticTheme.MINIMAL_WHITE: {
+        "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
+        "header": "minimal", "cover": "minimal", "kpi": "outline", "uppercase": True,
+        "title_size": 34, "h1_size": 13, "body_leading": 18,
+    },
+}
+
+
+def build_styles(pal: dict, ts: dict) -> dict:
+    f, fb, fi = ts["font"], ts["font_bold"], ts["font_italic"]
     return {
-        "title": ParagraphStyle("title", fontSize=28, textColor=pal["primary"],
-                                 spaceAfter=8, fontName="Helvetica-Bold", alignment=TA_LEFT),
-        "h1": ParagraphStyle("h1", fontSize=20, textColor=pal["primary"],
-                              spaceAfter=6, spaceBefore=18, fontName="Helvetica-Bold"),
-        "h2": ParagraphStyle("h2", fontSize=15, textColor=pal["secondary"],
-                              spaceAfter=4, spaceBefore=12, fontName="Helvetica-Bold"),
+        "title": ParagraphStyle("title", fontSize=ts["title_size"], textColor=pal["primary"],
+                                 spaceAfter=8, fontName=fb, alignment=TA_LEFT),
+        "h1": ParagraphStyle("h1", fontSize=ts["h1_size"], textColor=pal["primary"],
+                              spaceAfter=6, spaceBefore=18, fontName=fb),
+        "h1_light": ParagraphStyle("h1_light", fontSize=ts["h1_size"], textColor=colors.white,
+                                    fontName=fb),
+        "h2": ParagraphStyle("h2", fontSize=13, textColor=pal["secondary"],
+                              spaceAfter=4, spaceBefore=12, fontName=fb),
         "body": ParagraphStyle("body", fontSize=10, textColor=pal["text"],
-                                spaceAfter=6, fontName="Helvetica", leading=16,
+                                spaceAfter=6, fontName=f, leading=ts["body_leading"],
                                 alignment=TA_JUSTIFY),
         "bullet": ParagraphStyle("bullet", fontSize=10, textColor=pal["text"],
-                                  spaceAfter=4, fontName="Helvetica", leftIndent=16,
+                                  spaceAfter=4, fontName=f, leftIndent=16,
                                   leading=14),
         "kpi_label": ParagraphStyle("kpi_label", fontSize=9, textColor=pal["secondary"],
-                                     fontName="Helvetica-Bold", alignment=TA_CENTER),
+                                     fontName=fb, alignment=TA_CENTER),
         "kpi_value": ParagraphStyle("kpi_value", fontSize=22, textColor=pal["primary"],
-                                     fontName="Helvetica-Bold", alignment=TA_CENTER),
+                                     fontName=fb, alignment=TA_CENTER),
         "caption": ParagraphStyle("caption", fontSize=8, textColor=colors.grey,
-                                   fontName="Helvetica-Oblique", alignment=TA_CENTER),
-        "cover_title": ParagraphStyle("cover_title", fontSize=36, textColor=colors.white,
-                                       fontName="Helvetica-Bold", alignment=TA_LEFT, leading=44),
-        "cover_sub": ParagraphStyle("cover_sub", fontSize=16, textColor=colors.HexColor("#AECAE8"),
-                                     fontName="Helvetica", alignment=TA_LEFT),
-        "score_label": ParagraphStyle("score_label", fontSize=11, textColor=pal["text"],
-                                       fontName="Helvetica-Bold", alignment=TA_CENTER),
+                                   fontName=fi, alignment=TA_CENTER),
         "footer": ParagraphStyle("footer", fontSize=8, textColor=colors.grey,
-                                  fontName="Helvetica-Oblique", alignment=TA_CENTER),
+                                  fontName=fi, alignment=TA_CENTER),
     }
+
+
+def section_header(story, title, color, pal, styles, ts):
+    """Themed section heading: rule / banner / goldrule / minimal."""
+    if ts["uppercase"]:
+        title = title.upper()
+    mode = ts["header"]
+    if mode == "banner":
+        # Green Nature: full-width colored banner with white text
+        t = Table([[Paragraph(title, styles["h1_light"])]], colWidths=[17 * cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), color),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('ROUNDEDCORNERS', [6, 6, 6, 6]),
+        ]))
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(t)
+    elif mode == "goldrule":
+        # Dark Premium: serif heading + thin gold rule
+        story.append(Paragraph(title, styles["h1"]))
+        story.append(HRFlowable(width="100%", thickness=0.8, color=pal["accent"]))
+    elif mode == "minimal":
+        # Minimal: small uppercase spaced heading + thin grey rule
+        story.append(Paragraph(f'<font color="#{color.hexval()[2:]}">■</font>&nbsp;&nbsp;{title}',
+                               styles["h1"]))
+        story.append(HRFlowable(width="30%", thickness=0.7,
+                                color=colors.HexColor("#BDBDBD"), hAlign='LEFT'))
+    else:
+        # Corporate: classic heading + thick colored rule
+        story.append(Paragraph(title, styles["h1"]))
+        story.append(HRFlowable(width="100%", thickness=2, color=color))
+    story.append(Spacer(1, 0.3 * cm))
 
 
 def score_to_color(score: float, pal: dict) -> colors.Color:
@@ -93,16 +148,20 @@ def score_to_color(score: float, pal: dict) -> colors.Color:
     return colors.HexColor("#E74C3C")
 
 
-def kpi_table(kpi_list, pal):
+def kpi_table(kpi_list, pal, ts):
+    kpi_style = ts["kpi"]
+    value_color = colors.white if kpi_style == "dark" else pal["primary"]
+    label_color = pal["accent"] if kpi_style == "dark" else pal["secondary"]
+
     data = []
     row = []
     for i, (label, value) in enumerate(kpi_list):
         cell_content = [Paragraph(str(value), ParagraphStyle(
-            "kv", fontSize=18, fontName="Helvetica-Bold",
-            textColor=pal["primary"], alignment=TA_CENTER)),
+            "kv", fontSize=18, fontName=ts["font_bold"],
+            textColor=value_color, alignment=TA_CENTER)),
             Paragraph(label, ParagraphStyle(
-                "kl", fontSize=9, fontName="Helvetica",
-                textColor=pal["secondary"], alignment=TA_CENTER))]
+                "kl", fontSize=9, fontName=ts["font"],
+                textColor=label_color, alignment=TA_CENTER))]
         row.append(cell_content)
         if len(row) == 3:
             data.append(row)
@@ -113,13 +172,30 @@ def kpi_table(kpi_list, pal):
         data.append(row)
 
     t = Table(data, colWidths=[5.5 * cm, 5.5 * cm, 5.5 * cm])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
-        ('BOX', (0, 0), (-1, -1), 0.5, pal["secondary"]),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
-        ('ROWPADDING', (0, 0), (-1, -1), 12),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
+    if kpi_style == "dark":
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#1A1F28")),
+            ('BOX', (0, 0), (-1, -1), 0.5, pal["accent"]),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#3A4250")),
+            ('ROWPADDING', (0, 0), (-1, -1), 12),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+    elif kpi_style == "outline":
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+            ('BOX', (0, 0), (-1, -1), 0.7, colors.HexColor("#BDBDBD")),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#E0E0E0")),
+            ('ROWPADDING', (0, 0), (-1, -1), 14),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+    else:
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('BOX', (0, 0), (-1, -1), 0.5, pal["secondary"]),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
+            ('ROWPADDING', (0, 0), (-1, -1), 12),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
     return t
 
 
@@ -159,30 +235,96 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                          chart_images: dict) -> bytes:
     buf = io.BytesIO()
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
-    styles = build_styles(pal)
+    ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
+    styles = build_styles(pal, ts)
 
     doc = SimpleDocTemplate(buf, pagesize=A4,
                              leftMargin=2 * cm, rightMargin=2 * cm,
                              topMargin=2 * cm, bottomMargin=2 * cm)
     story = []
 
-    # ── Cover ─────────────────────────────────────────────────────────────
+    # ── Cover (varies per theme) ──────────────────────────────────────────
     type_labels = {
         "white_paper": "Livre Blanc ESG / RSE",
         "full_report": "Rapport ESG Complet",
         "executive_summary_pdf": "Synthèse Exécutive ESG",
     }
     type_label = type_labels.get(request.report_type.value, "Rapport ESG")
+    meta_line = f"Exercice {request.company.reporting_year}  •  Secteur : {request.company.sector}  •  {request.company.country}"
 
-    story.append(Spacer(1, 2 * cm))
-    story.append(Paragraph(request.company.name.upper(), styles["title"]))
-    story.append(HRFlowable(width="100%", thickness=4, color=pal["accent"]))
-    story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph(type_label, styles["h1"]))
-    story.append(Paragraph(
-        f"Exercice {request.company.reporting_year}  •  Secteur : {request.company.sector}  •  {request.company.country}",
-        styles["body"]))
-    story.append(Spacer(1, 0.5 * cm))
+    if ts["cover"] == "luxe":
+        # Dark Premium: full dark block, centered serif, gold accents
+        cover_cells = [
+            [Paragraph(type_label.upper(), ParagraphStyle(
+                "ck", fontSize=11, fontName=ts["font"], textColor=pal["accent"],
+                alignment=TA_CENTER, spaceAfter=14))],
+            [Paragraph(request.company.name.upper(), ParagraphStyle(
+                "ct", fontSize=32, fontName=ts["font_bold"], textColor=colors.white,
+                alignment=TA_CENTER, leading=38, spaceAfter=10))],
+            [Paragraph(meta_line, ParagraphStyle(
+                "cm", fontSize=10, fontName=ts["font_italic"],
+                textColor=colors.HexColor("#8B949E"), alignment=TA_CENTER))],
+            [Paragraph(f"—  {scores.rating}  —", ParagraphStyle(
+                "cr", fontSize=26, fontName=ts["font_bold"], textColor=pal["accent"],
+                alignment=TA_CENTER, spaceBefore=16))],
+        ]
+        cover_t = Table(cover_cells, colWidths=[17 * cm])
+        cover_t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#0D1117")),
+            ('BOX', (0, 0), (-1, -1), 1, pal["accent"]),
+            ('TOPPADDING', (0, 0), (-1, 0), 36),
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 36),
+            ('LEFTPADDING', (0, 0), (-1, -1), 20),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 20),
+        ]))
+        story.append(Spacer(1, 2 * cm))
+        story.append(cover_t)
+        story.append(Spacer(1, 0.8 * cm))
+    elif ts["cover"] == "banner":
+        # Green Nature: big colored banner + light band
+        banner = Table([[Paragraph(request.company.name, ParagraphStyle(
+            "ct", fontSize=30, fontName=ts["font_bold"], textColor=colors.white,
+            leading=36))]], colWidths=[17 * cm])
+        banner.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
+            ('TOPPADDING', (0, 0), (-1, -1), 28),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 28),
+            ('LEFTPADDING', (0, 0), (-1, -1), 18),
+        ]))
+        sub = Table([[Paragraph(f"{type_label} — {meta_line}", ParagraphStyle(
+            "cs", fontSize=10, fontName=ts["font"], textColor=pal["primary"]))]],
+            colWidths=[17 * cm])
+        sub.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 18),
+        ]))
+        story.append(Spacer(1, 1.5 * cm))
+        story.append(banner)
+        story.append(sub)
+        story.append(Spacer(1, 0.8 * cm))
+    elif ts["cover"] == "minimal":
+        # Minimal: whitespace, small kicker, huge title, thin rule
+        story.append(Spacer(1, 3 * cm))
+        story.append(Paragraph(type_label.upper(), ParagraphStyle(
+            "ck", fontSize=10, fontName=ts["font_bold"],
+            textColor=colors.HexColor("#9E9E9E"), spaceAfter=10)))
+        story.append(Paragraph(request.company.name, styles["title"]))
+        story.append(Spacer(1, 0.2 * cm))
+        story.append(HRFlowable(width="100%", thickness=0.7, color=colors.HexColor("#BDBDBD")))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph(meta_line, styles["body"]))
+        story.append(Spacer(1, 1 * cm))
+    else:
+        # Corporate: classic left-aligned with thick accent rule
+        story.append(Spacer(1, 2 * cm))
+        story.append(Paragraph(request.company.name.upper(), styles["title"]))
+        story.append(HRFlowable(width="100%", thickness=4, color=pal["accent"]))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph(type_label, styles["h1"]))
+        story.append(Paragraph(meta_line, styles["body"]))
+        story.append(Spacer(1, 0.5 * cm))
 
     # Score summary table
     score_data = [
@@ -232,9 +374,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(PageBreak())
 
     # ── Executive Summary ──────────────────────────────────────────────────
-    story.append(Paragraph("1. Synthèse Exécutive", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["secondary"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "1. Synthèse Exécutive", pal["secondary"], pal, styles, ts)
 
     exec_text = content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG pour l'exercice {request.company.reporting_year}. "
@@ -246,9 +386,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
-    story.append(Paragraph("2. Pilier Environnemental", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["env"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "2. Pilier Environnemental", pal["env"], pal, styles, ts)
     story.append(Paragraph(
         f"Score environnemental : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
 
@@ -271,7 +409,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     if env_kpis:
         story.append(Spacer(1, 0.3 * cm))
-        story.append(kpi_table(env_kpis, pal))
+        story.append(kpi_table(env_kpis, pal, ts))
 
     if "emissions_pie" in chart_images:
         story.append(Spacer(1, 0.3 * cm))
@@ -283,9 +421,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Social ────────────────────────────────────────────────────────────
-    story.append(Paragraph("3. Pilier Social", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["social"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "3. Pilier Social", pal["social"], pal, styles, ts)
     story.append(Paragraph(
         f"Score social : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
 
@@ -306,14 +442,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     if soc_kpis:
         story.append(Spacer(1, 0.3 * cm))
-        story.append(kpi_table(soc_kpis, pal))
+        story.append(kpi_table(soc_kpis, pal, ts))
 
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Gouvernance ──────────────────────────────────────────────────────
-    story.append(Paragraph("4. Pilier Gouvernance", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["gov"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "4. Pilier Gouvernance", pal["gov"], pal, styles, ts)
     story.append(Paragraph(
         f"Score gouvernance : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
 
@@ -334,14 +468,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     if gov_kpis:
         story.append(Spacer(1, 0.3 * cm))
-        story.append(kpi_table(gov_kpis, pal))
+        story.append(kpi_table(gov_kpis, pal, ts))
 
     story.append(PageBreak())
 
     # ── Forces & Faiblesses ───────────────────────────────────────────────
-    story.append(Paragraph("5. Analyse Stratégique", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["accent"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "5. Analyse Stratégique", pal["accent"], pal, styles, ts)
 
     story.append(Paragraph("Points forts identifiés", styles["h2"]))
     for s in scores.strengths:
@@ -354,17 +486,13 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     if request.include_recommendations:
         story.append(Spacer(1, 0.4 * cm))
-        story.append(Paragraph("6. Recommandations Prioritaires", styles["h1"]))
-        story.append(HRFlowable(width="100%", thickness=2, color=pal["accent"]))
-        story.append(Spacer(1, 0.3 * cm))
+        section_header(story, "6. Recommandations Prioritaires", pal["accent"], pal, styles, ts)
         for i, rec in enumerate(scores.recommendations, 1):
             story.append(Paragraph(f"<b>{i}.</b>  {rec}", styles["bullet"]))
 
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
-    story.append(Paragraph("7. Cadres de Référence & Alignement ODD", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["secondary"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "7. Cadres de Référence & Alignement ODD", pal["secondary"], pal, styles, ts)
 
     ref_text = (
         "Ce rapport s'inscrit dans les cadres de référence suivants : <b>GRI Standards</b> (Global Reporting Initiative), "
@@ -376,9 +504,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── Conclusion ────────────────────────────────────────────────────────
     story.append(PageBreak())
-    story.append(Paragraph("8. Conclusion", styles["h1"]))
-    story.append(HRFlowable(width="100%", thickness=2, color=pal["primary"]))
-    story.append(Spacer(1, 0.3 * cm))
+    section_header(story, "8. Conclusion", pal["primary"], pal, styles, ts)
 
     conclusion = content.get("conclusion",
         f"{request.company.name} démontre une démarche ESG globale avec un score de "
@@ -397,9 +523,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Section spécifique White Paper : Vision Stratégique ──────────────
     if request.report_type.value == "white_paper":
         story.append(Spacer(1, 0.5 * cm))
-        story.append(Paragraph("9. Vision Stratégique & Perspectives", styles["h1"]))
-        story.append(HRFlowable(width="100%", thickness=2, color=pal["accent"]))
-        story.append(Spacer(1, 0.3 * cm))
+        section_header(story, "9. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
         story.append(Paragraph(
             "Ce livre blanc a vocation à documenter la trajectoire ESG de l'organisation sur le long terme. "
             "Il constitue un document de référence stratégique, destiné à éclairer les décisions "

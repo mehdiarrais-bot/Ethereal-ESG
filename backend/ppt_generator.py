@@ -1,12 +1,8 @@
 import io
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
-from pptx.util import Inches, Pt
-from pptx.chart.data import ChartData
-from pptx.enum.chart import XL_CHART_TYPE
-import copy
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
 
 # Color palettes per theme
@@ -21,11 +17,12 @@ THEMES = {
         "text_light": RGBColor(0xFF, 0xFF, 0xFF),
         "text_dark": RGBColor(0x2C, 0x3E, 0x50),
         "subtitle": RGBColor(0xAE, 0xC6, 0xE8),
+        "muted": RGBColor(0x6B, 0x7C, 0x93),
         "card_bg": RGBColor(0xEB, 0xF2, 0xFB),
     },
     AestheticTheme.GREEN_NATURE: {
         "bg_primary": RGBColor(0x1A, 0x5C, 0x38),
-        "bg_secondary": RGBColor(0xF0, 0xFB, 0xF4),
+        "bg_secondary": RGBColor(0xF3, 0xFB, 0xF5),
         "accent": RGBColor(0xF1, 0xC4, 0x0F),
         "env": RGBColor(0x2E, 0xCC, 0x71),
         "social": RGBColor(0x34, 0x98, 0xDB),
@@ -33,7 +30,8 @@ THEMES = {
         "text_light": RGBColor(0xFF, 0xFF, 0xFF),
         "text_dark": RGBColor(0x1A, 0x33, 0x25),
         "subtitle": RGBColor(0xA9, 0xDB, 0xBC),
-        "card_bg": RGBColor(0xD5, 0xF5, 0xE3),
+        "muted": RGBColor(0x5E, 0x8C, 0x72),
+        "card_bg": RGBColor(0xDD, 0xF3, 0xE4),
     },
     AestheticTheme.DARK_PREMIUM: {
         "bg_primary": RGBColor(0x0D, 0x11, 0x17),
@@ -44,44 +42,82 @@ THEMES = {
         "gov": RGBColor(0xBC, 0x8C, 0xFF),
         "text_light": RGBColor(0xE6, 0xED, 0xF3),
         "text_dark": RGBColor(0xE6, 0xED, 0xF3),
-        "subtitle": RGBColor(0x7D, 0x8B, 0x9A),
-        "card_bg": RGBColor(0x21, 0x26, 0x2D),
+        "subtitle": RGBColor(0x8B, 0x94, 0x9E),
+        "muted": RGBColor(0x8B, 0x94, 0x9E),
+        "card_bg": RGBColor(0x1F, 0x25, 0x2E),
     },
     AestheticTheme.MINIMAL_WHITE: {
         "bg_primary": RGBColor(0x21, 0x21, 0x21),
-        "bg_secondary": RGBColor(0xFA, 0xFA, 0xFA),
+        "bg_secondary": RGBColor(0xFF, 0xFF, 0xFF),
         "accent": RGBColor(0xFF, 0x6F, 0x00),
         "env": RGBColor(0x43, 0xA0, 0x47),
         "social": RGBColor(0x1E, 0x88, 0xE5),
         "gov": RGBColor(0x8E, 0x24, 0xAA),
         "text_light": RGBColor(0xFF, 0xFF, 0xFF),
         "text_dark": RGBColor(0x21, 0x21, 0x21),
-        "subtitle": RGBColor(0x75, 0x75, 0x75),
-        "card_bg": RGBColor(0xF0, 0xF0, 0xF0),
+        "subtitle": RGBColor(0x9E, 0x9E, 0x9E),
+        "muted": RGBColor(0x9E, 0x9E, 0x9E),
+        "card_bg": RGBColor(0xFF, 0xFF, 0xFF),
+    },
+}
+
+# Design language per theme: fonts, header style, card style, cover layout
+STYLES = {
+    AestheticTheme.CORPORATE_BLUE: {
+        "font_title": "Calibri", "font_body": "Calibri",
+        "header": "band", "card": "flat", "cover": "classic",
+        "dark_slides": False, "uppercase_titles": False,
+    },
+    AestheticTheme.GREEN_NATURE: {
+        "font_title": "Trebuchet MS", "font_body": "Trebuchet MS",
+        "header": "pill", "card": "rounded", "cover": "organic",
+        "dark_slides": False, "uppercase_titles": False,
+    },
+    AestheticTheme.DARK_PREMIUM: {
+        "font_title": "Georgia", "font_body": "Georgia",
+        "header": "hairline", "card": "dark", "cover": "luxe",
+        "dark_slides": True, "uppercase_titles": True,
+    },
+    AestheticTheme.MINIMAL_WHITE: {
+        "font_title": "Segoe UI", "font_body": "Segoe UI",
+        "header": "minimal", "card": "outline", "cover": "minimal",
+        "dark_slides": False, "uppercase_titles": True,
     },
 }
 
 SLIDE_W = Inches(13.33)
 SLIDE_H = Inches(7.5)
 
+RECT = 1
+ROUNDED_RECT = 5
+OVAL = 9
 
-def rgb_to_hex(r, g, b):
-    return f"#{r:02X}{g:02X}{b:02X}"
 
-
-def add_bg_rect(slide, left, top, width, height, color: RGBColor, alpha=None):
-    shape = slide.shapes.add_shape(1, left, top, width, height)
-    shape.line.fill.background()
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
-    if alpha is not None:
-        shape.fill.fore_color.theme_color = None
+def add_shape(slide, shape_type, left, top, width, height, fill: RGBColor = None,
+              line_color: RGBColor = None, line_width_pt: float = None):
+    shape = slide.shapes.add_shape(shape_type, left, top, width, height)
+    if fill is not None:
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = fill
+    else:
+        shape.fill.background()
+    if line_color is not None:
+        shape.line.color.rgb = line_color
+        if line_width_pt:
+            shape.line.width = Pt(line_width_pt)
+    else:
+        shape.line.fill.background()
     return shape
+
+
+def add_bg_rect(slide, left, top, width, height, color: RGBColor):
+    return add_shape(slide, RECT, left, top, width, height, fill=color)
 
 
 def add_text(slide, text, left, top, width, height, font_size=18,
              bold=False, color: RGBColor = RGBColor(0, 0, 0),
-             align=PP_ALIGN.LEFT, italic=False, word_wrap=True):
+             align=PP_ALIGN.LEFT, italic=False, word_wrap=True,
+             font: str = None):
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     tf.word_wrap = word_wrap
@@ -93,6 +129,8 @@ def add_text(slide, text, left, top, width, height, font_size=18,
     run.font.bold = bold
     run.font.italic = italic
     run.font.color.rgb = color
+    if font:
+        run.font.name = font
     return txBox
 
 
@@ -101,12 +139,181 @@ def add_image_from_bytes(slide, img_bytes, left, top, width, height):
     slide.shapes.add_picture(img_io, left, top, width, height)
 
 
-def score_color(score: float, theme_colors: dict) -> RGBColor:
-    if score >= 75:
-        return theme_colors["env"]
-    elif score >= 50:
-        return theme_colors["accent"]
-    return RGBColor(0xE7, 0x4C, 0x3C)
+def maybe_upper(text: str, style: dict) -> str:
+    return text.upper() if style["uppercase_titles"] else text
+
+
+def content_slide(prs, blank_layout, theme, style, title, color: RGBColor):
+    """Create a content slide with a themed header. Returns the slide."""
+    slide = prs.slides.add_slide(blank_layout)
+    title = maybe_upper(title, style)
+    ft = style["font_title"]
+
+    if style["header"] == "band":
+        # Corporate: full-width colored band + accent side bar
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+        add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), color)
+        add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
+        add_text(slide, title, Inches(0.3), Inches(0.15), Inches(12), Inches(0.8),
+                 font_size=26, bold=True, color=theme["text_light"], font=ft)
+
+    elif style["header"] == "pill":
+        # Nature: light bg, rounded pill title block, decorative circles
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+        c1 = add_shape(slide, OVAL, Inches(11.8), Inches(-1.2), Inches(3), Inches(3), fill=theme["card_bg"])
+        c2 = add_shape(slide, OVAL, Inches(12.6), Inches(6.4), Inches(2), Inches(2), fill=theme["card_bg"])
+        add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(0.25), Inches(7.2), Inches(0.75), fill=color)
+        add_text(slide, title, Inches(0.6), Inches(0.32), Inches(6.8), Inches(0.6),
+                 font_size=22, bold=True, color=theme["text_light"], font=ft)
+
+    elif style["header"] == "hairline":
+        # Premium: dark bg everywhere, serif title, thin gold hairline
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+        add_text(slide, title, Inches(0.5), Inches(0.3), Inches(12), Inches(0.7),
+                 font_size=24, bold=False, color=color, font=ft)
+        add_bg_rect(slide, Inches(0.5), Inches(1.05), Inches(12.3), Inches(0.02), theme["accent"])
+
+    else:  # minimal
+        # Minimal: white bg, small color chip + uppercase title, thin underline
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+        add_bg_rect(slide, Inches(0.5), Inches(0.42), Inches(0.22), Inches(0.22), color)
+        add_text(slide, title, Inches(0.9), Inches(0.28), Inches(11.5), Inches(0.55),
+                 font_size=18, bold=True, color=theme["text_dark"], font=ft)
+        add_bg_rect(slide, Inches(0.5), Inches(1.0), Inches(2.2), Inches(0.02), theme["text_dark"])
+
+    return slide
+
+
+def kpi_card(slide, left, top, w, h, theme, style, color: RGBColor):
+    """Draw a KPI card background in the theme's card style."""
+    if style["card"] == "flat":
+        add_bg_rect(slide, left, top, w, h, theme["card_bg"])
+        add_bg_rect(slide, left, top, w, Inches(0.1), color)
+    elif style["card"] == "rounded":
+        add_shape(slide, ROUNDED_RECT, left, top, w, h, fill=theme["card_bg"])
+        add_shape(slide, OVAL, left + Inches(0.15), top + Inches(0.15),
+                  Inches(0.18), Inches(0.18), fill=color)
+    elif style["card"] == "dark":
+        add_bg_rect(slide, left, top, w, h, theme["card_bg"])
+        add_bg_rect(slide, left, top, w, Inches(0.03), theme["accent"])
+    else:  # outline
+        add_shape(slide, RECT, left, top, w, h, fill=theme["card_bg"],
+                  line_color=RGBColor(0xE0, 0xE0, 0xE0), line_width_pt=1.0)
+        add_bg_rect(slide, left, top, Inches(0.06), h, color)
+
+
+def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3)):
+    fb = style["font_body"]
+    cols = [Inches(0.3), Inches(4.55), Inches(8.8)]
+    label_indent = Inches(0.42) if style["card"] == "rounded" else Inches(0.2)
+    for idx, (kpi_label, kpi_val) in enumerate(kpis[:9]):
+        col = cols[idx % 3]
+        row = top_start + (idx // 3) * Inches(1.9)
+        kpi_card(slide, col, row, Inches(4.0), Inches(1.7), theme, style, color)
+        add_text(slide, kpi_label, col + label_indent, row + Inches(0.15),
+                 Inches(3.5), Inches(0.45), font_size=11, color=theme["muted"], font=fb)
+        add_text(slide, kpi_val, col + Inches(0.2), row + Inches(0.65),
+                 Inches(3.7), Inches(0.85), font_size=22, bold=True, color=color, font=fb)
+
+
+# ── Covers ────────────────────────────────────────────────────────────────
+
+def cover_classic(slide, theme, style, request, scores, subtitle):
+    ft, fb = style["font_title"], style["font_body"]
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
+    add_shape(slide, OVAL, Inches(10.5), Inches(-1.5), Inches(4), Inches(4),
+              fill=RGBColor(0xFF, 0xFF, 0xFF))
+    add_text(slide, request.company.name.upper(), Inches(0.6), Inches(1.2), Inches(9), Inches(1.2),
+             font_size=40, bold=True, color=theme["text_light"], font=ft)
+    add_text(slide, subtitle, Inches(0.6), Inches(2.5), Inches(9), Inches(0.7),
+             font_size=22, color=theme["subtitle"], font=fb)
+    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+             Inches(0.6), Inches(3.3), Inches(10), Inches(0.5),
+             font_size=14, color=theme["subtitle"], font=fb)
+    add_bg_rect(slide, Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5), theme["accent"])
+    add_text(slide, f"ESG {scores.rating}", Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5),
+             font_size=28, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, f"Score Global : {scores.total_esg_score}/100",
+             Inches(0.6), Inches(5.8), Inches(6), Inches(0.5),
+             font_size=14, color=theme["subtitle"], font=fb)
+
+
+def cover_organic(slide, theme, style, request, scores, subtitle):
+    ft, fb = style["font_title"], style["font_body"]
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+    # Overlapping organic circles top-right
+    add_shape(slide, OVAL, Inches(9.8), Inches(-2.2), Inches(5.5), Inches(5.5), fill=theme["card_bg"])
+    add_shape(slide, OVAL, Inches(11.2), Inches(-0.8), Inches(3.6), Inches(3.6), fill=theme["env"])
+    add_shape(slide, OVAL, Inches(10.4), Inches(1.6), Inches(1.4), Inches(1.4), fill=theme["accent"])
+    # Title in deep green on light bg
+    add_text(slide, request.company.name, Inches(0.7), Inches(1.6), Inches(9), Inches(1.3),
+             font_size=42, bold=True, color=theme["bg_primary"], font=ft)
+    add_text(slide, subtitle, Inches(0.7), Inches(2.9), Inches(9), Inches(0.7),
+             font_size=20, color=theme["muted"], font=fb)
+    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+             Inches(0.7), Inches(3.7), Inches(10), Inches(0.5),
+             font_size=13, color=theme["muted"], font=fb)
+    # Bottom rounded band with score
+    add_shape(slide, ROUNDED_RECT, Inches(0.7), Inches(5.3), Inches(11.9), Inches(1.5),
+              fill=theme["bg_primary"])
+    add_text(slide, f"Score ESG : {scores.total_esg_score}/100", Inches(1.2), Inches(5.75),
+             Inches(6), Inches(0.6), font_size=22, bold=True, color=theme["text_light"], font=ft)
+    add_shape(slide, OVAL, Inches(10.2), Inches(5.45), Inches(1.2), Inches(1.2), fill=theme["accent"])
+    add_text(slide, scores.rating, Inches(10.2), Inches(5.75), Inches(1.2), Inches(0.6),
+             font_size=22, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
+
+
+def cover_luxe(slide, theme, style, request, scores, subtitle):
+    ft, fb = style["font_title"], style["font_body"]
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    # Thin gold frame
+    m, t = Inches(0.4), Inches(0.015)
+    gold = theme["accent"]
+    add_bg_rect(slide, m, m, SLIDE_W - m - m, t, gold)
+    add_bg_rect(slide, m, SLIDE_H - m, SLIDE_W - m - m, t, gold)
+    add_bg_rect(slide, m, m, t, SLIDE_H - m - m, gold)
+    add_bg_rect(slide, SLIDE_W - m, m, t, SLIDE_H - m - m + t, gold)
+    # Centered serif composition
+    add_text(slide, subtitle.upper(), Inches(1), Inches(1.5), Inches(11.33), Inches(0.5),
+             font_size=13, color=theme["accent"], align=PP_ALIGN.CENTER, font=fb)
+    add_text(slide, request.company.name.upper(), Inches(1), Inches(2.3), Inches(11.33), Inches(1.4),
+             font_size=44, bold=False, color=theme["text_light"], align=PP_ALIGN.CENTER, font=ft)
+    add_bg_rect(slide, Inches(5.9), Inches(3.9), Inches(1.5), Inches(0.02), gold)
+    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+             Inches(1), Inches(4.2), Inches(11.33), Inches(0.5),
+             font_size=13, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, f"— {scores.rating} —", Inches(1), Inches(5.1), Inches(11.33), Inches(0.8),
+             font_size=34, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, f"Score ESG {scores.total_esg_score}/100", Inches(1), Inches(5.95),
+             Inches(11.33), Inches(0.5), font_size=14, color=theme["subtitle"],
+             align=PP_ALIGN.CENTER, font=fb)
+
+
+def cover_minimal(slide, theme, style, request, scores, subtitle):
+    ft, fb = style["font_title"], style["font_body"]
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+    add_bg_rect(slide, Inches(0.7), Inches(1.1), Inches(0.35), Inches(0.35), theme["accent"])
+    add_text(slide, subtitle.upper(), Inches(0.7), Inches(1.7), Inches(11), Inches(0.5),
+             font_size=12, bold=True, color=theme["muted"], font=fb)
+    add_text(slide, request.company.name, Inches(0.65), Inches(2.3), Inches(11.5), Inches(1.6),
+             font_size=52, bold=True, color=theme["text_dark"], font=ft)
+    add_bg_rect(slide, Inches(0.7), Inches(4.2), Inches(11.9), Inches(0.015),
+                RGBColor(0xBD, 0xBD, 0xBD))
+    add_text(slide, f"Exercice {request.company.reporting_year}", Inches(0.7), Inches(4.5),
+             Inches(4), Inches(0.4), font_size=13, color=theme["muted"], font=fb)
+    add_text(slide, request.company.sector, Inches(4.7), Inches(4.5), Inches(4), Inches(0.4),
+             font_size=13, color=theme["muted"], font=fb)
+    add_text(slide, request.company.country, Inches(8.7), Inches(4.5), Inches(4), Inches(0.4),
+             font_size=13, color=theme["muted"], font=fb)
+    add_text(slide, f"{scores.total_esg_score}", Inches(0.6), Inches(5.1), Inches(4), Inches(1.2),
+             font_size=64, bold=True, color=theme["accent"], font=ft)
+    add_text(slide, f"/100 — Note {scores.rating}", Inches(3.0), Inches(5.75), Inches(5), Inches(0.5),
+             font_size=16, color=theme["muted"], font=fb)
+
+
+COVERS = {"classic": cover_classic, "organic": cover_organic,
+          "luxe": cover_luxe, "minimal": cover_minimal}
 
 
 def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
@@ -116,30 +323,13 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     prs.slide_height = SLIDE_H
 
     theme = THEMES.get(request.aesthetic_theme, THEMES[AestheticTheme.CORPORATE_BLUE])
+    style = STYLES.get(request.aesthetic_theme, STYLES[AestheticTheme.CORPORATE_BLUE])
+    ft, fb = style["font_title"], style["font_body"]
     ptype = request.presentation_type
-
-    # Slide layout (blank)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
     slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-
-    # Accent bar left
-    add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
-
-    # Decorative circle top-right
-    circ = slide.shapes.add_shape(9, Inches(10.5), Inches(-1.5), Inches(4), Inches(4))
-    circ.fill.solid()
-    circ.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-    circ.line.fill.background()
-
-    # Title
-    add_text(slide, request.company.name.upper(),
-             Inches(0.6), Inches(1.2), Inches(9), Inches(1.2),
-             font_size=40, bold=True, color=theme["text_light"])
-
-    # Subtitle
     subtitle_map = {
         PresentationType.EXECUTIVE_SUMMARY: "Rapport ESG — Synthèse Exécutive",
         PresentationType.INVESTOR_DECK: "ESG Investor Deck",
@@ -147,77 +337,43 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         PresentationType.STAKEHOLDER_BRIEF: "Communication Parties Prenantes",
         PresentationType.ANNUAL_REPORT: "Rapport Annuel ESG / RSE",
     }
-    add_text(slide, subtitle_map.get(ptype, "Rapport ESG"),
-             Inches(0.6), Inches(2.5), Inches(9), Inches(0.7),
-             font_size=22, color=theme["subtitle"])
-
-    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
-             Inches(0.6), Inches(3.3), Inches(10), Inches(0.5),
-             font_size=14, color=theme["subtitle"])
-
-    # Rating badge
-    badge = add_bg_rect(slide, Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5), theme["accent"])
-    add_text(slide, f"ESG {scores.rating}",
-             Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5),
-             font_size=28, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER)
-
-    add_text(slide, f"Score Global: {scores.total_esg_score}/100",
-             Inches(0.6), Inches(5.8), Inches(6), Inches(0.5),
-             font_size=14, color=theme["subtitle"])
-
-    add_text(slide, f"Généré automatiquement — ESG Platform",
-             Inches(0.6), Inches(6.8), Inches(8), Inches(0.4),
-             font_size=9, italic=True, color=theme["subtitle"])
+    COVERS[style["cover"]](slide, theme, style, request, scores,
+                           subtitle_map.get(ptype, "Rapport ESG"))
 
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["bg_primary"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
+    header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
+    slide = content_slide(prs, blank_layout, theme, style, "Tableau de Bord ESG", header_color)
 
-    add_text(slide, "Tableau de Bord ESG", Inches(0.3), Inches(0.15),
-             Inches(10), Inches(0.8), font_size=26, bold=True, color=theme["text_light"])
-
-    # Score cards (3 piliers)
     pillars = [
         ("E — Environnement", scores.environmental_score, theme["env"], Inches(0.3)),
         ("S — Social", scores.social_score, theme["social"], Inches(4.55)),
         ("G — Gouvernance", scores.governance_score, theme["gov"], Inches(8.8)),
     ]
     for label, score, color, left in pillars:
-        card = add_bg_rect(slide, left, Inches(1.3), Inches(4.0), Inches(2.4), theme["card_bg"])
-        add_bg_rect(slide, left, Inches(1.3), Inches(4.0), Inches(0.12), color)
-        add_text(slide, label, left + Inches(0.2), Inches(1.5),
-                 Inches(3.6), Inches(0.5), font_size=13, bold=True, color=theme["text_dark"])
+        kpi_card(slide, left, Inches(1.3), Inches(4.0), Inches(2.4), theme, style, color)
+        lbl_indent = Inches(0.42) if style["card"] == "rounded" else Inches(0.2)
+        add_text(slide, label, left + lbl_indent, Inches(1.5),
+                 Inches(3.5), Inches(0.5), font_size=13, bold=True, color=theme["text_dark"], font=fb)
         add_text(slide, f"{score:.1f}", left + Inches(0.2), Inches(2.0),
-                 Inches(2.0), Inches(0.9), font_size=44, bold=True, color=color)
-        add_text(slide, "/100", left + Inches(1.5), Inches(2.4),
-                 Inches(1.5), Inches(0.4), font_size=14, color=theme["subtitle"])
+                 Inches(2.0), Inches(0.9), font_size=44, bold=True, color=color, font=ft)
+        add_text(slide, "/100", left + Inches(1.6), Inches(2.4),
+                 Inches(1.5), Inches(0.4), font_size=14, color=theme["muted"], font=fb)
 
-    # Global score
-    add_bg_rect(slide, Inches(0.3), Inches(3.9), Inches(12.7), Inches(0.08), theme["accent"])
+    sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
+    add_bg_rect(slide, Inches(0.3), Inches(3.9), Inches(12.7), Inches(0.03), sep_color)
     add_text(slide, f"Score ESG Global : {scores.total_esg_score}/100  —  Note : {scores.rating}",
-             Inches(0.3), Inches(4.1), Inches(10), Inches(0.6),
-             font_size=20, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER)
+             Inches(0.3), Inches(4.05), Inches(12.7), Inches(0.6),
+             font_size=20, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=ft)
 
-    # Radar chart
     if "radar" in chart_images:
         add_image_from_bytes(slide, chart_images["radar"],
                              Inches(0.3), Inches(4.8), Inches(5.5), Inches(2.5))
-
-    # Bar chart
     if "bars" in chart_images:
         add_image_from_bytes(slide, chart_images["bars"],
                              Inches(6.0), Inches(4.8), Inches(7.0), Inches(2.5))
 
     # ── SLIDE 3: Environnement ───────────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["env"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["env"])
-
-    add_text(slide, "🌍  Pilier Environnemental", Inches(0.3), Inches(0.12),
-             Inches(12), Inches(0.85), font_size=26, bold=True, color=theme["text_light"])
+    slide = content_slide(prs, blank_layout, theme, style, "🌍  Pilier Environnemental", theme["env"])
 
     env = request.environmental
     env_kpis = []
@@ -240,34 +396,17 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if env.waste_recycled_percent is not None:
         env_kpis.append(("Taux de recyclage", f"{env.waste_recycled_percent:.1f}%"))
 
-    cols = [Inches(0.3), Inches(4.55), Inches(8.8)]
-    for idx, (kpi_label, kpi_val) in enumerate(env_kpis[:9]):
-        col = cols[idx % 3]
-        row = Inches(1.3) + (idx // 3) * Inches(1.9)
-        card = add_bg_rect(slide, col, row, Inches(4.0), Inches(1.7), theme["card_bg"])
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(0.1), theme["env"])
-        add_text(slide, kpi_label, col + Inches(0.15), row + Inches(0.15),
-                 Inches(3.7), Inches(0.45), font_size=11, color=theme["subtitle"])
-        add_text(slide, kpi_val, col + Inches(0.15), row + Inches(0.6),
-                 Inches(3.7), Inches(0.85), font_size=22, bold=True, color=theme["env"])
+    kpi_grid(slide, env_kpis, theme, style, theme["env"])
+    add_text(slide, f"Score E — {scores.environmental_score:.0f}/100",
+             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
+             font_size=16, bold=True, color=theme["env"], align=PP_ALIGN.RIGHT, font=ft)
 
-    score_pos_left = Inches(10.0)
-    add_text(slide, f"Score E\n{scores.environmental_score:.0f}/100",
-             score_pos_left, Inches(6.5), Inches(3), Inches(0.9),
-             font_size=18, bold=True, color=theme["env"], align=PP_ALIGN.RIGHT)
-
-    if "emissions_pie" in chart_images:
+    if "emissions_pie" in chart_images and len(env_kpis) <= 6:
         add_image_from_bytes(slide, chart_images["emissions_pie"],
                              Inches(9.5), Inches(1.2), Inches(3.7), Inches(3.0))
 
     # ── SLIDE 4: Social ──────────────────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["social"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["social"])
-
-    add_text(slide, "👥  Pilier Social", Inches(0.3), Inches(0.12),
-             Inches(12), Inches(0.85), font_size=26, bold=True, color=theme["text_light"])
+    slide = content_slide(prs, blank_layout, theme, style, "👥  Pilier Social", theme["social"])
 
     soc = request.social
     soc_kpis = []
@@ -290,28 +429,13 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if soc.disabled_employees_percent is not None:
         soc_kpis.append(("Salariés handicapés", f"{soc.disabled_employees_percent:.1f}%"))
 
-    for idx, (kpi_label, kpi_val) in enumerate(soc_kpis[:9]):
-        col = cols[idx % 3]
-        row = Inches(1.3) + (idx // 3) * Inches(1.9)
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(1.7), theme["card_bg"])
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(0.1), theme["social"])
-        add_text(slide, kpi_label, col + Inches(0.15), row + Inches(0.15),
-                 Inches(3.7), Inches(0.45), font_size=11, color=theme["subtitle"])
-        add_text(slide, kpi_val, col + Inches(0.15), row + Inches(0.6),
-                 Inches(3.7), Inches(0.85), font_size=22, bold=True, color=theme["social"])
-
-    add_text(slide, f"Score S\n{scores.social_score:.0f}/100",
-             Inches(10.0), Inches(6.5), Inches(3), Inches(0.9),
-             font_size=18, bold=True, color=theme["social"], align=PP_ALIGN.RIGHT)
+    kpi_grid(slide, soc_kpis, theme, style, theme["social"])
+    add_text(slide, f"Score S — {scores.social_score:.0f}/100",
+             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
+             font_size=16, bold=True, color=theme["social"], align=PP_ALIGN.RIGHT, font=ft)
 
     # ── SLIDE 5: Gouvernance ─────────────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["gov"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["gov"])
-
-    add_text(slide, "⚖️  Pilier Gouvernance", Inches(0.3), Inches(0.12),
-             Inches(12), Inches(0.85), font_size=26, bold=True, color=theme["text_light"])
+    slide = content_slide(prs, blank_layout, theme, style, "⚖️  Pilier Gouvernance", theme["gov"])
 
     gov = request.governance
     gov_kpis = []
@@ -332,60 +456,37 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     gov_kpis.append(("Audit ESG conduit", "Oui ✓" if gov.esg_audit_conducted else "Non ✗"))
     gov_kpis.append(("Comité durabilité", "Oui ✓" if gov.sustainability_committee else "Non ✗"))
 
-    for idx, (kpi_label, kpi_val) in enumerate(gov_kpis[:9]):
-        col = cols[idx % 3]
-        row = Inches(1.3) + (idx // 3) * Inches(1.9)
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(1.7), theme["card_bg"])
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(0.1), theme["gov"])
-        add_text(slide, kpi_label, col + Inches(0.15), row + Inches(0.15),
-                 Inches(3.7), Inches(0.45), font_size=11, color=theme["subtitle"])
-        add_text(slide, kpi_val, col + Inches(0.15), row + Inches(0.6),
-                 Inches(3.7), Inches(0.85), font_size=20, bold=True, color=theme["gov"])
-
-    add_text(slide, f"Score G\n{scores.governance_score:.0f}/100",
-             Inches(10.0), Inches(6.5), Inches(3), Inches(0.9),
-             font_size=18, bold=True, color=theme["gov"], align=PP_ALIGN.RIGHT)
+    kpi_grid(slide, gov_kpis, theme, style, theme["gov"])
+    add_text(slide, f"Score G — {scores.governance_score:.0f}/100",
+             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
+             font_size=16, bold=True, color=theme["gov"], align=PP_ALIGN.RIGHT, font=ft)
 
     # ── SLIDE 6: Forces & Faiblesses ────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["bg_primary"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
+    slide = content_slide(prs, blank_layout, theme, style, "Analyse Stratégique ESG", header_color)
 
-    add_text(slide, "Analyse Stratégique ESG", Inches(0.3), Inches(0.12),
-             Inches(12), Inches(0.85), font_size=26, bold=True, color=theme["text_light"])
-
-    # Forces (left)
-    add_bg_rect(slide, Inches(0.3), Inches(1.2), Inches(6.0), Inches(5.8), theme["card_bg"])
-    add_bg_rect(slide, Inches(0.3), Inches(1.2), Inches(6.0), Inches(0.55), theme["env"])
-    add_text(slide, "  ✅  Points Forts", Inches(0.3), Inches(1.2),
-             Inches(6.0), Inches(0.55), font_size=14, bold=True, color=theme["text_light"])
-
-    for i, strength in enumerate(scores.strengths):
-        add_text(slide, f"• {strength}",
-                 Inches(0.5), Inches(1.85) + i * Inches(0.85),
-                 Inches(5.6), Inches(0.8), font_size=12, color=theme["text_dark"])
-
-    # Faiblesses (right)
-    add_bg_rect(slide, Inches(6.9), Inches(1.2), Inches(6.1), Inches(5.8), theme["card_bg"])
-    add_bg_rect(slide, Inches(6.9), Inches(1.2), Inches(6.1), Inches(0.55), RGBColor(0xE7, 0x4C, 0x3C))
-    add_text(slide, "  ⚠️  Axes d'Amélioration", Inches(6.9), Inches(1.2),
-             Inches(6.1), Inches(0.55), font_size=14, bold=True, color=theme["text_light"])
-
-    for i, weakness in enumerate(scores.weaknesses):
-        add_text(slide, f"• {weakness}",
-                 Inches(7.1), Inches(1.85) + i * Inches(0.85),
-                 Inches(5.7), Inches(0.8), font_size=12, color=theme["text_dark"])
+    red = RGBColor(0xE7, 0x4C, 0x3C)
+    panel_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
+    for (px, pw, ptitle, pcolor, items) in [
+        (Inches(0.3), Inches(6.0), "✅  Points Forts", theme["env"], scores.strengths),
+        (Inches(6.9), Inches(6.1), "⚠️  Axes d'Amélioration", red, scores.weaknesses),
+    ]:
+        if style["card"] == "outline":
+            add_shape(slide, RECT, px, Inches(1.2), pw, Inches(5.8), fill=theme["card_bg"],
+                      line_color=RGBColor(0xE0, 0xE0, 0xE0), line_width_pt=1.0)
+            add_text(slide, "  " + ptitle, px, Inches(1.3), pw, Inches(0.5),
+                     font_size=14, bold=True, color=pcolor, font=ft)
+        else:
+            add_shape(slide, panel_shape, px, Inches(1.2), pw, Inches(5.8), fill=theme["card_bg"])
+            add_shape(slide, panel_shape, px, Inches(1.2), pw, Inches(0.55), fill=pcolor)
+            add_text(slide, "  " + ptitle, px, Inches(1.2), pw, Inches(0.55),
+                     font_size=14, bold=True, color=theme["text_light"], font=ft)
+        for i, item in enumerate(items):
+            add_text(slide, f"• {item}", px + Inches(0.2), Inches(1.95) + i * Inches(0.85),
+                     pw - Inches(0.4), Inches(0.8), font_size=12, color=theme["text_dark"], font=fb)
 
     # ── SLIDE 7: Recommandations ─────────────────────────────────────────
     if request.include_recommendations:
-        slide = prs.slides.add_slide(blank_layout)
-        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-        add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["bg_primary"])
-        add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
-
-        add_text(slide, "Recommandations Prioritaires", Inches(0.3), Inches(0.12),
-                 Inches(12), Inches(0.85), font_size=26, bold=True, color=theme["text_light"])
+        slide = content_slide(prs, blank_layout, theme, style, "Recommandations Prioritaires", header_color)
 
         rec_colors = [theme["env"], theme["social"], theme["gov"], theme["accent"],
                       theme["env"], theme["social"]]
@@ -393,22 +494,16 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             row = Inches(1.2) + (i % 3) * Inches(2.0)
             col = Inches(0.3) + (i // 3) * Inches(6.5)
             num_color = rec_colors[i]
-            add_bg_rect(slide, col, row, Inches(6.1), Inches(1.8), theme["card_bg"])
-            add_bg_rect(slide, col, row, Inches(0.5), Inches(1.8), num_color)
-            add_text(slide, str(i + 1), col, row + Inches(0.5),
-                     Inches(0.5), Inches(0.8), font_size=20, bold=True,
-                     color=theme["text_light"], align=PP_ALIGN.CENTER)
-            add_text(slide, rec, col + Inches(0.6), row + Inches(0.25),
-                     Inches(5.4), Inches(1.3), font_size=11, color=theme["text_dark"])
+            kpi_card(slide, col, row, Inches(6.1), Inches(1.8), theme, style, num_color)
+            add_text(slide, str(i + 1), col + Inches(0.1), row + Inches(0.5),
+                     Inches(0.5), Inches(0.8), font_size=22, bold=True,
+                     color=num_color, align=PP_ALIGN.CENTER, font=ft)
+            add_text(slide, rec, col + Inches(0.7), row + Inches(0.25),
+                     Inches(5.2), Inches(1.3), font_size=11, color=theme["text_dark"], font=fb)
 
     # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
-    slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), theme["bg_primary"])
-    add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
-
-    add_text(slide, "Alignement — ODD & Cadres de Référence", Inches(0.3), Inches(0.12),
-             Inches(12), Inches(0.85), font_size=24, bold=True, color=theme["text_light"])
+    slide = content_slide(prs, blank_layout, theme, style,
+                          "Alignement — ODD & Cadres de Référence", header_color)
 
     odds = [
         ("ODD 7", "Énergie propre", theme["accent"]),
@@ -418,31 +513,43 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         ("ODD 13", "Action climatique", theme["env"]),
         ("ODD 16", "Paix & Institutions", theme["gov"]),
     ]
-
+    odd_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
     for idx, (odd_num, odd_label, odd_color) in enumerate(odds):
         col = Inches(0.3) + (idx % 3) * Inches(4.3)
         row = Inches(1.3) + (idx // 3) * Inches(1.8)
-        add_bg_rect(slide, col, row, Inches(4.0), Inches(1.6), odd_color)
+        if style["card"] == "outline":
+            add_shape(slide, RECT, col, row, Inches(4.0), Inches(1.6), fill=theme["card_bg"],
+                      line_color=odd_color, line_width_pt=1.5)
+            txt_color, sub_color = odd_color, theme["text_dark"]
+        else:
+            add_shape(slide, odd_shape, col, row, Inches(4.0), Inches(1.6), fill=odd_color)
+            txt_color = sub_color = RGBColor(0xFF, 0xFF, 0xFF)
         add_text(slide, odd_num, col + Inches(0.15), row + Inches(0.1),
-                 Inches(3.7), Inches(0.6), font_size=18, bold=True,
-                 color=RGBColor(0xFF, 0xFF, 0xFF))
+                 Inches(3.7), Inches(0.6), font_size=18, bold=True, color=txt_color, font=ft)
         add_text(slide, odd_label, col + Inches(0.15), row + Inches(0.75),
-                 Inches(3.7), Inches(0.7), font_size=13,
-                 color=RGBColor(0xFF, 0xFF, 0xFF))
+                 Inches(3.7), Inches(0.7), font_size=13, color=sub_color, font=fb)
 
     frameworks = ["GRI Standards", "TCFD", "CSRD / DPEF", "SFDR", "ISO 14001 / 26000"]
-    add_bg_rect(slide, Inches(0.3), Inches(5.1), Inches(12.7), Inches(0.08), theme["accent"])
+    add_bg_rect(slide, Inches(0.3), Inches(5.1), Inches(12.7), Inches(0.03), sep_color)
     add_text(slide, "Cadres reportés : " + "  |  ".join(frameworks),
              Inches(0.3), Inches(5.3), Inches(12.7), Inches(0.6),
-             font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER)
+             font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=fb)
 
     # ── SLIDE 9: Conclusion ──────────────────────────────────────────────
     slide = prs.slides.add_slide(blank_layout)
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-    add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
+    if style["cover"] == "minimal":
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+        concl_title_color, concl_text_color = theme["text_dark"], theme["muted"]
+        add_bg_rect(slide, Inches(0.6), Inches(0.7), Inches(0.3), Inches(0.3), theme["accent"])
+        title_top = Inches(1.2)
+    else:
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+        add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
+        concl_title_color, concl_text_color = theme["text_light"], theme["subtitle"]
+        title_top = Inches(0.8)
 
-    add_text(slide, "Conclusion & Engagements", Inches(0.6), Inches(0.8),
-             Inches(11), Inches(1.0), font_size=30, bold=True, color=theme["text_light"])
+    add_text(slide, maybe_upper("Conclusion & Engagements", style), Inches(0.6), title_top,
+             Inches(11), Inches(1.0), font_size=30, bold=True, color=concl_title_color, font=ft)
 
     conclusion_text = content.get("conclusion",
         f"{request.company.name} affiche un score ESG global de {scores.total_esg_score}/100 "
@@ -450,16 +557,16 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         "La société s'engage à renforcer ses performances sur les axes identifiés "
         "et à maintenir la transparence de son reporting extra-financier."
     )
-    add_text(slide, conclusion_text, Inches(0.6), Inches(2.0),
-             Inches(11.5), Inches(2.8), font_size=14, color=theme["subtitle"])
+    add_text(slide, conclusion_text, Inches(0.6), Inches(2.2),
+             Inches(11.5), Inches(2.8), font_size=14, color=concl_text_color, font=fb)
 
     add_text(slide, f"Score ESG : {scores.total_esg_score}/100  —  Note : {scores.rating}",
              Inches(0.6), Inches(5.0), Inches(10), Inches(0.7),
-             font_size=22, bold=True, color=theme["accent"])
+             font_size=22, bold=True, color=theme["accent"], font=ft)
 
     add_text(slide, f"© {request.company.reporting_year} {request.company.name} — Document confidentiel",
              Inches(0.6), Inches(6.7), Inches(11), Inches(0.4),
-             font_size=9, italic=True, color=theme["subtitle"])
+             font_size=9, italic=True, color=concl_text_color, font=fb)
 
     buf = io.BytesIO()
     prs.save(buf)

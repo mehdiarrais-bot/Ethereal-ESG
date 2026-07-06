@@ -28,19 +28,53 @@ THEME_HEX = {
 }
 
 
+# Design language per theme: fonts + heading treatment
+DOCX_STYLES = {
+    AestheticTheme.CORPORATE_BLUE: {
+        "font": "Calibri", "heading": "plain", "uppercase": False, "h1_size": 22,
+    },
+    AestheticTheme.GREEN_NATURE: {
+        "font": "Trebuchet MS", "heading": "shaded", "uppercase": False, "h1_size": 17,
+    },
+    AestheticTheme.DARK_PREMIUM: {
+        "font": "Georgia", "heading": "plain", "uppercase": True, "h1_size": 19,
+    },
+    AestheticTheme.MINIMAL_WHITE: {
+        "font": "Segoe UI", "heading": "plain", "uppercase": True, "h1_size": 14,
+    },
+}
+
+
 def hex_to_rgb(h):
     h = h.lstrip('#')
     return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
 
-def add_heading(doc, text, level, color_hex, size=None):
+def shade_paragraph(p, color_hex):
+    pPr = p._p.get_or_add_pPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:fill'), color_hex)
+    pPr.append(shd)
+
+
+def add_heading(doc, text, level, color_hex, size=None, style=None):
+    style = style or DOCX_STYLES[AestheticTheme.CORPORATE_BLUE]
+    if style["uppercase"]:
+        text = text.upper()
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     run = p.add_run(text)
     run.bold = True
-    run.font.color.rgb = hex_to_rgb(color_hex)
-    sizes = {1: 22, 2: 16, 3: 13}
-    run.font.size = Pt(size or sizes.get(level, 13))
+    run.font.name = style["font"]
+    sizes = {1: style["h1_size"], 2: max(12, style["h1_size"] - 5), 3: 12}
+    run.font.size = Pt(size or sizes.get(level, 12))
+    if style["heading"] == "shaded" and level == 1:
+        # Green Nature: white text on colored band
+        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        shade_paragraph(p, color_hex)
+    else:
+        run.font.color.rgb = hex_to_rgb(color_hex)
     p.paragraph_format.space_before = Pt(14)
     p.paragraph_format.space_after = Pt(6)
     return p
@@ -115,8 +149,12 @@ def add_bullet_list(doc, items, icon, color_hex):
 
 def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) -> bytes:
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
+    style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
 
     doc = Document()
+    normal = doc.styles['Normal']
+    normal.font.name = style["font"]
+    normal.font.size = Pt(10.5)
 
     # Page margins
     for section in doc.sections:
@@ -130,8 +168,19 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     title_run = title_p.add_run(request.company.name.upper())
     title_run.font.size = Pt(32)
     title_run.bold = True
-    title_run.font.color.rgb = hex_to_rgb(colors["primary"])
-    title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    title_run.font.name = style["font"]
+    if request.aesthetic_theme == AestheticTheme.DARK_PREMIUM:
+        # Luxe: white serif title on a dark band
+        title_run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        shade_paragraph(title_p, "0D1117")
+        title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    elif request.aesthetic_theme == AestheticTheme.GREEN_NATURE:
+        title_run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        shade_paragraph(title_p, colors["primary"])
+        title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    else:
+        title_run.font.color.rgb = hex_to_rgb(colors["primary"])
+        title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     title_p.paragraph_format.space_after = Pt(4)
 
     add_hr(doc, colors["accent"])
@@ -193,7 +242,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     doc.add_page_break()
 
     # ── 1. Synthèse Exécutive ─────────────────────────────────────────────
-    add_heading(doc, "1. Synthèse Exécutive", 1, colors["primary"])
+    add_heading(doc, "1. Synthèse Exécutive", 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
     exec_text = content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
@@ -201,7 +250,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
 
     # ── 2. Environnement ──────────────────────────────────────────────────
-    add_heading(doc, "2. Pilier Environnemental", 1, colors["env"])
+    add_heading(doc, "2. Pilier Environnemental", 1, colors["env"], style=style)
     add_hr(doc, colors["env"])
     add_score_block(doc, "Score Environnemental", scores.environmental_score, colors["env"])
 
@@ -221,7 +270,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     add_kpi_table(doc, env_kpis, colors)
 
     # ── 3. Social ──────────────────────────────────────────────────────────
-    add_heading(doc, "3. Pilier Social", 1, colors["social"])
+    add_heading(doc, "3. Pilier Social", 1, colors["social"], style=style)
     add_hr(doc, colors["social"])
     add_score_block(doc, "Score Social", scores.social_score, colors["social"])
 
@@ -239,7 +288,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     add_kpi_table(doc, soc_kpis, colors)
 
     # ── 4. Gouvernance ────────────────────────────────────────────────────
-    add_heading(doc, "4. Pilier Gouvernance", 1, colors["gov"])
+    add_heading(doc, "4. Pilier Gouvernance", 1, colors["gov"], style=style)
     add_hr(doc, colors["gov"])
     add_score_block(doc, "Score Gouvernance", scores.governance_score, colors["gov"])
 
@@ -259,17 +308,17 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     doc.add_page_break()
 
     # ── 5. Analyse Stratégique ────────────────────────────────────────────
-    add_heading(doc, "5. Analyse Stratégique ESG", 1, colors["primary"])
+    add_heading(doc, "5. Analyse Stratégique ESG", 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
 
-    add_heading(doc, "Points Forts", 2, colors["env"])
+    add_heading(doc, "Points Forts", 2, colors["env"], style=style)
     add_bullet_list(doc, scores.strengths, "✅", colors["env"])
 
-    add_heading(doc, "Axes d'Amélioration", 2, "E74C3C")
+    add_heading(doc, "Axes d'Amélioration", 2, "E74C3C", style=style)
     add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
 
     if request.include_recommendations and scores.recommendations:
-        add_heading(doc, "6. Recommandations Prioritaires", 1, colors["primary"])
+        add_heading(doc, "6. Recommandations Prioritaires", 1, colors["primary"], style=style)
         add_hr(doc, colors["accent"])
         for i, rec in enumerate(scores.recommendations, 1):
             p = doc.add_paragraph()
@@ -280,7 +329,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
             p.paragraph_format.space_after = Pt(4)
 
     # ── 7. Référentiels ───────────────────────────────────────────────────
-    add_heading(doc, "7. Cadres de Référence & Alignement ODD", 1, colors["primary"])
+    add_heading(doc, "7. Cadres de Référence & Alignement ODD", 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
     ref_text = (
         "Ce rapport s'inscrit dans les cadres de référence suivants : GRI Standards, TCFD, CSRD, SFDR et ISO 14001/26000. "
@@ -291,7 +340,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
 
     # ── Conclusion ────────────────────────────────────────────────────────
     doc.add_page_break()
-    add_heading(doc, "8. Conclusion", 1, colors["primary"])
+    add_heading(doc, "8. Conclusion", 1, colors["primary"], style=style)
     add_hr(doc, colors["primary"])
     conclusion = content.get("conclusion",
         f"{request.company.name} réaffirme son engagement vers un modèle d'affaires durable. "
