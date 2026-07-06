@@ -41,6 +41,9 @@ class AestheticTheme(str, Enum):
     GREEN_NATURE = "green_nature"
     DARK_PREMIUM = "dark_premium"
     MINIMAL_WHITE = "minimal_white"
+    SUNSET_TERRACOTTA = "sunset_terracotta"
+    OCEAN_DEEP = "ocean_deep"
+    ROYAL_PURPLE = "royal_purple"
 
 
 class ReportType(str, Enum):
@@ -113,6 +116,24 @@ class GovernanceData(BaseModel):
         return self
 
 
+_LOGO_RE = re.compile(r'^data:image/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\r\n]+)$')
+MAX_LOGO_BYTES = 1_500_000  # 1,5 Mo décodé
+
+
+def decode_logo(data_url: Optional[str]) -> Optional[bytes]:
+    """Décode un logo data-URL déjà validé. Retourne None si absent/invalide."""
+    if not data_url:
+        return None
+    m = _LOGO_RE.match(data_url)
+    if not m:
+        return None
+    import base64
+    try:
+        return base64.b64decode(m.group(2), validate=False)
+    except Exception:
+        return None
+
+
 class CompanyInfo(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     sector: str = Field(..., min_length=1, max_length=100)
@@ -120,11 +141,49 @@ class CompanyInfo(BaseModel):
     revenue_eur: Optional[float] = Field(None, ge=0, le=1e13)
     reporting_year: int = Field(2024, ge=2000, le=2035)
     logo_description: Optional[str] = Field(None, max_length=200)
+    presenter_name: Optional[str] = Field(None, max_length=100)
+    presenter_title: Optional[str] = Field(None, max_length=100)
+    logo_base64: Optional[str] = Field(None, max_length=2_100_000)
 
     @field_validator('name', 'sector', 'country', mode='before')
     @classmethod
     def sanitize(cls, v):
         return sanitize_text(str(v) if v is not None else '')
+
+    @field_validator('presenter_name', 'presenter_title', mode='before')
+    @classmethod
+    def sanitize_optional(cls, v):
+        if v is None or v == '':
+            return None
+        return sanitize_text(str(v), 100)
+
+    @field_validator('logo_base64', mode='after')
+    @classmethod
+    def check_logo(cls, v):
+        if not v:
+            return None
+        m = _LOGO_RE.match(v)
+        if not m:
+            raise ValueError("Logo invalide : format PNG ou JPEG attendu")
+        import base64, io as _io
+        try:
+            raw = base64.b64decode(m.group(2), validate=False)
+        except Exception:
+            raise ValueError("Logo invalide : encodage base64 illisible")
+        if len(raw) > MAX_LOGO_BYTES:
+            raise ValueError("Logo trop volumineux (max 1,5 Mo)")
+        try:
+            from PIL import Image as PILImage
+            img = PILImage.open(_io.BytesIO(raw))
+            img.verify()
+            img = PILImage.open(_io.BytesIO(raw))
+            if img.width > 4000 or img.height > 4000:
+                raise ValueError("Logo trop grand (max 4000×4000 pixels)")
+        except ValueError:
+            raise
+        except Exception:
+            raise ValueError("Logo invalide : le fichier n'est pas une image lisible")
+        return v
 
     @field_validator('revenue_eur', mode='after')
     @classmethod
@@ -145,6 +204,7 @@ class ESGRequest(BaseModel):
     language: str = Field("fr", pattern=r'^(fr|en)$')
     include_recommendations: bool = True
     include_benchmarks: bool = True
+    include_cover_image: bool = True
 
 
 class ESGScores(BaseModel):

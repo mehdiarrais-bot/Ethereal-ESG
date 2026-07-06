@@ -27,6 +27,7 @@ export function useESGScore(form) {
     language: f.language,
     include_recommendations: f.include_recommendations,
     include_benchmarks: f.include_benchmarks,
+    include_cover_image: f.include_cover_image ?? true,
   })
 
   useEffect(() => {
@@ -35,10 +36,14 @@ export function useESGScore(form) {
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
+        // Le calcul de score n'utilise pas le logo : on l'exclut pour ne pas
+        // renvoyer ~2 Mo de base64 à chaque frappe.
+        const p = buildPayload(form)
+        p.company = { ...p.company, logo_base64: null }
         const res = await fetch('/api/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildPayload(form)),
+          body: JSON.stringify(p),
         })
         if (res.ok) setScores(await res.json())
       } catch {}

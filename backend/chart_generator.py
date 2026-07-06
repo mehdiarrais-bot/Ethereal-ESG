@@ -47,17 +47,55 @@ THEME_COLORS = {
         "bg": "#FAFAFA",
         "text": "#212121",
     },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "primary": "#9A3412",
+        "secondary": "#E76F51",
+        "accent": "#F4A261",
+        "env": "#2A9D8F",
+        "social": "#E76F51",
+        "gov": "#6D597A",
+        "bg": "#FDF6F0",
+        "text": "#4A2C22",
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "primary": "#0F4C5C",
+        "secondary": "#277DA1",
+        "accent": "#00BFA6",
+        "env": "#43AA8B",
+        "social": "#277DA1",
+        "gov": "#577590",
+        "bg": "#F4FBFC",
+        "text": "#123B44",
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "primary": "#2B1055",
+        "secondary": "#B9A6E0",
+        "accent": "#FFD54F",
+        "env": "#2E9E62",
+        "social": "#7E9BF5",
+        "gov": "#C08CF5",
+        "bg": "#241047",
+        "text": "#F2EDFB",
+    },
 }
 
 
-def get_colors(theme: AestheticTheme) -> dict:
-    return THEME_COLORS.get(theme, THEME_COLORS[AestheticTheme.CORPORATE_BLUE])
+DARK_THEMES = {AestheticTheme.DARK_PREMIUM, AestheticTheme.ROYAL_PURPLE}
 
 
-def radar_chart(scores: ESGScores, theme: AestheticTheme) -> bytes:
-    colors = get_colors(theme)
+def get_colors(theme: AestheticTheme, light_bg: bool = False) -> dict:
+    c = dict(THEME_COLORS.get(theme, THEME_COLORS[AestheticTheme.CORPORATE_BLUE]))
+    if light_bg and theme in DARK_THEMES:
+        # Variante pour insertion sur page blanche (PDF)
+        c["bg"] = "#FFFFFF"
+        c["text"] = "#2C3E50"
+        c["secondary"] = "#5A6B7C"
+    return c
+
+
+def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    colors = get_colors(theme, light_bg)
     bg = colors["bg"]
-    is_dark = theme == AestheticTheme.DARK_PREMIUM
 
     categories = ['Environnement', 'Social', 'Gouvernance']
     values = [scores.environmental_score, scores.social_score, scores.governance_score]
@@ -94,8 +132,8 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def score_bars_chart(scores: ESGScores, theme: AestheticTheme) -> bytes:
-    colors = get_colors(theme)
+def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    colors = get_colors(theme, light_bg)
     bg = colors["bg"]
 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
@@ -135,8 +173,8 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme) -> bytes:
-    colors = get_colors(theme)
+def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    colors = get_colors(theme, light_bg)
     bg = colors["bg"]
 
     data = {}

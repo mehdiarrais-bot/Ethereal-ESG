@@ -5,7 +5,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-import copy
 from models import ESGRequest, ESGScores, AestheticTheme
 
 THEME_HEX = {
@@ -25,6 +24,18 @@ THEME_HEX = {
         "primary": "212121", "secondary": "1E88E5", "accent": "FF6F00",
         "env": "43A047", "social": "1E88E5", "gov": "8E24AA",
     },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "primary": "9A3412", "secondary": "E76F51", "accent": "F4A261",
+        "env": "2A9D8F", "social": "E76F51", "gov": "6D597A",
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "primary": "0F4C5C", "secondary": "277DA1", "accent": "00BFA6",
+        "env": "43AA8B", "social": "277DA1", "gov": "577590",
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "primary": "2B1055", "secondary": "5E35B1", "accent": "D4A017",
+        "env": "2E9E62", "social": "4A5FC1", "gov": "8E24AA",
+    },
 }
 
 
@@ -41,6 +52,15 @@ DOCX_STYLES = {
     },
     AestheticTheme.MINIMAL_WHITE: {
         "font": "Segoe UI", "heading": "plain", "uppercase": True, "h1_size": 14,
+    },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "font": "Cambria", "heading": "shaded", "uppercase": False, "h1_size": 17,
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "font": "Segoe UI", "heading": "plain", "uppercase": False, "h1_size": 20,
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "font": "Georgia", "heading": "plain", "uppercase": True, "h1_size": 19,
     },
 }
 
@@ -147,7 +167,8 @@ def add_bullet_list(doc, items, icon, color_hex):
         p.paragraph_format.space_after = Pt(3)
 
 
-def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) -> bytes:
+def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
+                         logo_bytes: bytes = None, cover_art: bytes = None) -> bytes:
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
     style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
 
@@ -164,6 +185,15 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
         section.right_margin = Cm(2.5)
 
     # ── Cover ─────────────────────────────────────────────────────────────
+    # Logo entreprise
+    if logo_bytes:
+        try:
+            logo_p = doc.add_paragraph()
+            logo_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            logo_p.add_run().add_picture(io.BytesIO(logo_bytes), height=Cm(2))
+        except Exception:
+            pass
+
     title_p = doc.add_paragraph()
     title_run = title_p.add_run(request.company.name.upper())
     title_run.font.size = Pt(32)
@@ -202,7 +232,29 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
     )
     meta_run.font.size = Pt(11)
     meta_run.font.color.rgb = hex_to_rgb("7F8C8D")
-    meta_p.paragraph_format.space_after = Pt(20)
+    meta_p.paragraph_format.space_after = Pt(8)
+
+    # Présentateur
+    if request.company.presenter_name:
+        pres_line = f"Présenté par {request.company.presenter_name}"
+        if request.company.presenter_title:
+            pres_line += f" — {request.company.presenter_title}"
+        pres_p = doc.add_paragraph()
+        pres_run = pres_p.add_run(pres_line)
+        pres_run.font.size = Pt(11)
+        pres_run.italic = True
+        pres_run.font.color.rgb = hex_to_rgb(colors["secondary"])
+        pres_p.paragraph_format.space_after = Pt(12)
+
+    # Illustration de couverture (générée localement)
+    if cover_art:
+        try:
+            art_p = doc.add_paragraph()
+            art_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            art_p.add_run().add_picture(io.BytesIO(cover_art), width=Cm(16))
+            art_p.paragraph_format.space_after = Pt(12)
+        except Exception:
+            pass
 
     # Score summary table
     summary_table = doc.add_table(rows=2, cols=4)
@@ -259,14 +311,14 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
 
     env = request.environmental
     env_kpis = []
-    if env.co2_emissions_tonnes: env_kpis.append(("CO₂ total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
-    if env.energy_consumption_mwh: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
-    if env.water_consumption_m3: env_kpis.append(("Eau (m³)", f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
-    if env.scope1_emissions: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
-    if env.scope2_emissions: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
+    if env.co2_emissions_tonnes is not None: env_kpis.append(("CO₂ total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
+    if env.renewable_energy_percent is not None: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
+    if env.energy_consumption_mwh is not None: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
+    if env.water_consumption_m3 is not None: env_kpis.append(("Eau (m³)", f"{env.water_consumption_m3:,.0f}"))
+    if env.waste_recycled_percent is not None: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
+    if env.scope1_emissions is not None: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
+    if env.scope2_emissions is not None: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
+    if env.scope3_emissions is not None: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
     add_kpi_table(doc, env_kpis, colors)
 
     # ── 3. Social ──────────────────────────────────────────────────────────
@@ -279,12 +331,12 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
 
     soc = request.social
     soc_kpis = []
-    if soc.total_employees: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
-    if soc.female_employees_percent: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate: soc_kpis.append(("TF accidents", f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
+    if soc.total_employees is not None: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
+    if soc.female_employees_percent is not None: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
+    if soc.employee_turnover_percent is not None: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
+    if soc.training_hours_per_employee is not None: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
+    if soc.accident_frequency_rate is not None: soc_kpis.append(("TF accidents", f"{soc.accident_frequency_rate:.2f}"))
+    if soc.customer_satisfaction_score is not None: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
     add_kpi_table(doc, soc_kpis, colors)
 
     # ── 4. Gouvernance ────────────────────────────────────────────────────
@@ -297,12 +349,14 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict) 
 
     gov = request.governance
     gov_kpis = []
-    if gov.board_members: gov_kpis.append(("Membres CA", str(gov.board_members)))
-    if gov.female_board_percent: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
-    if gov.csr_budget_eur: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
-    gov_kpis.append(("Audit ESG", "✓ Oui" if gov.esg_audit_conducted else "✗ Non"))
-    gov_kpis.append(("Comité durable", "✓ Oui" if gov.sustainability_committee else "✗ Non"))
+    if gov.board_members is not None: gov_kpis.append(("Membres CA", str(gov.board_members)))
+    if gov.female_board_percent is not None: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
+    if gov.independent_board_percent is not None: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
+    if gov.csr_budget_eur is not None: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
+    if gov.esg_audit_conducted is not None:
+        gov_kpis.append(("Audit ESG", "✓ Oui" if gov.esg_audit_conducted else "✗ Non"))
+    if gov.sustainability_committee is not None:
+        gov_kpis.append(("Comité durable", "✓ Oui" if gov.sustainability_committee else "✗ Non"))
     add_kpi_table(doc, gov_kpis, colors)
 
     doc.add_page_break()

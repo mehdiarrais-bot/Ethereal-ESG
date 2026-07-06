@@ -21,7 +21,8 @@ const STEPS = [
 ]
 
 const EMPTY_FORM = {
-  company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024 },
+  company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024,
+    presenter_name: '', presenter_title: '', logo_base64: null },
   environmental: {
     co2_emissions_tonnes: '', energy_consumption_mwh: '', renewable_energy_percent: '',
     water_consumption_m3: '', waste_generated_tonnes: '', waste_recycled_percent: '',
@@ -44,17 +45,7 @@ const EMPTY_FORM = {
   language: 'fr',
   include_recommendations: true,
   include_benchmarks: true,
-}
-
-function cleanNumeric(obj) {
-  if (typeof obj !== 'object' || obj === null) return obj
-  const result = {}
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === '' || v === undefined) result[k] = null
-    else if (typeof v === 'object' && !Array.isArray(v)) result[k] = cleanNumeric(v)
-    else result[k] = v
-  }
-  return result
+  include_cover_image: true,
 }
 
 export default function App() {
@@ -114,7 +105,11 @@ export default function App() {
       })
       if (!res.ok) {
         let msg = `Erreur serveur ${res.status}`
-        try { const j = await res.json(); msg = j.detail || msg } catch {}
+        try {
+          const j = await res.json()
+          if (Array.isArray(j.detail)) msg = j.detail.map(d => d.msg || JSON.stringify(d)).join(' ; ')
+          else if (j.detail) msg = j.detail
+        } catch {}
         throw new Error(msg)
       }
       setDownloadProgress(95)

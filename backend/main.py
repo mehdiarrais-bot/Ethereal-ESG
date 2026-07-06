@@ -9,8 +9,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.datastructures import MutableHeaders
 
-from models import ESGRequest, ESGScores, AestheticTheme
+from models import ESGRequest, ESGScores, AestheticTheme, decode_logo
 from esg_calculator import calculate_esg_scores
+from image_bank import cover_art
 from chart_generator import radar_chart, score_bars_chart, emissions_breakdown_chart, gauge_chart
 from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
@@ -30,7 +31,7 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "no-referrer",
 }
 
-MAX_BODY_BYTES = 100_000  # 100 KB
+MAX_BODY_BYTES = 2_500_000  # 2,5 Mo (logo base64 inclus)
 
 
 class SecurityMiddleware:
@@ -55,9 +56,20 @@ class SecurityMiddleware:
                     resp = JSONResponse(status_code=413, content={"detail": "Request too large"})
                     await resp(scope, receive, send)
                     return
-                # Rebuild receive so the body can still be read downstream
+                # Rebuild receive: yield the buffered body ONCE, then delegate
+                # to the original receive (disconnect events). Returning the body
+                # forever would spin StreamingResponse.listen_for_disconnect
+                # into a busy-loop that freezes the whole event loop.
+                original_receive = receive
+                body_sent = False
+
                 async def receive_with_body():
-                    return {"type": "http.request", "body": body, "more_body": False}
+                    nonlocal body_sent
+                    if not body_sent:
+                        body_sent = True
+                        return {"type": "http.request", "body": body, "more_body": False}
+                    return await original_receive()
+
                 receive = receive_with_body
 
             # Inject security headers into response
@@ -132,13 +144,28 @@ def calculate(request: ESGRequest):
     return scores
 
 
+def build_extras(request: ESGRequest) -> tuple:
+    """Logo décodé + illustration de couverture générée localement."""
+    logo_bytes = decode_logo(request.company.logo_base64)
+    art = None
+    if request.include_cover_image:
+        try:
+            art = cover_art(request.aesthetic_theme, request.company.name)
+        except Exception as e:
+            print(f"Cover art error: {e}")
+    return logo_bytes, art
+
+
 @app.post("/api/generate/pptx")
 def generate_presentation(request: ESGRequest):
     """Generate PowerPoint presentation."""
     scores = calculate_esg_scores(request)
     content = generate_esg_content(request, scores)
+    logo_bytes, art = build_extras(request)
 
     chart_images = {}
+    if art:
+        chart_images["cover_art"] = art
     try:
         chart_images["radar"] = radar_chart(scores, request.aesthetic_theme)
     except Exception as e:
@@ -149,7 +176,7 @@ def generate_presentation(request: ESGRequest):
         print(f"Bars chart error: {e}")
 
     env = request.environmental
-    if env.scope1_emissions or env.scope2_emissions or env.scope3_emissions:
+    if any(v is not None for v in (env.scope1_emissions, env.scope2_emissions, env.scope3_emissions)):
         try:
             chart_images["emissions_pie"] = emissions_breakdown_chart(
                 env.scope1_emissions, env.scope2_emissions, env.scope3_emissions,
@@ -158,7 +185,7 @@ def generate_presentation(request: ESGRequest):
         except Exception as e:
             print(f"Pie chart error: {e}")
 
-    pptx_bytes = generate_pptx(request, scores, content, chart_images)
+    pptx_bytes = generate_pptx(request, scores, content, chart_images, logo_bytes=logo_bytes)
 
     filename = f"ESG_{safe_name(request.company.name)}_{request.company.reporting_year}.pptx"
     return StreamingResponse(
@@ -173,24 +200,27 @@ def generate_report(request: ESGRequest):
     """Generate PDF report or white paper."""
     scores = calculate_esg_scores(request)
     content = generate_esg_content(request, scores)
+    logo_bytes, art = build_extras(request)
 
     chart_images = {}
+    if art:
+        chart_images["cover_art"] = art
     try:
-        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme)
+        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme, light_bg=True)
     except Exception as e:
         print(f"Radar chart error: {e}")
 
     env = request.environmental
-    if env.scope1_emissions or env.scope2_emissions or env.scope3_emissions:
+    if any(v is not None for v in (env.scope1_emissions, env.scope2_emissions, env.scope3_emissions)):
         try:
             chart_images["emissions_pie"] = emissions_breakdown_chart(
                 env.scope1_emissions, env.scope2_emissions, env.scope3_emissions,
-                request.aesthetic_theme
+                request.aesthetic_theme, light_bg=True
             )
         except Exception as e:
             print(f"Pie chart error: {e}")
 
-    pdf_bytes = generate_pdf_report(request, scores, content, chart_images)
+    pdf_bytes = generate_pdf_report(request, scores, content, chart_images, logo_bytes=logo_bytes)
 
     type_suffix = {
         "white_paper": "Livre_Blanc",
@@ -225,7 +255,9 @@ def generate_word(request: ESGRequest):
     """Generate Word document report."""
     scores = calculate_esg_scores(request)
     content = generate_esg_content(request, scores)
-    docx_bytes = generate_word_report(request, scores, content)
+    logo_bytes, art = build_extras(request)
+    docx_bytes = generate_word_report(request, scores, content,
+                                      logo_bytes=logo_bytes, cover_art=art)
     type_suffix = {
         "white_paper": "Livre_Blanc",
         "full_report": "Rapport_ESG",

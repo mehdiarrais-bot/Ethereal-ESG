@@ -59,6 +59,45 @@ THEMES = {
         "muted": RGBColor(0x9E, 0x9E, 0x9E),
         "card_bg": RGBColor(0xFF, 0xFF, 0xFF),
     },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "bg_primary": RGBColor(0x9A, 0x34, 0x12),
+        "bg_secondary": RGBColor(0xFD, 0xF3, 0xEC),
+        "accent": RGBColor(0xF4, 0xA2, 0x61),
+        "env": RGBColor(0x2A, 0x9D, 0x8F),
+        "social": RGBColor(0xE7, 0x6F, 0x51),
+        "gov": RGBColor(0x6D, 0x59, 0x7A),
+        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
+        "text_dark": RGBColor(0x4A, 0x2C, 0x22),
+        "subtitle": RGBColor(0xF2, 0xC9, 0xB0),
+        "muted": RGBColor(0xA8, 0x70, 0x5F),
+        "card_bg": RGBColor(0xFA, 0xE5, 0xD8),
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "bg_primary": RGBColor(0x0F, 0x4C, 0x5C),
+        "bg_secondary": RGBColor(0xEF, 0xF9, 0xFB),
+        "accent": RGBColor(0x00, 0xBF, 0xA6),
+        "env": RGBColor(0x43, 0xAA, 0x8B),
+        "social": RGBColor(0x27, 0x7D, 0xA1),
+        "gov": RGBColor(0x57, 0x75, 0x90),
+        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
+        "text_dark": RGBColor(0x12, 0x3B, 0x44),
+        "subtitle": RGBColor(0xA8, 0xD8, 0xE0),
+        "muted": RGBColor(0x5C, 0x8A, 0x96),
+        "card_bg": RGBColor(0xDC, 0xF1, 0xF5),
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "bg_primary": RGBColor(0x2B, 0x10, 0x55),
+        "bg_secondary": RGBColor(0x24, 0x10, 0x47),
+        "accent": RGBColor(0xFF, 0xD5, 0x4F),
+        "env": RGBColor(0x2E, 0x9E, 0x62),
+        "social": RGBColor(0x7E, 0x9B, 0xF5),
+        "gov": RGBColor(0xC0, 0x8C, 0xF5),
+        "text_light": RGBColor(0xF2, 0xED, 0xFB),
+        "text_dark": RGBColor(0xF2, 0xED, 0xFB),
+        "subtitle": RGBColor(0xB9, 0xA6, 0xE0),
+        "muted": RGBColor(0xB9, 0xA6, 0xE0),
+        "card_bg": RGBColor(0x3A, 0x21, 0x70),
+    },
 }
 
 # Design language per theme: fonts, header style, card style, cover layout
@@ -82,6 +121,21 @@ STYLES = {
         "font_title": "Segoe UI", "font_body": "Segoe UI",
         "header": "minimal", "card": "outline", "cover": "minimal",
         "dark_slides": False, "uppercase_titles": True,
+    },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "font_title": "Cambria", "font_body": "Calibri",
+        "header": "pill", "card": "rounded", "cover": "organic",
+        "dark_slides": False, "uppercase_titles": False,
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "font_title": "Segoe UI", "font_body": "Segoe UI",
+        "header": "band", "card": "flat", "cover": "classic",
+        "dark_slides": False, "uppercase_titles": False,
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "font_title": "Georgia", "font_body": "Georgia",
+        "header": "hairline", "card": "dark", "cover": "luxe",
+        "dark_slides": True, "uppercase_titles": True,
     },
 }
 
@@ -134,7 +188,7 @@ def add_text(slide, text, left, top, width, height, font_size=18,
     return txBox
 
 
-def add_image_from_bytes(slide, img_bytes, left, top, width, height):
+def add_image_from_bytes(slide, img_bytes, left, top, width=None, height=None):
     img_io = io.BytesIO(img_bytes)
     slide.shapes.add_picture(img_io, left, top, width, height)
 
@@ -202,13 +256,14 @@ def kpi_card(slide, left, top, w, h, theme, style, color: RGBColor):
         add_bg_rect(slide, left, top, Inches(0.06), h, color)
 
 
-def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3)):
+def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3), ncols=3):
     fb = style["font_body"]
-    cols = [Inches(0.3), Inches(4.55), Inches(8.8)]
+    cols = [Inches(0.3), Inches(4.55), Inches(8.8)][:ncols]
+    max_cards = ncols * 3
     label_indent = Inches(0.42) if style["card"] == "rounded" else Inches(0.2)
-    for idx, (kpi_label, kpi_val) in enumerate(kpis[:9]):
-        col = cols[idx % 3]
-        row = top_start + (idx // 3) * Inches(1.9)
+    for idx, (kpi_label, kpi_val) in enumerate(kpis[:max_cards]):
+        col = cols[idx % ncols]
+        row = top_start + (idx // ncols) * Inches(1.9)
         kpi_card(slide, col, row, Inches(4.0), Inches(1.7), theme, style, color)
         add_text(slide, kpi_label, col + label_indent, row + Inches(0.15),
                  Inches(3.5), Inches(0.45), font_size=11, color=theme["muted"], font=fb)
@@ -317,7 +372,7 @@ COVERS = {"classic": cover_classic, "organic": cover_organic,
 
 
 def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
-                  chart_images: dict) -> bytes:
+                  chart_images: dict, logo_bytes: bytes = None) -> bytes:
     prs = Presentation()
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
@@ -339,6 +394,44 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     }
     COVERS[style["cover"]](slide, theme, style, request, scores,
                            subtitle_map.get(ptype, "Rapport ESG"))
+
+    # Logo entreprise sur la couverture
+    if logo_bytes:
+        logo_pos = {
+            "classic": (Inches(11.75), Inches(0.35)),
+            "organic": (Inches(0.7), Inches(0.45)),
+            "luxe": (Inches(6.17), Inches(0.55)),
+            "minimal": (Inches(11.55), Inches(0.9)),
+        }[style["cover"]]
+        try:
+            slide.shapes.add_picture(io.BytesIO(logo_bytes),
+                                     logo_pos[0], logo_pos[1], height=Inches(1.0))
+        except Exception:
+            pass
+
+    # Présentateur
+    if request.company.presenter_name:
+        line = f"Présenté par {request.company.presenter_name}"
+        if request.company.presenter_title:
+            line += f" — {request.company.presenter_title}"
+        pres_y = Inches(6.9) if style["cover"] == "organic" else Inches(6.55)
+        pres_align = PP_ALIGN.CENTER if style["cover"] == "luxe" else PP_ALIGN.LEFT
+        pres_color = theme["muted"] if style["cover"] == "minimal" else theme["subtitle"]
+        add_text(slide, line, Inches(0.7), pres_y, Inches(11.9), Inches(0.4),
+                 font_size=12, italic=True, color=pres_color, font=fb, align=pres_align)
+
+    # ── SLIDE 1bis: Illustration de couverture (générée localement) ──────
+    if "cover_art" in chart_images:
+        slide = prs.slides.add_slide(blank_layout)
+        bg = theme["bg_primary"] if style["dark_slides"] else theme["bg_secondary"]
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, bg)
+        add_image_from_bytes(slide, chart_images["cover_art"], 0, 0, SLIDE_W, Inches(4.4))
+        add_text(slide, maybe_upper(f"Rapport ESG {request.company.reporting_year}", style),
+                 Inches(0.7), Inches(4.9), Inches(11.9), Inches(0.9),
+                 font_size=32, bold=True, color=theme["text_dark"], font=ft)
+        add_text(slide, f"{request.company.name}  •  {request.company.sector}",
+                 Inches(0.7), Inches(5.9), Inches(11.9), Inches(0.5),
+                 font_size=15, color=theme["muted"], font=fb)
 
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
@@ -367,10 +460,10 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     if "radar" in chart_images:
         add_image_from_bytes(slide, chart_images["radar"],
-                             Inches(0.3), Inches(4.8), Inches(5.5), Inches(2.5))
+                             Inches(1.2), Inches(4.75), height=Inches(2.55))
     if "bars" in chart_images:
         add_image_from_bytes(slide, chart_images["bars"],
-                             Inches(6.0), Inches(4.8), Inches(7.0), Inches(2.5))
+                             Inches(5.6), Inches(4.8), height=Inches(2.5))
 
     # ── SLIDE 3: Environnement ───────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style, "🌍  Pilier Environnemental", theme["env"])
@@ -396,14 +489,15 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if env.waste_recycled_percent is not None:
         env_kpis.append(("Taux de recyclage", f"{env.waste_recycled_percent:.1f}%"))
 
-    kpi_grid(slide, env_kpis, theme, style, theme["env"])
+    has_pie = "emissions_pie" in chart_images
+    kpi_grid(slide, env_kpis, theme, style, theme["env"], ncols=2 if has_pie else 3)
     add_text(slide, f"Score E — {scores.environmental_score:.0f}/100",
              Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
              font_size=16, bold=True, color=theme["env"], align=PP_ALIGN.RIGHT, font=ft)
 
-    if "emissions_pie" in chart_images and len(env_kpis) <= 6:
+    if has_pie:
         add_image_from_bytes(slide, chart_images["emissions_pie"],
-                             Inches(9.5), Inches(1.2), Inches(3.7), Inches(3.0))
+                             Inches(9.0), Inches(1.4), width=Inches(4.1))
 
     # ── SLIDE 4: Social ──────────────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style, "👥  Pilier Social", theme["social"])
@@ -453,8 +547,10 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         gov_kpis.append(("Violations de données", f"{gov.data_breaches}"))
     if gov.csr_budget_eur is not None:
         gov_kpis.append(("Budget RSE", f"{gov.csr_budget_eur:,.0f} €"))
-    gov_kpis.append(("Audit ESG conduit", "Oui ✓" if gov.esg_audit_conducted else "Non ✗"))
-    gov_kpis.append(("Comité durabilité", "Oui ✓" if gov.sustainability_committee else "Non ✗"))
+    if gov.esg_audit_conducted is not None:
+        gov_kpis.append(("Audit ESG conduit", "Oui ✓" if gov.esg_audit_conducted else "Non ✗"))
+    if gov.sustainability_committee is not None:
+        gov_kpis.append(("Comité durabilité", "Oui ✓" if gov.sustainability_committee else "Non ✗"))
 
     kpi_grid(slide, gov_kpis, theme, style, theme["gov"])
     add_text(slide, f"Score G — {scores.governance_score:.0f}/100",

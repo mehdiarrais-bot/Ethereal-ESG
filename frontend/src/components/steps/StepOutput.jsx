@@ -6,6 +6,9 @@ const THEMES = [
   { id: 'green_nature', name: 'Green Nature', desc: 'Verdoyant, impact-first — rapports RSE', colors: ['#1A5C38', '#27AE60', '#F1C40F'] },
   { id: 'dark_premium', name: 'Dark Premium', desc: 'Elegant, haut de gamme — investisseurs', colors: ['#0D1117', '#58A6FF', '#F7C948'] },
   { id: 'minimal_white', name: 'Minimal White', desc: 'Epure, moderne — focus sur les donnees', colors: ['#212121', '#1E88E5', '#FF6F00'] },
+  { id: 'sunset_terracotta', name: 'Terracotta Sunset', desc: 'Chaleureux, organique — marques engagees', colors: ['#9A3412', '#E76F51', '#F4A261'] },
+  { id: 'ocean_deep', name: 'Ocean Profond', desc: 'Teal & cyan — maritime, energie, eau', colors: ['#0F4C5C', '#277DA1', '#00BFA6'] },
+  { id: 'royal_purple', name: 'Royal Violet', desc: 'Violet & or — prestige, luxe, culture', colors: ['#2B1055', '#5E35B1', '#FFD54F'] },
 ]
 
 const PRES_TYPES = [
@@ -116,9 +119,9 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
               Inclure les benchmarks sectoriels
             </label>
             <label className="checkbox-label">
-              <input type="checkbox" checked={form.language === 'fr'}
-                onChange={e => set('language')(e.target.checked ? 'fr' : 'en')} />
-              Rapport en francais
+              <input type="checkbox" checked={form.include_cover_image ?? true}
+                onChange={e => set('include_cover_image')(e.target.checked)} />
+              Illustration de couverture (générée localement)
             </label>
           </div>
         </div>

@@ -7,7 +7,13 @@ from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
                                  TableStyle, Image, HRFlowable, PageBreak,
                                  KeepTogether)
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from xml.sax.saxutils import escape as _xml_escape
 from models import ESGRequest, ESGScores, AestheticTheme, ReportType
+
+
+def esc(v) -> str:
+    """Échappe &, <, > pour le mini-parser XML des Paragraph reportlab."""
+    return _xml_escape(str(v))
 
 PALETTE = {
     AestheticTheme.CORPORATE_BLUE: {
@@ -32,12 +38,12 @@ PALETTE = {
     },
     AestheticTheme.DARK_PREMIUM: {
         "primary": colors.HexColor("#1A1F28"),
-        "secondary": colors.HexColor("#2D3748"),
+        "secondary": colors.HexColor("#4A5568"),
         "accent": colors.HexColor("#F7C948"),
         "env": colors.HexColor("#3FB950"),
         "social": colors.HexColor("#58A6FF"),
         "gov": colors.HexColor("#BC8CFF"),
-        "light_bg": colors.HexColor("#2D3748"),
+        "light_bg": colors.HexColor("#E8EBF0"),
         "text": colors.HexColor("#2C3E50"),
     },
     AestheticTheme.MINIMAL_WHITE: {
@@ -49,6 +55,36 @@ PALETTE = {
         "gov": colors.HexColor("#8E24AA"),
         "light_bg": colors.HexColor("#F5F5F5"),
         "text": colors.HexColor("#212121"),
+    },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "primary": colors.HexColor("#9A3412"),
+        "secondary": colors.HexColor("#E76F51"),
+        "accent": colors.HexColor("#F4A261"),
+        "env": colors.HexColor("#2A9D8F"),
+        "social": colors.HexColor("#E76F51"),
+        "gov": colors.HexColor("#6D597A"),
+        "light_bg": colors.HexColor("#FAE5D8"),
+        "text": colors.HexColor("#4A2C22"),
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "primary": colors.HexColor("#0F4C5C"),
+        "secondary": colors.HexColor("#277DA1"),
+        "accent": colors.HexColor("#00BFA6"),
+        "env": colors.HexColor("#43AA8B"),
+        "social": colors.HexColor("#277DA1"),
+        "gov": colors.HexColor("#577590"),
+        "light_bg": colors.HexColor("#DCF1F5"),
+        "text": colors.HexColor("#123B44"),
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "primary": colors.HexColor("#2B1055"),
+        "secondary": colors.HexColor("#5E35B1"),
+        "accent": colors.HexColor("#D4A017"),
+        "env": colors.HexColor("#2E9E62"),
+        "social": colors.HexColor("#4A5FC1"),
+        "gov": colors.HexColor("#8E24AA"),
+        "light_bg": colors.HexColor("#EDE6F7"),
+        "text": colors.HexColor("#2E2145"),
     },
 }
 
@@ -74,6 +110,21 @@ PDF_STYLES = {
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "minimal", "cover": "minimal", "kpi": "outline", "uppercase": True,
         "title_size": 34, "h1_size": 13, "body_leading": 18,
+    },
+    AestheticTheme.SUNSET_TERRACOTTA: {
+        "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
+        "header": "banner", "cover": "banner", "kpi": "filled", "uppercase": False,
+        "title_size": 30, "h1_size": 15, "body_leading": 17,
+    },
+    AestheticTheme.OCEAN_DEEP: {
+        "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
+        "header": "rule", "cover": "classic", "kpi": "filled", "uppercase": False,
+        "title_size": 28, "h1_size": 20, "body_leading": 16,
+    },
+    AestheticTheme.ROYAL_PURPLE: {
+        "font": "Times-Roman", "font_bold": "Times-Bold", "font_italic": "Times-Italic",
+        "header": "goldrule", "cover": "luxe", "kpi": "dark", "uppercase": True,
+        "title_size": 30, "h1_size": 19, "body_leading": 17,
     },
 }
 
@@ -174,7 +225,7 @@ def kpi_table(kpi_list, pal, ts):
     t = Table(data, colWidths=[5.5 * cm, 5.5 * cm, 5.5 * cm])
     if kpi_style == "dark":
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#1A1F28")),
+            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
             ('BOX', (0, 0), (-1, -1), 0.5, pal["accent"]),
             ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#3A4250")),
             ('ROWPADDING', (0, 0), (-1, -1), 12),
@@ -199,40 +250,8 @@ def kpi_table(kpi_list, pal, ts):
     return t
 
 
-def score_bar_table(env_s, soc_s, gov_s, total, pal):
-    def bar_cell(label, score, color):
-        bar_width = int(score * 1.2)
-        bar_str = "█" * (bar_width // 10) + "░" * (12 - bar_width // 10)
-        return [
-            Paragraph(f"<b>{label}</b>", ParagraphStyle(
-                "bl", fontSize=10, fontName="Helvetica-Bold",
-                textColor=pal["text"])),
-            Paragraph(f'<font color="#{color.hexval()[2:]}">{"█" * int(score // 8)}</font>',
-                      ParagraphStyle("bv", fontSize=12, fontName="Helvetica")),
-            Paragraph(f"<b>{score:.1f}/100</b>", ParagraphStyle(
-                "bs", fontSize=12, fontName="Helvetica-Bold",
-                textColor=color, alignment=TA_RIGHT)),
-        ]
-
-    data = [
-        bar_cell("Environnement", env_s, pal["env"]),
-        bar_cell("Social", soc_s, pal["social"]),
-        bar_cell("Gouvernance", gov_s, pal["gov"]),
-        bar_cell("Score ESG Global", total, pal["accent"]),
-    ]
-    t = Table(data, colWidths=[5 * cm, 8 * cm, 3.5 * cm])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
-        ('ROWPADDING', (0, 0), (-1, -1), 8),
-        ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.white),
-        ('BACKGROUND', (0, 3), (-1, 3), pal["primary"]),
-        ('TEXTCOLOR', (0, 3), (-1, 3), colors.white),
-    ]))
-    return t
-
-
 def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
-                         chart_images: dict) -> bytes:
+                         chart_images: dict, logo_bytes: bytes = None) -> bytes:
     buf = io.BytesIO()
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
     ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
@@ -250,7 +269,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "executive_summary_pdf": "Synthèse Exécutive ESG",
     }
     type_label = type_labels.get(request.report_type.value, "Rapport ESG")
-    meta_line = f"Exercice {request.company.reporting_year}  •  Secteur : {request.company.sector}  •  {request.company.country}"
+    meta_line = esc(f"Exercice {request.company.reporting_year}  •  Secteur : {request.company.sector}  •  {request.company.country}")
 
     if ts["cover"] == "luxe":
         # Dark Premium: full dark block, centered serif, gold accents
@@ -258,7 +277,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             [Paragraph(type_label.upper(), ParagraphStyle(
                 "ck", fontSize=11, fontName=ts["font"], textColor=pal["accent"],
                 alignment=TA_CENTER, spaceAfter=14))],
-            [Paragraph(request.company.name.upper(), ParagraphStyle(
+            [Paragraph(esc(request.company.name.upper()), ParagraphStyle(
                 "ct", fontSize=32, fontName=ts["font_bold"], textColor=colors.white,
                 alignment=TA_CENTER, leading=38, spaceAfter=10))],
             [Paragraph(meta_line, ParagraphStyle(
@@ -270,7 +289,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         ]
         cover_t = Table(cover_cells, colWidths=[17 * cm])
         cover_t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#0D1117")),
+            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
             ('BOX', (0, 0), (-1, -1), 1, pal["accent"]),
             ('TOPPADDING', (0, 0), (-1, 0), 36),
             ('BOTTOMPADDING', (0, -1), (-1, -1), 36),
@@ -282,7 +301,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         story.append(Spacer(1, 0.8 * cm))
     elif ts["cover"] == "banner":
         # Green Nature: big colored banner + light band
-        banner = Table([[Paragraph(request.company.name, ParagraphStyle(
+        banner = Table([[Paragraph(esc(request.company.name), ParagraphStyle(
             "ct", fontSize=30, fontName=ts["font_bold"], textColor=colors.white,
             leading=36))]], colWidths=[17 * cm])
         banner.setStyle(TableStyle([
@@ -291,7 +310,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             ('BOTTOMPADDING', (0, 0), (-1, -1), 28),
             ('LEFTPADDING', (0, 0), (-1, -1), 18),
         ]))
-        sub = Table([[Paragraph(f"{type_label} — {meta_line}", ParagraphStyle(
+        sub = Table([[Paragraph(esc(type_label) + " — " + meta_line, ParagraphStyle(
             "cs", fontSize=10, fontName=ts["font"], textColor=pal["primary"]))]],
             colWidths=[17 * cm])
         sub.setStyle(TableStyle([
@@ -310,7 +329,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         story.append(Paragraph(type_label.upper(), ParagraphStyle(
             "ck", fontSize=10, fontName=ts["font_bold"],
             textColor=colors.HexColor("#9E9E9E"), spaceAfter=10)))
-        story.append(Paragraph(request.company.name, styles["title"]))
+        story.append(Paragraph(esc(request.company.name), styles["title"]))
         story.append(Spacer(1, 0.2 * cm))
         story.append(HRFlowable(width="100%", thickness=0.7, color=colors.HexColor("#BDBDBD")))
         story.append(Spacer(1, 0.3 * cm))
@@ -319,19 +338,55 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     else:
         # Corporate: classic left-aligned with thick accent rule
         story.append(Spacer(1, 2 * cm))
-        story.append(Paragraph(request.company.name.upper(), styles["title"]))
+        story.append(Paragraph(esc(request.company.name.upper()), styles["title"]))
         story.append(HRFlowable(width="100%", thickness=4, color=pal["accent"]))
         story.append(Spacer(1, 0.3 * cm))
         story.append(Paragraph(type_label, styles["h1"]))
         story.append(Paragraph(meta_line, styles["body"]))
         story.append(Spacer(1, 0.5 * cm))
 
+    # Logo entreprise
+    if logo_bytes:
+        try:
+            logo_img = Image(io.BytesIO(logo_bytes))
+            ratio = logo_img.imageWidth / max(1, logo_img.imageHeight)
+            logo_img.drawHeight = 2 * cm
+            logo_img.drawWidth = min(8 * cm, 2 * cm * ratio)
+            logo_img.hAlign = 'CENTER' if ts["cover"] == "luxe" else 'LEFT'
+            story.insert(1, logo_img)
+            story.insert(2, Spacer(1, 0.4 * cm))
+        except Exception:
+            pass
+
+    # Présentateur
+    if request.company.presenter_name:
+        pres_line = f"Présenté par {request.company.presenter_name}"
+        if request.company.presenter_title:
+            pres_line += f" — {request.company.presenter_title}"
+        story.append(Paragraph(esc(pres_line), ParagraphStyle(
+            "pres", fontSize=11, fontName=ts["font_italic"],
+            textColor=pal["secondary"],
+            alignment=TA_CENTER if ts["cover"] == "luxe" else TA_LEFT)))
+        story.append(Spacer(1, 0.4 * cm))
+
+    # Illustration de couverture (générée localement)
+    if "cover_art" in chart_images:
+        try:
+            art = Image(io.BytesIO(chart_images["cover_art"]), width=17 * cm, height=5.5 * cm)
+            art.hAlign = 'CENTER'
+            story.append(art)
+            story.append(Spacer(1, 0.5 * cm))
+        except Exception:
+            pass
+
     # Score summary table
     score_data = [
         [Paragraph("Score Environnemental", styles["kpi_label"]),
          Paragraph("Score Social", styles["kpi_label"]),
          Paragraph("Score Gouvernance", styles["kpi_label"]),
-         Paragraph("Score ESG Global", styles["kpi_label"])],
+         Paragraph("Score ESG Global", ParagraphStyle(
+             "kpi_label_w", fontSize=9, textColor=colors.white,
+             fontName=ts["font_bold"], alignment=TA_CENTER))],
         [Paragraph(f"<font color='#{pal['env'].hexval()[2:]}'><b>{scores.environmental_score:.1f}</b></font>",
                    ParagraphStyle("sv", fontSize=26, fontName="Helvetica-Bold",
                                   alignment=TA_CENTER)),
@@ -382,7 +437,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         f"correspondant à une notation {scores.rating}. Ce résultat reflète les engagements de l'entreprise "
         "en matière de responsabilité environnementale, sociale et de gouvernance d'entreprise."
     )
-    story.append(Paragraph(exec_text, styles["body"]))
+    story.append(Paragraph(esc(exec_text), styles["body"]))
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
@@ -394,18 +449,18 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "L'analyse environnementale couvre les émissions de gaz à effet de serre, "
         "la consommation d'énergie et d'eau, la gestion des déchets et les initiatives biodiversité."
     )
-    story.append(Paragraph(env_text, styles["body"]))
+    story.append(Paragraph(esc(env_text), styles["body"]))
 
     env = request.environmental
     env_kpis = []
-    if env.co2_emissions_tonnes: env_kpis.append(("CO₂ total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
-    if env.energy_consumption_mwh: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
-    if env.water_consumption_m3: env_kpis.append(("Eau (m³)", f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
-    if env.scope1_emissions: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
-    if env.scope2_emissions: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
+    if env.co2_emissions_tonnes is not None: env_kpis.append(("CO2 total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
+    if env.renewable_energy_percent is not None: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
+    if env.energy_consumption_mwh is not None: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
+    if env.water_consumption_m3 is not None: env_kpis.append(("Eau (m3)", f"{env.water_consumption_m3:,.0f}"))
+    if env.waste_recycled_percent is not None: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
+    if env.scope1_emissions is not None: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
+    if env.scope2_emissions is not None: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
+    if env.scope3_emissions is not None: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
 
     if env_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -429,16 +484,16 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "La performance sociale englobe la gestion des ressources humaines, la diversité, "
         "la sécurité au travail, la formation et l'engagement avec les parties prenantes."
     )
-    story.append(Paragraph(soc_text, styles["body"]))
+    story.append(Paragraph(esc(soc_text), styles["body"]))
 
     soc = request.social
     soc_kpis = []
-    if soc.total_employees: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
-    if soc.female_employees_percent: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate: soc_kpis.append(("Taux freq. acc.", f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
+    if soc.total_employees is not None: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
+    if soc.female_employees_percent is not None: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
+    if soc.employee_turnover_percent is not None: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
+    if soc.training_hours_per_employee is not None: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
+    if soc.accident_frequency_rate is not None: soc_kpis.append(("Taux freq. acc.", f"{soc.accident_frequency_rate:.2f}"))
+    if soc.customer_satisfaction_score is not None: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
 
     if soc_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -455,16 +510,16 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "La gouvernance évalue la qualité de la direction, l'indépendance du conseil, "
         "l'éthique des affaires, la cybersécurité et les mécanismes de contrôle interne."
     )
-    story.append(Paragraph(gov_text, styles["body"]))
+    story.append(Paragraph(esc(gov_text), styles["body"]))
 
     gov = request.governance
     gov_kpis = []
-    if gov.board_members: gov_kpis.append(("Membres CA", str(gov.board_members)))
-    if gov.female_board_percent: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
-    if gov.csr_budget_eur: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
-    gov_kpis.append(("Audit ESG", "✓ Oui" if gov.esg_audit_conducted else "✗ Non"))
-    gov_kpis.append(("Comité durable", "✓ Oui" if gov.sustainability_committee else "✗ Non"))
+    if gov.board_members is not None: gov_kpis.append(("Membres CA", str(gov.board_members)))
+    if gov.female_board_percent is not None: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
+    if gov.independent_board_percent is not None: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
+    if gov.csr_budget_eur is not None: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
+    gov_kpis.append(("Audit ESG", "Oui" if gov.esg_audit_conducted else ("Non" if gov.esg_audit_conducted is not None else "Non renseigné")))
+    gov_kpis.append(("Comité durable", "Oui" if gov.sustainability_committee else ("Non" if gov.sustainability_committee is not None else "Non renseigné")))
 
     if gov_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -477,18 +532,18 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     story.append(Paragraph("Points forts identifiés", styles["h2"]))
     for s in scores.strengths:
-        story.append(Paragraph(f"✅  {s}", styles["bullet"]))
+        story.append(Paragraph(f"•  {esc(s)}", styles["bullet"]))
 
     story.append(Spacer(1, 0.4 * cm))
     story.append(Paragraph("Axes d'amélioration", styles["h2"]))
     for w in scores.weaknesses:
-        story.append(Paragraph(f"⚠️  {w}", styles["bullet"]))
+        story.append(Paragraph(f"–  {esc(w)}", styles["bullet"]))
 
     if request.include_recommendations:
         story.append(Spacer(1, 0.4 * cm))
         section_header(story, "6. Recommandations Prioritaires", pal["accent"], pal, styles, ts)
         for i, rec in enumerate(scores.recommendations, 1):
-            story.append(Paragraph(f"<b>{i}.</b>  {rec}", styles["bullet"]))
+            story.append(Paragraph(f"<b>{i}.</b>  {esc(rec)}", styles["bullet"]))
 
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
@@ -502,28 +557,10 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     )
     story.append(Paragraph(ref_text, styles["body"]))
 
-    # ── Conclusion ────────────────────────────────────────────────────────
-    story.append(PageBreak())
-    section_header(story, "8. Conclusion", pal["primary"], pal, styles, ts)
-
-    conclusion = content.get("conclusion",
-        f"{request.company.name} démontre une démarche ESG globale avec un score de "
-        f"{scores.total_esg_score}/100 (note {scores.rating}). L'organisation s'engage "
-        "à poursuivre ses efforts de transformation durable et à maintenir une transparence "
-        "totale dans son reporting extra-financier, conformément aux meilleures pratiques internationales."
-    )
-    story.append(Paragraph(conclusion, styles["body"]))
-
-    story.append(Spacer(1, 1 * cm))
-    story.append(HRFlowable(width="100%", thickness=1, color=pal["secondary"]))
-    story.append(Paragraph(
-        f"© {request.company.reporting_year} {request.company.name} — Document généré automatiquement par la Plateforme ESG",
-        styles["footer"]))
-
     # ── Section spécifique White Paper : Vision Stratégique ──────────────
     if request.report_type.value == "white_paper":
         story.append(Spacer(1, 0.5 * cm))
-        section_header(story, "9. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
+        section_header(story, "8. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
         story.append(Paragraph(
             "Ce livre blanc a vocation à documenter la trajectoire ESG de l'organisation sur le long terme. "
             "Il constitue un document de référence stratégique, destiné à éclairer les décisions "
@@ -544,8 +581,26 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             ("Gouvernance", f"Score G cible : {min(100, scores.governance_score + 5):.0f}/100 | Audit annuel | Comité durable"),
         ]
         for label, obj in pillars_obj:
-            p = story[-1] if False else None
             story.append(Paragraph(f"<b>• {label} :</b> {obj}", styles["bullet"]))
+
+
+    # ── Conclusion ────────────────────────────────────────────────────────
+    story.append(PageBreak())
+    section_header(story, "9. Conclusion" if request.report_type.value == "white_paper" else "8. Conclusion", pal["primary"], pal, styles, ts)
+
+    conclusion = content.get("conclusion",
+        f"{request.company.name} démontre une démarche ESG globale avec un score de "
+        f"{scores.total_esg_score}/100 (note {scores.rating}). L'organisation s'engage "
+        "à poursuivre ses efforts de transformation durable et à maintenir une transparence "
+        "totale dans son reporting extra-financier, conformément aux meilleures pratiques internationales."
+    )
+    story.append(Paragraph(esc(conclusion), styles["body"]))
+
+    story.append(Spacer(1, 1 * cm))
+    story.append(HRFlowable(width="100%", thickness=1, color=pal["secondary"]))
+    story.append(Paragraph(
+        esc(f"© {request.company.reporting_year} {request.company.name} — Document généré automatiquement par la Plateforme ESG"),
+        styles["footer"]))
 
     doc.build(story)
     buf.seek(0)
