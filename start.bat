@@ -57,38 +57,38 @@ if "%PYTHON_CMD%"=="" (
 for /f "tokens=*" %%i in ('%PYTHON_CMD% --version 2^>^&1') do echo [OK] %%i (commande: %PYTHON_CMD%)
 
 REM ── 2. Node.js ───────────────────────────────────────────────────────────
-set NODE_CMD=
-where node >nul 2>nul
-if not errorlevel 1 (
-    set NODE_CMD=node
+node --version >nul 2>nul
+if not errorlevel 1 goto node_ok
+
+REM node absent du PATH, chercher manuellement
+if exist "C:\Program Files\nodejs\node.exe" (
+    set "PATH=C:\Program Files\nodejs;%PATH%"
+    goto node_ok
+)
+if exist "C:\Program Files (x86)\nodejs\node.exe" (
+    set "PATH=C:\Program Files (x86)\nodejs;%PATH%"
+    goto node_ok
+)
+for %%D in (
+    "%LOCALAPPDATA%\Programs\nodejs"
+    "%APPDATA%\npm"
+    "%USERPROFILE%\AppData\Roaming\nvm\latest"
+) do (
+    if exist "%%~D\node.exe" (
+        set "PATH=%%~D;%PATH%"
+        goto node_ok
+    )
 )
 
-REM Chercher Node dans les emplacements Windows standard si "where" echoue
-if "%NODE_CMD%"=="" (
-    if exist "%ProgramFiles%\nodejs\node.exe" set NODE_CMD="%ProgramFiles%\nodejs\node.exe"
-)
-if "%NODE_CMD%"=="" (
-    if exist "%ProgramFiles(x86)%\nodejs\node.exe" set NODE_CMD="%ProgramFiles(x86)%\nodejs\node.exe"
-)
-if "%NODE_CMD%"=="" (
-    if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" set NODE_CMD="%LOCALAPPDATA%\Programs\nodejs\node.exe"
-)
+echo.
+echo [ERREUR] Node.js introuvable.
+echo   Installer depuis https://nodejs.org/ (version LTS)
+echo   Puis relancer ce script.
+echo.
+pause
+exit /b 1
 
-REM Ajouter nodejs au PATH si trouve hors PATH
-if not "%NODE_CMD%"=="node" if not "%NODE_CMD%"=="" (
-    for %%F in (%NODE_CMD%) do set "PATH=%%~dpF;%PATH%"
-    set NODE_CMD=node
-)
-
-if "%NODE_CMD%"=="" (
-    echo.
-    echo [ERREUR] Node.js introuvable.
-    echo   Installer depuis https://nodejs.org/ (version LTS)
-    echo   Puis REDEMARRER le PC et relancer ce script.
-    echo.
-    pause
-    exit /b 1
-)
+:node_ok
 for /f "tokens=*" %%i in ('node --version 2^>^&1') do echo [OK] Node %%i
 
 REM ── 3. Venv Python ───────────────────────────────────────────────────────
