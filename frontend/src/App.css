@@ -71,14 +71,17 @@
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn {
-  padding: 11px 24px;
-  border-radius: var(--radius-sm);
+  padding: 11px 26px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
   transition: transform var(--fast) var(--ease), box-shadow var(--fast), background var(--fast), border-color var(--fast);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   position: relative;
   overflow: hidden;
@@ -124,7 +127,7 @@
 .btn-docx { background: linear-gradient(135deg, #047857, var(--env)); color: white; }
 .btn-docx:hover { transform: translateY(-2px); box-shadow: 0 0 22px rgba(52,211,153,0.5); }
 
-.btn-lg { padding: 14px 30px; font-size: 15px; border-radius: 12px; }
+.btn-lg { padding: 14px 30px; font-size: 15px; border-radius: var(--radius-pill); }
 
 /* Shine sweep on hover for prominent buttons */
 .btn-primary::after,
@@ -145,10 +148,10 @@
 /* ── Cards (glassmorphism) ───────────────────────────────────── */
 .card {
   background: var(--glass-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
-  padding: 28px;
+  padding: 32px 34px;
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   position: relative;
@@ -177,11 +180,11 @@
 /* ── Form elements ───────────────────────────────────────────── */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px 24px;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
 
 .form-group label {
   font-size: 12px;
@@ -189,15 +192,18 @@
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.6px;
+  padding-left: 4px;
 }
 
 .form-group input,
 .form-group select {
-  padding: 11px 14px;
+  padding: 12px 18px;
+  height: 46px;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: rgba(8, 5, 22, 0.6);
   color: var(--text);
+  font-size: 14px;
   transition: border-color var(--fast), box-shadow var(--fast), background var(--fast);
   width: 100%;
 }
@@ -222,12 +228,14 @@
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: var(--neon);
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--glass-border);
-  display: flex;
+  margin-bottom: 18px;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 7px 16px 7px 12px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: var(--radius-pill);
 }
 
 /* ── Toggle buttons ──────────────────────────────────────────── */
@@ -235,8 +243,9 @@
   display: flex;
   gap: 0;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   overflow: hidden;
+  height: 46px;
 }
 
 .toggle-btn {
@@ -264,8 +273,8 @@
   justify-content: space-between;
   background: rgba(244, 63, 94, 0.12);
   border: 1px solid rgba(244, 63, 94, 0.4);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  border-radius: var(--radius-pill);
+  padding: 12px 22px;
   color: #fda4af;
   font-size: 14px;
   backdrop-filter: blur(8px);
@@ -283,10 +292,12 @@
 /* Generic tip box (used in steps) */
 .tip-box {
   background: rgba(34, 211, 238, 0.08) !important;
+  border: 1px solid rgba(34, 211, 238, 0.22) !important;
   border-left: 3px solid var(--neon) !important;
-  border-radius: 0 10px 10px 0;
-  padding: 14px 18px;
+  border-radius: var(--radius) !important;
+  padding: 16px 22px;
   font-size: 13px;
+  line-height: 1.55;
   color: var(--text-dim) !important;
-  margin-top: 12px;
+  margin-top: 16px;
 }

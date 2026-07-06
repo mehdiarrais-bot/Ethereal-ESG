@@ -33,8 +33,10 @@
   --glow-violet: 0 0 24px rgba(124, 92, 246, 0.45);
   --glow-neon: 0 0 22px rgba(34, 211, 238, 0.5);
 
-  --radius: 16px;
-  --radius-sm: 10px;
+  --radius-lg: 26px;
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-pill: 999px;
 
   /* Motion */
   --fast: 180ms;

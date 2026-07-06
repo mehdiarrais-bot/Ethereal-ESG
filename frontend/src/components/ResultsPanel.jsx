@@ -149,8 +149,8 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           color: var(--text);
         }
         .rating-badge {
-          padding: 6px 16px;
-          border-radius: 8px;
+          padding: 8px 20px;
+          border-radius: var(--radius);
           color: white;
           text-align: center;
         }
@@ -177,15 +177,15 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           gap: 6px;
         }
         .result-list li {
-          padding: 8px 12px;
+          padding: 10px 14px;
           background: rgba(124,92,246,0.08);
-          border-radius: 8px;
+          border-radius: 14px;
           font-size: 12px;
           color: var(--text-dim);
           display: flex;
           align-items: flex-start;
           gap: 8px;
-          line-height: 1.4;
+          line-height: 1.45;
         }
         .result-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
         .download-actions {

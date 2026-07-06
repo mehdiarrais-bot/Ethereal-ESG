@@ -56,11 +56,11 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
         }
         .header-brand { display: flex; align-items: center; gap: 14px; }
         .header-logo {
-          width: 46px; height: 46px;
+          width: 48px; height: 48px;
           background: linear-gradient(135deg, var(--violet), var(--neon-blue));
-          border-radius: 12px;
+          border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
-          font-size: 16px; font-weight: 900; color: #fff; letter-spacing: -1px;
+          font-size: 15px; font-weight: 900; color: #fff; letter-spacing: -0.5px;
           box-shadow: var(--glow-violet);
           animation: glowPulse 3.5s ease-in-out infinite;
         }
@@ -82,10 +82,11 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
         .badge-gov { background: rgba(192,132,252,0.14); border: 1px solid rgba(192,132,252,0.4); }
         .header-actions { display: flex; gap: 8px; }
         .hdr-btn {
-          padding: 7px 14px; border-radius: 9px;
+          padding: 8px 16px; border-radius: 999px;
           border: 1px solid var(--glass-border); font-size: 12px; font-weight: 600;
           cursor: pointer; transition: transform var(--fast) var(--ease), box-shadow var(--fast), background var(--fast);
           color: var(--text); background: var(--glass);
+          white-space: nowrap;
         }
         .hdr-btn:hover { transform: translateY(-1px); }
         .hdr-btn-score { background: rgba(52,211,153,0.16); color: #fff; border: 1px solid rgba(52,211,153,0.5); font-size: 13px; font-weight: 700; }

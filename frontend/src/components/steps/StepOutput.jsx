@@ -29,7 +29,7 @@ function Swatch({ colors }) {
   return (
     <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
       {colors.map(c => (
-        <div key={c} style={{ width: 18, height: 18, borderRadius: 4, background: c, border: '1px solid rgba(0,0,0,0.1)' }} />
+        <div key={c} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.15)' }} />
       ))}
     </div>
   )
@@ -191,50 +191,55 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
       )}
 
       <style>{`
-        .output-section { margin-bottom: 24px; }
+        .output-section { margin-bottom: 28px; }
         .output-section-title {
+          display: inline-flex; align-items: center;
           font-size: 12px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 1px; color: var(--blue-secondary);
-          margin-bottom: 12px; padding-bottom: 7px;
-          border-bottom: 2px solid var(--border);
+          letter-spacing: 1px; color: var(--neon);
+          margin-bottom: 16px; padding: 7px 16px;
+          background: rgba(34, 211, 238, 0.08);
+          border: 1px solid rgba(34, 211, 238, 0.25);
+          border-radius: var(--radius-pill);
         }
         .options-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+          gap: 14px;
         }
         .options-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .option-card {
-          position: relative; padding: 13px 14px;
-          border: 1px solid var(--glass-border); border-radius: 12px;
+          position: relative; padding: 16px 18px 15px;
+          border: 1px solid var(--glass-border); border-radius: var(--radius);
           background: rgba(8, 5, 22, 0.5); text-align: left; cursor: pointer;
           transition: border-color var(--fast), background var(--fast), transform var(--fast) var(--ease), box-shadow var(--fast);
-          color: var(--text);
+          color: var(--text); min-height: 74px;
         }
-        .option-card:hover { border-color: var(--glass-border-lit); background: rgba(124,92,246,0.12); transform: translateY(-2px); }
+        .option-card:hover { border-color: var(--glass-border-lit); background: rgba(124,92,246,0.12); transform: translateY(-3px); }
         .option-card.selected {
           border-color: var(--neon); background: rgba(34,211,238,0.1);
           box-shadow: var(--glow-neon);
         }
-        .option-name { font-size: 13px; font-weight: 700; color: var(--text); }
-        .option-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+        .option-name { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.3; padding-right: 24px; }
+        .option-desc { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
         .option-check {
-          position: absolute; top: 8px; right: 10px;
-          width: 20px; height: 20px;
+          position: absolute; top: 12px; right: 12px;
+          width: 22px; height: 22px;
           background: linear-gradient(135deg, var(--neon), var(--neon-blue)); color: #04121a;
           border-radius: 50%; display: flex; align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 800;
+          font-size: 12px; font-weight: 800;
+          box-shadow: 0 0 12px rgba(34,211,238,0.6);
         }
         .generate-actions {
           display: flex; gap: 16px; align-items: flex-start;
-          padding-top: 20px; border-top: 1px solid var(--border);
+          padding-top: 22px; border-top: 1px solid var(--glass-border);
           flex-wrap: wrap; flex-direction: column;
         }
         .generate-actions > div { width: 100%; }
         .score-preview-chip {
+          display: inline-flex; align-items: center;
           background: rgba(52,211,153,0.12);
           border: 1px solid rgba(52,211,153,0.35);
-          border-radius: 10px; padding: 8px 16px;
+          border-radius: var(--radius-pill); padding: 9px 20px;
           font-size: 13px; color: #6ee7b7;
         }
         .score-preview-pending {
