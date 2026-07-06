@@ -8,12 +8,74 @@ from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
                                  KeepTogether)
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from xml.sax.saxutils import escape as _xml_escape
+import os
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from models import ESGRequest, ESGScores, AestheticTheme, ReportType
+
+# ── Enregistrement de polices TrueType système (Windows) ────────────────────
+# Chaque famille : (regular, bold, italic) → repli sur les polices PDF de base
+# si les fichiers sont introuvables (Linux/Mac ou installation minimale).
+_FONT_DIRS = [
+    r"C:\Windows\Fonts",
+    os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Fonts"),
+    "/usr/share/fonts/truetype/msttcorefonts",
+    "/usr/share/fonts/truetype/dejavu",
+]
+_FONT_FILES = {
+    "SegoeUI": ("segoeui.ttf", "segoeuib.ttf", "segoeuii.ttf"),
+    "Georgia": ("georgia.ttf", "georgiab.ttf", "georgiai.ttf"),
+}
+_FALLBACKS = {
+    "SegoeUI": ("Helvetica", "Helvetica-Bold", "Helvetica-Oblique"),
+    "Georgia": ("Times-Roman", "Times-Bold", "Times-Italic"),
+}
+_registered = {}
+
+
+def resolve_family(family: str) -> tuple:
+    """Retourne (regular, bold, italic) : TTF système si dispo, sinon base-14."""
+    if family in _registered:
+        return _registered[family]
+    result = _FALLBACKS[family]
+    files = _FONT_FILES[family]
+    for d in _FONT_DIRS:
+        paths = [os.path.join(d, f) for f in files]
+        if all(os.path.isfile(p) for p in paths):
+            try:
+                names = (family, family + "-Bold", family + "-Italic")
+                for name, path in zip(names, paths):
+                    pdfmetrics.registerFont(TTFont(name, path))
+                result = names
+                break
+            except Exception:
+                result = _FALLBACKS[family]
+                break
+    _registered[family] = result
+    return result
+
+
+# Glyphes absents des polices PDF (indices/exposants Unicode, symboles)
+_PDF_CHARS = str.maketrans({
+    '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3', '\u2084': '4',
+    '\u2070': '0', '\u00b9': '1',  # ³ et ² existent en latin-1, on les garde
+    '\u2713': '+', '\u2717': 'x', '\u2705': '', '\u26a0': '', '\ufe0f': '',
+    '\u2192': '>', '\u2588': '', '\u2591': '',
+})
+
+
+def pdf_txt(v) -> str:
+    """Texte brut sûr pour canvas.drawString (translittéré, latin-1)."""
+    s = str(v).translate(_PDF_CHARS)
+    return s.encode('latin-1', 'ignore').decode('latin-1')
 
 
 def esc(v) -> str:
-    """Échappe &, <, > pour le mini-parser XML des Paragraph reportlab."""
-    return _xml_escape(str(v))
+    """Adapte une chaîne aux Paragraph reportlab : glyphes indisponibles
+    translittérés, caractères hors latin-1 retirés, puis échappement XML."""
+    s = str(v).translate(_PDF_CHARS)
+    s = s.encode('latin-1', 'ignore').decode('latin-1')
+    return _xml_escape(s)
 
 PALETTE = {
     AestheticTheme.CORPORATE_BLUE: {
@@ -92,36 +154,43 @@ PALETTE = {
 # Design language per theme: fonts + header/cover/table styling
 PDF_STYLES = {
     AestheticTheme.CORPORATE_BLUE: {
+        "family": "SegoeUI",
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "rule", "cover": "classic", "kpi": "filled", "uppercase": False,
         "title_size": 28, "h1_size": 20, "body_leading": 16,
     },
     AestheticTheme.GREEN_NATURE: {
+        "family": "SegoeUI",
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "banner", "cover": "banner", "kpi": "filled", "uppercase": False,
         "title_size": 30, "h1_size": 15, "body_leading": 17,
     },
     AestheticTheme.DARK_PREMIUM: {
+        "family": "Georgia",
         "font": "Times-Roman", "font_bold": "Times-Bold", "font_italic": "Times-Italic",
         "header": "goldrule", "cover": "luxe", "kpi": "dark", "uppercase": True,
         "title_size": 30, "h1_size": 19, "body_leading": 17,
     },
     AestheticTheme.MINIMAL_WHITE: {
+        "family": "SegoeUI",
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "minimal", "cover": "minimal", "kpi": "outline", "uppercase": True,
         "title_size": 34, "h1_size": 13, "body_leading": 18,
     },
     AestheticTheme.SUNSET_TERRACOTTA: {
+        "family": "Georgia",
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "banner", "cover": "banner", "kpi": "filled", "uppercase": False,
         "title_size": 30, "h1_size": 15, "body_leading": 17,
     },
     AestheticTheme.OCEAN_DEEP: {
+        "family": "SegoeUI",
         "font": "Helvetica", "font_bold": "Helvetica-Bold", "font_italic": "Helvetica-Oblique",
         "header": "rule", "cover": "classic", "kpi": "filled", "uppercase": False,
         "title_size": 28, "h1_size": 20, "body_leading": 16,
     },
     AestheticTheme.ROYAL_PURPLE: {
+        "family": "Georgia",
         "font": "Times-Roman", "font_bold": "Times-Bold", "font_italic": "Times-Italic",
         "header": "goldrule", "cover": "luxe", "kpi": "dark", "uppercase": True,
         "title_size": 30, "h1_size": 19, "body_leading": 17,
@@ -129,15 +198,53 @@ PDF_STYLES = {
 }
 
 
+def page_decorator(pal, ts, company_name: str, minimal: bool = False):
+    """En-tête et pied de page dessinés sur chaque page."""
+    font = ts["font"]
+    name = pdf_txt(company_name)
+
+    def draw(canvas, doc):
+        w, h = A4
+        canvas.saveState()
+        if minimal:
+            # Minimal : simple pastille accent en haut à gauche
+            canvas.setFillColor(pal["accent"])
+            canvas.rect(2 * cm, h - 1.1 * cm, 0.9 * cm, 0.14 * cm, fill=1, stroke=0)
+        else:
+            # Bandeau plein + liseré accent
+            canvas.setFillColor(pal["primary"])
+            canvas.rect(0, h - 0.5 * cm, w, 0.5 * cm, fill=1, stroke=0)
+            canvas.setFillColor(pal["accent"])
+            canvas.rect(0, h - 0.62 * cm, w, 0.12 * cm, fill=1, stroke=0)
+        # Pied de page : filet + société à gauche, pagination à droite
+        canvas.setStrokeColor(pal["accent"] if not minimal else colors.HexColor("#D0D0D0"))
+        canvas.setLineWidth(0.6)
+        canvas.line(2 * cm, 1.55 * cm, w - 2 * cm, 1.55 * cm)
+        canvas.setFillColor(colors.HexColor("#8A8A8A"))
+        try:
+            canvas.setFont(font, 7.5)
+        except Exception:
+            canvas.setFont("Helvetica", 7.5)
+        canvas.drawString(2 * cm, 1.15 * cm, name)
+        canvas.drawRightString(w - 2 * cm, 1.15 * cm, f"Rapport ESG  |  page {canvas.getPageNumber()}")
+        canvas.restoreState()
+
+    return draw
+
+
 def build_styles(pal: dict, ts: dict) -> dict:
-    f, fb, fi = ts["font"], ts["font_bold"], ts["font_italic"]
+    f, fb, fi = resolve_family(ts["family"]) if ts.get("family") else \
+        (ts["font"], ts["font_bold"], ts["font_italic"])
+    ts = dict(ts, font=f, font_bold=fb, font_italic=fi)
     return {
         "title": ParagraphStyle("title", fontSize=ts["title_size"], textColor=pal["primary"],
-                                 spaceAfter=8, fontName=fb, alignment=TA_LEFT),
+                                 spaceAfter=8, fontName=fb, alignment=TA_LEFT,
+                                 leading=ts["title_size"] * 1.15),
         "h1": ParagraphStyle("h1", fontSize=ts["h1_size"], textColor=pal["primary"],
-                              spaceAfter=6, spaceBefore=18, fontName=fb),
+                              spaceAfter=6, spaceBefore=18, fontName=fb,
+                              leading=ts["h1_size"] * 1.25),
         "h1_light": ParagraphStyle("h1_light", fontSize=ts["h1_size"], textColor=colors.white,
-                                    fontName=fb),
+                                    fontName=fb, leading=ts["h1_size"] * 1.25),
         "h2": ParagraphStyle("h2", fontSize=13, textColor=pal["secondary"],
                               spaceAfter=4, spaceBefore=12, fontName=fb),
         "body": ParagraphStyle("body", fontSize=10, textColor=pal["text"],
@@ -154,6 +261,7 @@ def build_styles(pal: dict, ts: dict) -> dict:
                                    fontName=fi, alignment=TA_CENTER),
         "footer": ParagraphStyle("footer", fontSize=8, textColor=colors.grey,
                                   fontName=fi, alignment=TA_CENTER),
+        "_ts": ts,  # ts avec les polices résolues, pour les usages en aval
     }
 
 
@@ -201,52 +309,48 @@ def score_to_color(score: float, pal: dict) -> colors.Color:
 
 def kpi_table(kpi_list, pal, ts):
     kpi_style = ts["kpi"]
-    value_color = colors.white if kpi_style == "dark" else pal["primary"]
-    label_color = pal["accent"] if kpi_style == "dark" else pal["secondary"]
+    if kpi_style == "dark":
+        value_color, label_color = colors.white, colors.HexColor("#CFC7E8")
+        box_bg = pal["primary"]
+        grid_color = colors.HexColor("#5A4A85")
+    elif kpi_style == "outline":
+        value_color, label_color = pal["primary"], colors.HexColor("#9E9E9E")
+        box_bg = colors.white
+        grid_color = colors.HexColor("#E0E0E0")
+    else:
+        value_color, label_color = pal["primary"], pal["secondary"]
+        box_bg = pal["light_bg"]
+        grid_color = colors.white
 
-    data = []
-    row = []
-    for i, (label, value) in enumerate(kpi_list):
-        cell_content = [Paragraph(str(value), ParagraphStyle(
-            "kv", fontSize=18, fontName=ts["font_bold"],
-            textColor=value_color, alignment=TA_CENTER)),
-            Paragraph(label, ParagraphStyle(
-                "kl", fontSize=9, fontName=ts["font"],
-                textColor=label_color, alignment=TA_CENTER))]
-        row.append(cell_content)
+    label_style = ParagraphStyle("kl", fontSize=7.5, leading=10, fontName=ts["font_bold"],
+                                 textColor=label_color, alignment=TA_CENTER)
+    value_style = ParagraphStyle("kv", fontSize=16, leading=19, fontName=ts["font_bold"],
+                                 textColor=value_color, alignment=TA_CENTER)
+
+    data, row = [], []
+    for label, value in kpi_list:
+        row.append([Paragraph(esc(label).upper(), label_style),
+                    Spacer(1, 3),
+                    Paragraph(esc(value), value_style)])
         if len(row) == 3:
             data.append(row)
             row = []
     if row:
         while len(row) < 3:
-            row.append([Paragraph("", ParagraphStyle("empty", fontSize=10))])
+            row.append("")
         data.append(row)
 
-    t = Table(data, colWidths=[5.5 * cm, 5.5 * cm, 5.5 * cm])
-    if kpi_style == "dark":
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
-            ('BOX', (0, 0), (-1, -1), 0.5, pal["accent"]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#3A4250")),
-            ('ROWPADDING', (0, 0), (-1, -1), 12),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-    elif kpi_style == "outline":
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-            ('BOX', (0, 0), (-1, -1), 0.7, colors.HexColor("#BDBDBD")),
-            ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#E0E0E0")),
-            ('ROWPADDING', (0, 0), (-1, -1), 14),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-    else:
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
-            ('BOX', (0, 0), (-1, -1), 0.5, pal["secondary"]),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
-            ('ROWPADDING', (0, 0), (-1, -1), 12),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
+    t = Table(data, colWidths=[5.5 * cm] * 3)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), box_bg),
+        ('BOX', (0, 0), (-1, -1), 0.75, pal["accent"] if kpi_style == "dark" else grid_color),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, grid_color),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
     return t
 
 
@@ -256,10 +360,11 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
     ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
     styles = build_styles(pal, ts)
+    ts = styles["_ts"]  # polices résolues (TTF système ou base-14)
 
     doc = SimpleDocTemplate(buf, pagesize=A4,
                              leftMargin=2 * cm, rightMargin=2 * cm,
-                             topMargin=2 * cm, bottomMargin=2 * cm)
+                             topMargin=2.2 * cm, bottomMargin=2.2 * cm)
     story = []
 
     # ── Cover (varies per theme) ──────────────────────────────────────────
@@ -388,22 +493,22 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
              "kpi_label_w", fontSize=9, textColor=colors.white,
              fontName=ts["font_bold"], alignment=TA_CENTER))],
         [Paragraph(f"<font color='#{pal['env'].hexval()[2:]}'><b>{scores.environmental_score:.1f}</b></font>",
-                   ParagraphStyle("sv", fontSize=26, fontName="Helvetica-Bold",
+                   ParagraphStyle("sv", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
          Paragraph(f"<font color='#{pal['social'].hexval()[2:]}'><b>{scores.social_score:.1f}</b></font>",
-                   ParagraphStyle("sv2", fontSize=26, fontName="Helvetica-Bold",
+                   ParagraphStyle("sv2", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
          Paragraph(f"<font color='#{pal['gov'].hexval()[2:]}'><b>{scores.governance_score:.1f}</b></font>",
-                   ParagraphStyle("sv3", fontSize=26, fontName="Helvetica-Bold",
+                   ParagraphStyle("sv3", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
          Paragraph(f"<font color='#{pal['accent'].hexval()[2:]}'><b>{scores.total_esg_score:.1f}</b></font>",
-                   ParagraphStyle("sv4", fontSize=26, fontName="Helvetica-Bold",
+                   ParagraphStyle("sv4", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER))],
         [Paragraph("/100", styles["caption"]), Paragraph("/100", styles["caption"]),
          Paragraph("/100", styles["caption"]),
          Paragraph(f"Note : {scores.rating}", ParagraphStyle(
-             "rating", fontSize=12, fontName="Helvetica-Bold",
-             textColor=pal["accent"], alignment=TA_CENTER))],
+             "rating", fontSize=12, leading=14, fontName=ts["font_bold"],
+             textColor=colors.white, alignment=TA_CENTER))],
     ]
     score_table = Table(score_data, colWidths=[4 * cm] * 4)
     score_table.setStyle(TableStyle([
@@ -412,7 +517,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         ('TEXTCOLOR', (3, 0), (3, -1), colors.white),
         ('BOX', (0, 0), (-1, -1), 1, pal["secondary"]),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
-        ('ROWPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     story.append(score_table)
@@ -572,7 +678,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         # Objectifs 2027
         obj_data = [
             [Paragraph("<b>Horizon 2027 — Objectifs ESG cibles</b>",
-                       ParagraphStyle("ot", fontSize=11, fontName="Helvetica-Bold",
+                       ParagraphStyle("ot", fontSize=11, fontName=ts["font_bold"],
                                       textColor=pal["primary"]))],
         ]
         pillars_obj = [
@@ -602,6 +708,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         esc(f"© {request.company.reporting_year} {request.company.name} — Document généré automatiquement par la Plateforme ESG"),
         styles["footer"]))
 
-    doc.build(story)
+    decor = page_decorator(pal, ts, request.company.name,
+                           minimal=(ts["header"] == "minimal"))
+    doc.build(story, onFirstPage=decor, onLaterPages=decor)
     buf.seek(0)
     return buf.read()

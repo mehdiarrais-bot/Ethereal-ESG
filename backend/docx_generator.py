@@ -9,31 +9,31 @@ from models import ESGRequest, ESGScores, AestheticTheme
 
 THEME_HEX = {
     AestheticTheme.CORPORATE_BLUE: {
-        "primary": "1B3A6B", "secondary": "2E86C1", "accent": "F39C12",
+        "light": "EBF2FB", "primary": "1B3A6B", "secondary": "2E86C1", "accent": "F39C12",
         "env": "27AE60", "social": "2E86C1", "gov": "8E44AD",
     },
     AestheticTheme.GREEN_NATURE: {
-        "primary": "1A5C38", "secondary": "27AE60", "accent": "F1C40F",
+        "light": "D5F5E3", "primary": "1A5C38", "secondary": "27AE60", "accent": "F1C40F",
         "env": "2ECC71", "social": "3498DB", "gov": "E67E22",
     },
     AestheticTheme.DARK_PREMIUM: {
-        "primary": "1A1F28", "secondary": "58A6FF", "accent": "F7C948",
+        "light": "E8EBF0", "primary": "1A1F28", "secondary": "58A6FF", "accent": "F7C948",
         "env": "3FB950", "social": "58A6FF", "gov": "BC8CFF",
     },
     AestheticTheme.MINIMAL_WHITE: {
-        "primary": "212121", "secondary": "1E88E5", "accent": "FF6F00",
+        "light": "F5F5F5", "primary": "212121", "secondary": "1E88E5", "accent": "FF6F00",
         "env": "43A047", "social": "1E88E5", "gov": "8E24AA",
     },
     AestheticTheme.SUNSET_TERRACOTTA: {
-        "primary": "9A3412", "secondary": "E76F51", "accent": "F4A261",
+        "light": "FAE5D8", "primary": "9A3412", "secondary": "E76F51", "accent": "F4A261",
         "env": "2A9D8F", "social": "E76F51", "gov": "6D597A",
     },
     AestheticTheme.OCEAN_DEEP: {
-        "primary": "0F4C5C", "secondary": "277DA1", "accent": "00BFA6",
+        "light": "DCF1F5", "primary": "0F4C5C", "secondary": "277DA1", "accent": "00BFA6",
         "env": "43AA8B", "social": "277DA1", "gov": "577590",
     },
     AestheticTheme.ROYAL_PURPLE: {
-        "primary": "2B1055", "secondary": "5E35B1", "accent": "D4A017",
+        "light": "EDE6F7", "primary": "2B1055", "secondary": "5E35B1", "accent": "D4A017",
         "env": "2E9E62", "social": "4A5FC1", "gov": "8E24AA",
     },
 }
@@ -68,6 +68,14 @@ DOCX_STYLES = {
 def hex_to_rgb(h):
     h = h.lstrip('#')
     return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def shade_cell(cell, color_hex):
+    tcPr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:fill'), color_hex)
+    tcPr.append(shd)
 
 
 def shade_paragraph(p, color_hex):
@@ -127,6 +135,7 @@ def add_kpi_table(doc, kpi_list, colors):
         for col_idx, (label, value) in enumerate(row_data):
             # Label row
             cell = table.rows[0].cells[col_idx]
+            shade_cell(cell, colors.get("light", "F5F5F5"))
             cell.paragraphs[0].clear()
             run = cell.paragraphs[0].add_run(label)
             run.font.size = Pt(9)
@@ -266,6 +275,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     for i, (hdr, val, col) in enumerate(zip(headers, values, value_colors)):
         hdr_cell = summary_table.rows[0].cells[i]
+        shade_cell(hdr_cell, colors.get("light", "F5F5F5"))
         hdr_cell.paragraphs[0].clear()
         r = hdr_cell.paragraphs[0].add_run(hdr)
         r.font.size = Pt(9)
