@@ -1,42 +1,22 @@
 const THEMES = [
-  {
-    id: 'corporate_blue',
-    name: 'Corporate Blue',
-    desc: 'Professionnel, sobre — finance & industrie',
-    colors: ['#1B3A6B', '#2E86C1', '#F39C12'],
-  },
-  {
-    id: 'green_nature',
-    name: 'Green Nature',
-    desc: 'Verdoyant, impact-first — rapports RSE',
-    colors: ['#1A5C38', '#27AE60', '#F1C40F'],
-  },
-  {
-    id: 'dark_premium',
-    name: 'Dark Premium',
-    desc: 'Élégant, haut de gamme — investisseurs',
-    colors: ['#0D1117', '#58A6FF', '#F7C948'],
-  },
-  {
-    id: 'minimal_white',
-    name: 'Minimal White',
-    desc: 'Épuré, moderne — focus sur les données',
-    colors: ['#212121', '#1E88E5', '#FF6F00'],
-  },
+  { id: 'corporate_blue', name: 'Corporate Blue', desc: 'Professionnel, sobre — finance & industrie', colors: ['#1B3A6B', '#2E86C1', '#F39C12'] },
+  { id: 'green_nature', name: 'Green Nature', desc: 'Verdoyant, impact-first — rapports RSE', colors: ['#1A5C38', '#27AE60', '#F1C40F'] },
+  { id: 'dark_premium', name: 'Dark Premium', desc: 'Elegant, haut de gamme — investisseurs', colors: ['#0D1117', '#58A6FF', '#F7C948'] },
+  { id: 'minimal_white', name: 'Minimal White', desc: 'Epure, moderne — focus sur les donnees', colors: ['#212121', '#1E88E5', '#FF6F00'] },
 ]
 
 const PRES_TYPES = [
-  { id: 'executive_summary', name: 'Synthèse Exécutive', desc: 'Vue dirigeant condensée' },
+  { id: 'executive_summary', name: 'Synthese Executive', desc: 'Vue dirigeant condensee' },
   { id: 'investor_deck', name: 'Investor Deck', desc: 'Pour les investisseurs ESG' },
-  { id: 'detailed_report', name: 'Rapport Détaillé', desc: 'Analyse complète tous piliers' },
+  { id: 'detailed_report', name: 'Rapport Detaille', desc: 'Analyse complete tous piliers' },
   { id: 'stakeholder_brief', name: 'Parties Prenantes', desc: 'Communication externe' },
   { id: 'annual_report', name: 'Rapport Annuel', desc: 'Rapport annuel RSE officiel' },
 ]
 
 const REPORT_TYPES = [
-  { id: 'full_report', name: 'Rapport ESG Complet', desc: 'Analyse détaillée tous piliers' },
-  { id: 'white_paper', name: 'Livre Blanc RSE', desc: 'Document de référence stratégique' },
-  { id: 'executive_summary_pdf', name: 'Synthèse PDF', desc: 'Résumé exécutif condensé' },
+  { id: 'full_report', name: 'Rapport ESG Complet', desc: 'Analyse detaillee tous piliers' },
+  { id: 'white_paper', name: 'Livre Blanc RSE', desc: 'Document de reference strategique' },
+  { id: 'executive_summary_pdf', name: 'Synthese PDF', desc: 'Resume executif condense' },
 ]
 
 function Swatch({ colors }) {
@@ -60,8 +40,28 @@ function OptionCard({ item, selected, onClick, type }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, loading, scores }) {
+function ProgressBar({ progress, loading }) {
+  if (!loading && progress === 0) return null
+  const pct = Math.min(100, Math.round(progress))
+  const done = pct === 100
+  return (
+    <div className="progress-wrap">
+      <div className="progress-bar-bg">
+        <div
+          className={`progress-bar-fill ${done ? 'done' : ''}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="progress-label">
+        {done ? '✓ Fichier pret — telechargement lance' : `Generation en cours... ${pct}%`}
+      </span>
+    </div>
+  )
+}
+
+export default function StepOutput({ form, setForm, onDownload, onPreview, loading, previewLoading, previewUrl, progress, scores }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
+  const busy = loading || previewLoading
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -69,7 +69,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
         <div className="card-title">📊 Configuration des Livrables</div>
 
         <div className="output-section">
-          <div className="output-section-title">🎨 Thème Esthétique</div>
+          <div className="output-section-title">🎨 Theme Esthetique</div>
           <div className="options-grid options-grid-4">
             {THEMES.map(t => (
               <OptionCard key={t.id} item={t} selected={form.aesthetic_theme === t.id}
@@ -79,7 +79,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
         </div>
 
         <div className="output-section">
-          <div className="output-section-title">📽️ Type de Présentation PowerPoint</div>
+          <div className="output-section-title">📽️ Type de Presentation PowerPoint</div>
           <div className="options-grid">
             {PRES_TYPES.map(p => (
               <OptionCard key={p.id} item={p} selected={form.presentation_type === p.id}
@@ -114,7 +114,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
             <label className="checkbox-label">
               <input type="checkbox" checked={form.language === 'fr'}
                 onChange={e => set('language')(e.target.checked ? 'fr' : 'en')} />
-              Rapport en français
+              Rapport en francais
             </label>
           </div>
         </div>
@@ -122,26 +122,58 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
         <div className="generate-actions">
           {scores ? (
             <div className="score-preview-chip">
-              ✅ Score calculé : <strong>{scores.total_esg_score?.toFixed(1)}/100</strong> — Note <strong>{scores.rating}</strong>
+              ✅ Score : <strong>{scores.total_esg_score?.toFixed(1)}/100</strong> — Note <strong>{scores.rating}</strong>
             </div>
           ) : (
             <div className="score-preview-chip score-preview-pending">
-              ⏳ Saisissez des données pour calculer le score
+              ⏳ Saisissez des donnees pour calculer le score
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn btn-pptx btn-lg" onClick={() => onDownload('pptx')} disabled={loading || !scores}>
-              {loading ? '⏳' : '📑'} PowerPoint
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button className="btn btn-preview" onClick={onPreview} disabled={busy || !scores}>
+              {previewLoading ? 'Chargement...' : '👁 Previsualiser PDF'}
             </button>
-            <button className="btn btn-pdf btn-lg" onClick={() => onDownload('pdf')} disabled={loading || !scores}>
-              {loading ? '⏳' : '📄'} Rapport PDF
+            <button className="btn btn-pptx btn-lg" onClick={() => onDownload('pptx')} disabled={busy || !scores}>
+              📑 PowerPoint
             </button>
-            <button className="btn btn-docx btn-lg" onClick={() => onDownload('docx')} disabled={loading || !scores}>
-              {loading ? '⏳' : '📝'} Word .docx
+            <button className="btn btn-pdf btn-lg" onClick={() => onDownload('pdf')} disabled={busy || !scores}>
+              📄 Rapport PDF
+            </button>
+            <button className="btn btn-docx btn-lg" onClick={() => onDownload('docx')} disabled={busy || !scores}>
+              📝 Word .docx
+            </button>
+          </div>
+
+          <ProgressBar progress={progress} loading={loading} />
+        </div>
+      </div>
+
+      {/* Zone de prévisualisation PDF */}
+      {previewUrl && (
+        <div className="preview-card">
+          <div className="preview-header">
+            <span className="preview-title">👁 Previsualisation du rapport PDF</span>
+            <span className="preview-hint">Telechargez apres verification ci-dessous</span>
+          </div>
+          <iframe
+            src={previewUrl}
+            title="Previsualisation PDF"
+            className="preview-iframe"
+          />
+          <div className="preview-footer">
+            <button className="btn btn-pdf" onClick={() => onDownload('pdf')} disabled={busy}>
+              📄 Telecharger ce PDF
+            </button>
+            <button className="btn btn-pptx" onClick={() => onDownload('pptx')} disabled={busy}>
+              📑 Telecharger PowerPoint
+            </button>
+            <button className="btn btn-docx" onClick={() => onDownload('docx')} disabled={busy}>
+              📝 Telecharger Word
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       <style>{`
         .output-section { margin-bottom: 24px; }
@@ -174,10 +206,11 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
           font-size: 11px; font-weight: 700;
         }
         .generate-actions {
-          display: flex; gap: 16px; align-items: center;
+          display: flex; gap: 16px; align-items: flex-start;
           padding-top: 20px; border-top: 1px solid var(--border);
-          flex-wrap: wrap;
+          flex-wrap: wrap; flex-direction: column;
         }
+        .generate-actions > div { width: 100%; }
         .score-preview-chip {
           background: rgba(39,174,96,0.1);
           border: 1px solid rgba(39,174,96,0.3);
@@ -197,8 +230,60 @@ export default function StepOutput({ form, setForm, onDownload, loading, scores 
           width: 16px; height: 16px;
           cursor: pointer; accent-color: var(--blue-primary);
         }
+        .btn-preview {
+          background: #f0f4ff; color: var(--blue-primary);
+          border: 2px solid var(--blue-secondary);
+          padding: 10px 20px; border-radius: 8px;
+          font-weight: 600; cursor: pointer; font-size: 14px;
+          transition: all 0.15s;
+        }
+        .btn-preview:hover:not(:disabled) {
+          background: var(--blue-secondary); color: white;
+        }
+        .btn-preview:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Barre de progression */
+        .progress-wrap {
+          width: 100%; display: flex; flex-direction: column; gap: 6px;
+          padding: 12px 0 4px;
+        }
+        .progress-bar-bg {
+          width: 100%; height: 8px; background: #e8edf2; border-radius: 99px; overflow: hidden;
+        }
+        .progress-bar-fill {
+          height: 100%; background: var(--blue-secondary);
+          border-radius: 99px; transition: width 0.3s ease;
+        }
+        .progress-bar-fill.done { background: #27AE60; }
+        .progress-label {
+          font-size: 12px; color: var(--blue-secondary); font-weight: 600;
+        }
+
+        /* Zone preview PDF */
+        .preview-card {
+          background: white; border-radius: 16px;
+          border: 2px solid var(--blue-secondary);
+          overflow: hidden; box-shadow: 0 4px 20px rgba(46,134,193,0.15);
+        }
+        .preview-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 14px 20px; background: rgba(46,134,193,0.08);
+          border-bottom: 1px solid var(--border);
+        }
+        .preview-title { font-weight: 700; color: var(--blue-primary); font-size: 14px; }
+        .preview-hint { font-size: 12px; color: #8a9bb0; }
+        .preview-iframe {
+          width: 100%; height: 700px; border: none; display: block;
+        }
+        .preview-footer {
+          display: flex; gap: 10px; padding: 14px 20px;
+          border-top: 1px solid var(--border); background: #f8fafc;
+          flex-wrap: wrap;
+        }
+
         @media (max-width: 900px) {
           .options-grid-4 { grid-template-columns: repeat(2, 1fr); }
+          .preview-iframe { height: 400px; }
         }
       `}</style>
     </div>

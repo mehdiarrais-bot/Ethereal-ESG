@@ -55,7 +55,7 @@ function ListItems({ items, icon, color }) {
   )
 }
 
-export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, onDownloadDocx, loading, inline }) {
+export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, onDownloadDocx, loading, progress, inline }) {
   if (!scores) return null
 
   return (
@@ -95,15 +95,25 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
 
       <div className="download-actions">
         <button className="btn btn-pptx" onClick={onDownloadPptx} disabled={loading} style={{ flex: 1 }}>
-          {loading ? '⏳' : '📑'} PowerPoint
+          📑 PowerPoint
         </button>
         <button className="btn btn-pdf" onClick={onDownloadPdf} disabled={loading} style={{ flex: 1 }}>
-          {loading ? '⏳' : '📄'} PDF
+          📄 PDF
         </button>
         <button className="btn btn-docx" onClick={onDownloadDocx} disabled={loading} style={{ flex: 1 }}>
-          {loading ? '⏳' : '📝'} Word
+          📝 Word
         </button>
       </div>
+      {loading && progress > 0 && (
+        <div className="rp-progress-wrap">
+          <div className="rp-progress-bg">
+            <div className="rp-progress-fill" style={{ width: `${Math.min(100, progress)}%`, background: progress === 100 ? '#27AE60' : undefined }} />
+          </div>
+          <span className="rp-progress-label">
+            {progress === 100 ? '✓ Pret' : `Generation... ${Math.round(progress)}%`}
+          </span>
+        </div>
+      )}
 
       <style>{`
         .results-panel {
@@ -180,6 +190,19 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           padding-top: 4px;
           border-top: 1px solid var(--border);
           margin-top: 4px;
+        }
+        .rp-progress-wrap {
+          display: flex; flex-direction: column; gap: 5px;
+        }
+        .rp-progress-bg {
+          width: 100%; height: 6px; background: #e8edf2; border-radius: 99px; overflow: hidden;
+        }
+        .rp-progress-fill {
+          height: 100%; background: var(--blue-secondary);
+          border-radius: 99px; transition: width 0.3s ease;
+        }
+        .rp-progress-label {
+          font-size: 11px; color: var(--blue-secondary); font-weight: 600;
         }
       `}</style>
     </div>

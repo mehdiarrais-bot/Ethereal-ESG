@@ -61,6 +61,9 @@ export default function App() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [downloadLoading, setDownloadLoading] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showResults, setShowResults] = useState(true)
 
@@ -80,9 +83,24 @@ export default function App() {
     setError(null)
   }
 
+  const startProgress = () => {
+    setDownloadProgress(5)
+    const start = Date.now()
+    const tick = () => {
+      const elapsed = Date.now() - start
+      // Progression rapide au début, ralentit vers 90%
+      const target = Math.min(90, 5 + 85 * (1 - Math.exp(-elapsed / 4000)))
+      setDownloadProgress(Math.round(target))
+      if (target < 90) setTimeout(tick, 250)
+    }
+    setTimeout(tick, 250)
+  }
+
   const handleDownload = async (type) => {
     setDownloadLoading(true)
+    setDownloadProgress(0)
     setError(null)
+    startProgress()
     try {
       const endpoints = { pptx: '/api/generate/pptx', pdf: '/api/generate/pdf', docx: '/api/generate/docx' }
       const res = await fetch(endpoints[type], {
@@ -90,7 +108,11 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(form)),
       })
-      if (!res.ok) throw new Error(`Erreur lors de la génération (${res.status})`)
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `Erreur ${res.status}`)
+      }
+      setDownloadProgress(95)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -98,12 +120,40 @@ export default function App() {
       const cd = res.headers.get('content-disposition') || ''
       const fname = cd.match(/filename="(.+)"/)?.[1] || `rapport.${type}`
       a.download = fname
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      setDownloadProgress(100)
+      setTimeout(() => setDownloadProgress(0), 1500)
+    } catch (e) {
+      setError(e.message)
+      setDownloadProgress(0)
+    } finally {
+      setDownloadLoading(false)
+    }
+  }
+
+  const handlePreview = async () => {
+    setPreviewLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/generate/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload(form)),
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}))
+        throw new Error(detail.detail || `Erreur ${res.status}`)
+      }
+      const blob = await res.blob()
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(URL.createObjectURL(blob))
     } catch (e) {
       setError(e.message)
     } finally {
-      setDownloadLoading(false)
+      setPreviewLoading(false)
     }
   }
 
@@ -117,7 +167,11 @@ export default function App() {
     <StepOutput
       {...stepProps}
       onDownload={handleDownload}
-      loading={downloadLoading || scoreLoading}
+      onPreview={handlePreview}
+      loading={downloadLoading}
+      previewLoading={previewLoading}
+      previewUrl={previewUrl}
+      progress={downloadProgress}
       scores={scores}
     />,
   ]
@@ -181,6 +235,7 @@ export default function App() {
             onDownloadPdf={() => handleDownload('pdf')}
             onDownloadDocx={() => handleDownload('docx')}
             loading={downloadLoading}
+          progress={downloadProgress}
           />
         )}
       </div>
