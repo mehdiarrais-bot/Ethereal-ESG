@@ -3,7 +3,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import numpy as np
+import math
 from models import ESGScores, AestheticTheme
 
 THEME_COLORS = {
@@ -63,7 +63,7 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme) -> bytes:
     values = [scores.environmental_score, scores.social_score, scores.governance_score]
     values_plot = values + [values[0]]
 
-    angles = [n / float(3) * 2 * np.pi for n in range(3)]
+    angles = [n / float(3) * 2 * math.pi for n in range(3)]
     angles += angles[:1]
 
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True),
@@ -192,12 +192,13 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     ax.axis('off')
 
     # Background arc
-    theta = np.linspace(np.pi, 0, 100)
-    ax.plot(np.cos(theta), np.sin(theta), linewidth=20, color='#E0E0E0', solid_capstyle='butt')
+    theta = [math.pi + (0 - math.pi) * i / 99 for i in range(100)]
+    ax.plot([math.cos(t) for t in theta], [math.sin(t) for t in theta],
+            linewidth=20, color='#E0E0E0', solid_capstyle='butt')
 
     # Score arc
-    score_angle = np.pi * (1 - score / 100)
-    theta_score = np.linspace(np.pi, score_angle, 100)
+    score_angle = math.pi * (1 - score / 100)
+    theta_score = [math.pi + (score_angle - math.pi) * i / 99 for i in range(100)]
     if score >= 75:
         color = colors["env"]
     elif score >= 50:
@@ -205,7 +206,8 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     else:
         color = "#E74C3C"
 
-    ax.plot(np.cos(theta_score), np.sin(theta_score), linewidth=20, color=color, solid_capstyle='butt')
+    ax.plot([math.cos(t) for t in theta_score], [math.sin(t) for t in theta_score],
+            linewidth=20, color=color, solid_capstyle='butt')
 
     ax.text(0, 0.3, f'{score:.0f}', ha='center', va='center',
             fontsize=36, fontweight='bold', color=colors["text"])
