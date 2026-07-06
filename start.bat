@@ -57,12 +57,34 @@ if "%PYTHON_CMD%"=="" (
 for /f "tokens=*" %%i in ('%PYTHON_CMD% --version 2^>^&1') do echo [OK] %%i (commande: %PYTHON_CMD%)
 
 REM ── 2. Node.js ───────────────────────────────────────────────────────────
+set NODE_CMD=
 where node >nul 2>nul
-if errorlevel 1 (
+if not errorlevel 1 (
+    set NODE_CMD=node
+)
+
+REM Chercher Node dans les emplacements Windows standard si "where" echoue
+if "%NODE_CMD%"=="" (
+    if exist "%ProgramFiles%\nodejs\node.exe" set NODE_CMD="%ProgramFiles%\nodejs\node.exe"
+)
+if "%NODE_CMD%"=="" (
+    if exist "%ProgramFiles(x86)%\nodejs\node.exe" set NODE_CMD="%ProgramFiles(x86)%\nodejs\node.exe"
+)
+if "%NODE_CMD%"=="" (
+    if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" set NODE_CMD="%LOCALAPPDATA%\Programs\nodejs\node.exe"
+)
+
+REM Ajouter nodejs au PATH si trouve hors PATH
+if not "%NODE_CMD%"=="node" if not "%NODE_CMD%"=="" (
+    for %%F in (%NODE_CMD%) do set "PATH=%%~dpF;%PATH%"
+    set NODE_CMD=node
+)
+
+if "%NODE_CMD%"=="" (
     echo.
     echo [ERREUR] Node.js introuvable.
     echo   Installer depuis https://nodejs.org/ (version LTS)
-    echo   Puis fermer et rouvrir cette fenetre.
+    echo   Puis REDEMARRER le PC et relancer ce script.
     echo.
     pause
     exit /b 1
