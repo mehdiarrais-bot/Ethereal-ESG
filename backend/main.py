@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.datastructures import MutableHeaders
 
 from models import ESGRequest, ESGScores, AestheticTheme
 from esg_calculator import calculate_esg_scores
@@ -21,24 +23,59 @@ def safe_name(name: str) -> str:
     return SAFE_NAME_RE.sub('_', name)
 
 
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "no-referrer",
+}
+
 MAX_BODY_BYTES = 100_000  # 100 KB
 
 
-class BodySizeLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "POST":
-            content_length = request.headers.get("content-length")
-            if content_length and int(content_length) > MAX_BODY_BYTES:
-                return JSONResponse(status_code=413, content={"detail": "Request too large"})
-            body = await request.body()
-            if len(body) > MAX_BODY_BYTES:
-                return JSONResponse(status_code=413, content={"detail": "Request too large"})
-        return await call_next(request)
+class SecurityMiddleware:
+    """Pure ASGI middleware: body size limit + security headers."""
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            request = Request(scope, receive)
+
+            # Body size check for POST requests
+            if request.method == "POST":
+                cl = request.headers.get("content-length")
+                if cl and int(cl) > MAX_BODY_BYTES:
+                    resp = JSONResponse(status_code=413, content={"detail": "Request too large"})
+                    await resp(scope, receive, send)
+                    return
+                body = await request.body()
+                if len(body) > MAX_BODY_BYTES:
+                    resp = JSONResponse(status_code=413, content={"detail": "Request too large"})
+                    await resp(scope, receive, send)
+                    return
+                # Rebuild receive so the body can still be read downstream
+                async def receive_with_body():
+                    return {"type": "http.request", "body": body, "more_body": False}
+                receive = receive_with_body
+
+            # Inject security headers into response
+            async def send_with_headers(message):
+                if message["type"] == "http.response.start":
+                    headers = MutableHeaders(scope=message)
+                    for k, v in SECURITY_HEADERS.items():
+                        headers.append(k, v)
+                await send(message)
+
+            await self.app(scope, receive, send_with_headers)
+        else:
+            await self.app(scope, receive, send)
 
 
 app = FastAPI(title="ESG Platform API", version="1.0.0")
 
-app.add_middleware(BodySizeLimitMiddleware)
+app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
@@ -46,16 +83,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
-
-
-@app.middleware("http")
-async def security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    return response
 
 
 @app.exception_handler(Exception)
