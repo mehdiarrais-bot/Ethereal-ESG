@@ -3,6 +3,8 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .app-body {
@@ -32,8 +34,11 @@
   overflow-y: auto;
 }
 
+/* Horizontal slide on each step change (keyed remount in App.jsx) */
 .step-wrapper {
   flex: 1;
+  animation: slideInRight var(--med) var(--ease) both;
+  will-change: transform, opacity;
 }
 
 .step-nav {
@@ -41,178 +46,195 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--glass-border);
 }
 
-.step-dots {
-  display: flex;
-  gap: 8px;
-}
+.step-dots { display: flex; gap: 10px; }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: none;
-  background: var(--border);
+  background: rgba(140, 120, 255, 0.25);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform var(--fast) var(--ease), background var(--fast), box-shadow var(--fast);
   padding: 0;
 }
+.dot:hover { transform: scale(1.2); }
+.dot.active {
+  background: var(--neon);
+  transform: scale(1.4);
+  box-shadow: var(--glow-neon);
+}
+.dot.done { background: var(--env); box-shadow: 0 0 10px rgba(52,211,153,0.6); }
 
-.dot.active { background: var(--blue-primary); transform: scale(1.3); }
-.dot.done { background: var(--env); }
-
-/* Buttons */
+/* ── Buttons ─────────────────────────────────────────────────── */
 .btn {
-  padding: 10px 24px;
+  padding: 11px 24px;
   border-radius: var(--radius-sm);
-  border: none;
+  border: 1px solid transparent;
   font-size: 14px;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: transform var(--fast) var(--ease), box-shadow var(--fast), background var(--fast), border-color var(--fast);
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
 }
+.btn:active { transform: scale(0.96); }
 
 .btn-primary {
-  background: var(--blue-primary);
-  color: white;
+  background: linear-gradient(135deg, var(--violet), var(--neon-blue));
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(124, 92, 246, 0.4);
 }
-.btn-primary:hover { background: #162f5a; transform: translateY(-1px); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow-violet), 0 6px 22px rgba(59,130,246,0.45); }
 
 .btn-ghost {
-  background: transparent;
+  background: var(--glass);
   color: var(--text);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
 }
-.btn-ghost:hover { background: var(--bg); }
-.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-ghost:hover { background: rgba(124,92,246,0.16); border-color: var(--glass-border-lit); transform: translateY(-1px); }
+.btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 .btn-success {
-  background: var(--env);
+  background: linear-gradient(135deg, #059669, var(--env));
   color: white;
+  box-shadow: 0 4px 16px rgba(52,211,153,0.35);
 }
-.btn-success:hover { background: #219a52; }
-.btn-success:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(52,211,153,0.55); }
+.btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-accent {
-  background: var(--accent);
-  color: white;
+  background: linear-gradient(135deg, var(--neon), var(--neon-blue));
+  color: #04121a;
 }
-.btn-accent:hover { background: #d68910; }
+.btn-accent:hover { transform: translateY(-2px); box-shadow: var(--glow-neon); }
 
-.btn-pptx {
-  background: linear-gradient(135deg, #C0392B, #E74C3C);
-  color: white;
+.btn-pptx { background: linear-gradient(135deg, #b91c4a, #f43f5e); color: white; }
+.btn-pptx:hover { transform: translateY(-2px); box-shadow: 0 0 22px rgba(244,63,94,0.5); }
+
+.btn-pdf { background: linear-gradient(135deg, var(--violet-deep), var(--neon-blue)); color: white; }
+.btn-pdf:hover { transform: translateY(-2px); box-shadow: 0 0 22px rgba(59,130,246,0.5); }
+
+.btn-docx { background: linear-gradient(135deg, #047857, var(--env)); color: white; }
+.btn-docx:hover { transform: translateY(-2px); box-shadow: 0 0 22px rgba(52,211,153,0.5); }
+
+.btn-lg { padding: 14px 30px; font-size: 15px; border-radius: 12px; }
+
+/* Shine sweep on hover for prominent buttons */
+.btn-primary::after,
+.btn-pptx::after, .btn-pdf::after, .btn-docx::after, .btn-accent::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left var(--med) var(--ease);
 }
-.btn-pptx:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(192,57,43,0.3); }
-
-.btn-pdf {
-  background: linear-gradient(135deg, #1B3A6B, #2E86C1);
-  color: white;
-}
-.btn-pdf:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(27,58,107,0.3); }
-
-.btn-docx {
-  background: linear-gradient(135deg, #1F5C2E, #27AE60);
-  color: white;
-}
-.btn-docx:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(39,174,96,0.3); }
-
-.btn-lg {
-  padding: 14px 32px;
-  font-size: 15px;
-  border-radius: 10px;
+.btn-primary:hover::after,
+.btn-pptx:hover::after, .btn-pdf:hover::after, .btn-docx:hover::after, .btn-accent:hover::after {
+  left: 130%;
 }
 
-/* Cards */
+/* ── Cards (glassmorphism) ───────────────────────────────────── */
 .card {
-  background: var(--card);
+  background: var(--glass-strong);
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
   padding: 28px;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  position: relative;
+  animation: fadeUp var(--med) var(--ease) both;
+}
+/* Luminous top edge */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 12%; right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border-lit), transparent);
 }
 
 .card-title {
   font-size: 20px;
-  font-weight: 700;
-  color: var(--blue-primary);
+  font-weight: 800;
+  color: var(--text);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
   gap: 10px;
+  letter-spacing: 0.2px;
 }
 
-/* Form elements */
+/* ── Form elements ───────────────────────────────────────────── */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 18px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
 
 .form-group label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #5a6a7e;
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .form-group input,
 .form-group select {
-  padding: 10px 14px;
-  border: 1.5px solid var(--border);
+  padding: 11px 14px;
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: white;
+  background: rgba(8, 5, 22, 0.6);
   color: var(--text);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color var(--fast), box-shadow var(--fast), background var(--fast);
   width: 100%;
 }
+.form-group input::placeholder { color: var(--muted); }
+.form-group select option { background: var(--bg-1); color: var(--text); }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--blue-secondary);
-  box-shadow: 0 0 0 3px rgba(46,134,193,0.12);
+  border-color: var(--glass-border-lit);
+  box-shadow: 0 0 0 3px rgba(34,211,238,0.15), var(--glow-neon);
+  background: rgba(12, 8, 30, 0.8);
 }
 
-.form-hint {
-  font-size: 11px;
-  color: #8a9bb0;
-}
+.form-hint { font-size: 11px; color: var(--muted); }
 
-.form-section {
-  margin-bottom: 28px;
-}
+.form-section { margin-bottom: 28px; }
 
 .form-section-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--blue-secondary);
+  letter-spacing: 1.2px;
+  color: var(--neon);
   margin-bottom: 14px;
   padding-bottom: 8px;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Toggle buttons */
+/* ── Toggle buttons ──────────────────────────────────────────── */
 .toggle-group {
   display: flex;
   gap: 0;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -221,41 +243,50 @@
   flex: 1;
   padding: 9px 12px;
   border: none;
-  background: white;
+  background: rgba(8, 5, 22, 0.5);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
-  color: var(--text);
+  transition: background var(--fast), color var(--fast);
+  color: var(--text-dim);
 }
-
+.toggle-btn:hover { background: rgba(124,92,246,0.14); color: var(--text); }
 .toggle-btn.active {
-  background: var(--blue-primary);
+  background: linear-gradient(135deg, var(--violet), var(--neon-blue));
   color: white;
 }
+.toggle-btn:not(:last-child) { border-right: 1px solid var(--glass-border); }
 
-.toggle-btn:not(:last-child) {
-  border-right: 1px solid var(--border);
-}
-
-/* Error banner */
+/* ── Error banner ────────────────────────────────────────────── */
 .error-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #FDE8E8;
-  border: 1px solid #FBBABA;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.4);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
-  color: #C0392B;
+  color: #fda4af;
   font-size: 14px;
+  backdrop-filter: blur(8px);
+  animation: fadeUp var(--fast) var(--ease) both;
 }
-
 .error-banner button {
   background: none;
   border: none;
-  color: #C0392B;
+  color: #fda4af;
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
+}
+
+/* Generic tip box (used in steps) */
+.tip-box {
+  background: rgba(34, 211, 238, 0.08) !important;
+  border-left: 3px solid var(--neon) !important;
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--text-dim) !important;
+  margin-top: 12px;
 }

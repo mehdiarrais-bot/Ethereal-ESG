@@ -171,7 +171,7 @@ export default function App() {
                 <button onClick={() => setError(null)}>✕</button>
               </div>
             )}
-            <div className="step-wrapper">
+            <div className="step-wrapper" key={step}>
               {stepComponents[step]}
             </div>
             <div className="step-nav">

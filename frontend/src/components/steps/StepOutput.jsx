@@ -206,19 +206,24 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         .options-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .option-card {
           position: relative; padding: 13px 14px;
-          border: 2px solid var(--border); border-radius: 10px;
-          background: white; text-align: left; cursor: pointer;
-          transition: all 0.15s;
+          border: 1px solid var(--glass-border); border-radius: 12px;
+          background: rgba(8, 5, 22, 0.5); text-align: left; cursor: pointer;
+          transition: border-color var(--fast), background var(--fast), transform var(--fast) var(--ease), box-shadow var(--fast);
+          color: var(--text);
         }
-        .option-card:hover { border-color: var(--blue-secondary); background: rgba(46,134,193,0.04); }
-        .option-card.selected { border-color: var(--blue-primary); background: rgba(27,58,107,0.06); }
+        .option-card:hover { border-color: var(--glass-border-lit); background: rgba(124,92,246,0.12); transform: translateY(-2px); }
+        .option-card.selected {
+          border-color: var(--neon); background: rgba(34,211,238,0.1);
+          box-shadow: var(--glow-neon);
+        }
         .option-name { font-size: 13px; font-weight: 700; color: var(--text); }
-        .option-desc { font-size: 11px; color: #8a9bb0; margin-top: 3px; }
+        .option-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
         .option-check {
           position: absolute; top: 8px; right: 10px;
-          width: 20px; height: 20px; background: var(--blue-primary); color: white;
+          width: 20px; height: 20px;
+          background: linear-gradient(135deg, var(--neon), var(--neon-blue)); color: #04121a;
           border-radius: 50%; display: flex; align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 700;
+          font-size: 11px; font-weight: 800;
         }
         .generate-actions {
           display: flex; gap: 16px; align-items: flex-start;
@@ -227,49 +232,49 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         }
         .generate-actions > div { width: 100%; }
         .score-preview-chip {
-          background: rgba(39,174,96,0.1);
-          border: 1px solid rgba(39,174,96,0.3);
-          border-radius: 8px; padding: 8px 16px;
-          font-size: 13px; color: #1A5C38;
+          background: rgba(52,211,153,0.12);
+          border: 1px solid rgba(52,211,153,0.35);
+          border-radius: 10px; padding: 8px 16px;
+          font-size: 13px; color: #6ee7b7;
         }
         .score-preview-pending {
-          background: rgba(243,156,18,0.1);
-          border-color: rgba(243,156,18,0.3);
-          color: #7D5A00;
+          background: rgba(34,211,238,0.1);
+          border-color: rgba(34,211,238,0.35);
+          color: var(--neon);
         }
         .checkbox-label {
           display: flex; align-items: center; gap: 8px;
-          font-size: 13px; cursor: pointer; color: var(--text);
+          font-size: 13px; cursor: pointer; color: var(--text-dim);
         }
         .checkbox-label input[type=checkbox] {
           width: 16px; height: 16px;
-          cursor: pointer; accent-color: var(--blue-primary);
+          cursor: pointer; accent-color: var(--neon);
         }
         .btn-preview {
-          background: #f0f4ff; color: var(--blue-primary);
-          border: 2px solid var(--blue-secondary);
-          padding: 10px 20px; border-radius: 8px;
+          background: var(--glass); color: var(--neon);
+          border: 1px solid var(--glass-border-lit);
+          padding: 10px 20px; border-radius: 10px;
           font-weight: 600; cursor: pointer; font-size: 14px;
-          transition: all 0.15s;
+          transition: background var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast) var(--ease);
         }
         .btn-preview:hover:not(:disabled) {
-          background: var(--blue-secondary); color: white;
+          background: rgba(34,211,238,0.15); box-shadow: var(--glow-neon); transform: translateY(-1px);
         }
-        .btn-preview:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-preview:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* Lien manuel */
         .manual-dl-banner {
           display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-          background: #eafaf1; border: 1.5px solid #27AE60; border-radius: 10px;
+          background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.4); border-radius: 12px;
           padding: 12px 16px; margin-top: 8px;
         }
-        .manual-dl-banner span { color: #1A5C38; font-weight: 700; font-size: 13px; }
+        .manual-dl-banner span { color: #6ee7b7; font-weight: 700; font-size: 13px; }
         .manual-dl-link {
-          color: var(--blue-primary); font-size: 13px; font-weight: 600;
+          color: var(--neon); font-size: 13px; font-weight: 600;
           text-decoration: underline; flex: 1;
         }
         .manual-dl-close {
-          background: none; border: none; color: #8a9bb0;
+          background: none; border: none; color: var(--muted);
           font-size: 16px; cursor: pointer; padding: 0 4px;
         }
 
@@ -279,33 +284,35 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           padding: 12px 0 4px;
         }
         .progress-bar-bg {
-          width: 100%; height: 8px; background: #e8edf2; border-radius: 99px; overflow: hidden;
+          width: 100%; height: 8px; background: rgba(140,120,255,0.18); border-radius: 99px; overflow: hidden;
         }
         .progress-bar-fill {
-          height: 100%; background: var(--blue-secondary);
-          border-radius: 99px; transition: width 0.3s ease;
+          height: 100%; background: linear-gradient(90deg, var(--violet), var(--neon));
+          border-radius: 99px; transition: width 0.3s var(--ease); box-shadow: var(--glow-neon);
         }
-        .progress-bar-fill.done { background: #27AE60; }
+        .progress-bar-fill.done { background: linear-gradient(90deg, #059669, var(--env)); }
         .progress-label {
-          font-size: 12px; color: var(--blue-secondary); font-weight: 600;
+          font-size: 12px; color: var(--neon); font-weight: 600;
         }
 
         /* Zone preview */
         .preview-card {
-          background: white; border-radius: 16px;
-          border: 2px solid var(--blue-secondary);
-          overflow: hidden; box-shadow: 0 4px 20px rgba(46,134,193,0.15);
+          background: var(--glass-strong); border-radius: 16px;
+          border: 1px solid var(--glass-border-lit);
+          overflow: hidden; box-shadow: var(--shadow), var(--glow-neon);
+          backdrop-filter: blur(16px);
+          animation: fadeUp var(--med) var(--ease) both;
         }
         .preview-header {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 14px 20px; background: rgba(46,134,193,0.08);
-          border-bottom: 1px solid var(--border);
+          padding: 14px 20px; background: rgba(34,211,238,0.08);
+          border-bottom: 1px solid var(--glass-border);
         }
-        .preview-title { font-weight: 700; color: var(--blue-primary); font-size: 14px; }
-        .preview-hint { font-size: 12px; color: #8a9bb0; }
+        .preview-title { font-weight: 700; color: var(--neon); font-size: 14px; }
+        .preview-hint { font-size: 12px; color: var(--muted); }
         .preview-footer {
           display: flex; gap: 10px; padding: 14px 20px;
-          border-top: 1px solid var(--border); background: #f8fafc;
+          border-top: 1px solid var(--glass-border); background: rgba(8,5,22,0.4);
           flex-wrap: wrap;
         }
 

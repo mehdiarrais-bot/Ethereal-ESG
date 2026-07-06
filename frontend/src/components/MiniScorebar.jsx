@@ -37,25 +37,29 @@ export default function MiniScorebar({ scores, loading }) {
           display: flex;
           align-items: center;
           gap: 16px;
-          background: white;
-          border-top: 1px solid var(--border);
+          background: rgba(8, 5, 22, 0.55);
+          border-top: 1px solid var(--glass-border);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
           padding: 10px 32px;
           font-size: 12px;
+          flex-wrap: wrap;
         }
-        .mini-calculating { color: #8a9bb0; font-size: 12px; }
+        .mini-calculating { color: var(--muted); font-size: 12px; }
         .mini-pillar { display: flex; align-items: center; gap: 6px; }
         .mini-label { font-weight: 800; width: 14px; color: var(--text); }
         .mini-bar-track {
           width: 80px;
           height: 6px;
-          background: #E8EFF8;
+          background: rgba(140,120,255,0.18);
           border-radius: 3px;
           overflow: hidden;
         }
         .mini-bar-fill {
           height: 100%;
           border-radius: 3px;
-          transition: width 0.5s ease;
+          transition: width 0.6s var(--ease);
+          box-shadow: 0 0 10px currentColor;
         }
         .mini-value { font-weight: 700; width: 24px; text-align: right; }
         .mini-total {
@@ -63,19 +67,24 @@ export default function MiniScorebar({ scores, loading }) {
           display: flex;
           align-items: center;
           gap: 8px;
-          border-left: 1px solid var(--border);
+          border-left: 1px solid var(--glass-border);
           padding-left: 16px;
           font-size: 18px;
           font-weight: 800;
-          color: var(--blue-primary);
+          color: var(--text);
         }
         .mini-rating {
           font-size: 12px;
-          background: var(--accent);
-          color: white;
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-weight: 700;
+          background: linear-gradient(135deg, var(--neon), var(--neon-blue));
+          color: #04121a;
+          padding: 2px 9px;
+          border-radius: 5px;
+          font-weight: 800;
+          box-shadow: var(--glow-neon);
+        }
+        @media (max-width: 560px) {
+          .mini-scorebar { padding: 8px 16px; gap: 10px; }
+          .mini-bar-track { width: 46px; }
         }
       `}</style>
     </div>

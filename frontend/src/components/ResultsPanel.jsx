@@ -7,7 +7,7 @@ function ScoreGauge({ label, score, color }) {
   return (
     <div className="gauge-wrap">
       <svg width="110" height="110" viewBox="0 0 110 110">
-        <circle cx="55" cy="55" r={r} fill="none" stroke="#E8EFF8" strokeWidth="10" />
+        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(140,120,255,0.18)" strokeWidth="10" />
         <circle
           cx="55" cy="55" r={r} fill="none"
           stroke={color} strokeWidth="10"
@@ -20,7 +20,7 @@ function ScoreGauge({ label, score, color }) {
         <text x="55" y="52" textAnchor="middle" fontSize="20" fontWeight="800" fill={color}>
           {score.toFixed(0)}
         </text>
-        <text x="55" y="67" textAnchor="middle" fontSize="10" fill="#8a9bb0">
+        <text x="55" y="67" textAnchor="middle" fontSize="10" fill="var(--muted)">
           /100
         </text>
       </svg>
@@ -66,10 +66,10 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
       </div>
 
       <div className="gauges-row">
-        <ScoreGauge label="Environnement" score={scores.environmental_score} color="#27AE60" />
-        <ScoreGauge label="Social" score={scores.social_score} color="#2E86C1" />
-        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="#8E44AD" />
-        <ScoreGauge label="Global" score={scores.total_esg_score} color="#F39C12" />
+        <ScoreGauge label="Environnement" score={scores.environmental_score} color="#34d399" />
+        <ScoreGauge label="Social" score={scores.social_score} color="#38bdf8" />
+        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="#c084fc" />
+        <ScoreGauge label="Global" score={scores.total_esg_score} color="#22d3ee" />
       </div>
 
       {scores.strengths?.length > 0 && (
@@ -117,7 +117,6 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
 
       <style>{`
         .results-panel {
-          background: white;
           display: flex;
           flex-direction: column;
           gap: 16px;
@@ -128,13 +127,18 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           padding: 20px 16px;
           overflow-y: auto;
           max-height: 100%;
-          border-left: 1px solid var(--border);
+          border-left: 1px solid var(--glass-border);
+          background: rgba(8, 5, 22, 0.4);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
         }
         .results-inline {
-          border: 1px solid var(--border);
+          border: 1px solid var(--glass-border);
           border-radius: var(--radius);
           padding: 24px;
-          border-left: 4px solid var(--accent);
+          border-left: 3px solid var(--neon);
+          background: var(--glass-strong);
+          backdrop-filter: blur(16px);
         }
         .results-header {
           display: flex;
@@ -142,7 +146,7 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           justify-content: space-between;
           font-size: 18px;
           font-weight: 800;
-          color: var(--blue-primary);
+          color: var(--text);
         }
         .rating-badge {
           padding: 6px 16px;
@@ -150,8 +154,8 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           color: white;
           text-align: center;
         }
-        .rating-label { font-size: 10px; font-weight: 600; opacity: 0.85; text-transform: uppercase; }
-        .rating-value { font-size: 22px; font-weight: 900; line-height: 1.2; }
+        .rating-label { font-size: 10px; font-weight: 600; opacity: 0.9; text-transform: uppercase; color: #04121a; }
+        .rating-value { font-size: 22px; font-weight: 900; line-height: 1.2; color: #04121a; }
         .gauges-row {
           display: flex;
           gap: 8px;
@@ -159,12 +163,12 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           flex-wrap: wrap;
         }
         .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .gauge-label { font-size: 11px; font-weight: 600; color: #5a6a7e; text-align: center; }
+        .gauge-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-align: center; }
         .result-section { display: flex; flex-direction: column; gap: 8px; }
         .result-section-title {
           font-size: 13px;
           font-weight: 700;
-          color: var(--blue-primary);
+          color: var(--text);
         }
         .result-list {
           list-style: none;
@@ -174,10 +178,10 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         }
         .result-list li {
           padding: 8px 12px;
-          background: var(--bg);
-          border-radius: 6px;
+          background: rgba(124,92,246,0.08);
+          border-radius: 8px;
           font-size: 12px;
-          color: var(--text);
+          color: var(--text-dim);
           display: flex;
           align-items: flex-start;
           gap: 8px;
@@ -187,22 +191,25 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         .download-actions {
           display: flex;
           gap: 10px;
-          padding-top: 4px;
-          border-top: 1px solid var(--border);
+          padding-top: 12px;
+          border-top: 1px solid var(--glass-border);
           margin-top: 4px;
         }
         .rp-progress-wrap {
           display: flex; flex-direction: column; gap: 5px;
         }
         .rp-progress-bg {
-          width: 100%; height: 6px; background: #e8edf2; border-radius: 99px; overflow: hidden;
+          width: 100%; height: 6px; background: rgba(140,120,255,0.18); border-radius: 99px; overflow: hidden;
         }
         .rp-progress-fill {
-          height: 100%; background: var(--blue-secondary);
-          border-radius: 99px; transition: width 0.3s ease;
+          height: 100%; background: linear-gradient(90deg, var(--violet), var(--neon));
+          border-radius: 99px; transition: width 0.3s var(--ease); box-shadow: var(--glow-neon);
         }
         .rp-progress-label {
-          font-size: 11px; color: var(--blue-secondary); font-weight: 600;
+          font-size: 11px; color: var(--neon); font-weight: 600;
+        }
+        @media (max-width: 960px) {
+          .results-sidebar { display: none; }
         }
       `}</style>
     </div>
