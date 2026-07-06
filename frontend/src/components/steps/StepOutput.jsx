@@ -59,7 +59,7 @@ function ProgressBar({ progress, loading }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, onPreview, loading, previewLoading, previewUrl, progress, scores }) {
+export default function StepOutput({ form, setForm, onDownload, onPreview, loading, previewLoading, previewUrl, progress, downloadLink, onClearLink, scores }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
   const busy = loading || previewLoading
 
@@ -146,6 +146,16 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
           </div>
 
           <ProgressBar progress={progress} loading={loading} />
+
+          {downloadLink && (
+            <div className="manual-dl-banner">
+              <span>✅ Fichier pret !</span>
+              <a href={downloadLink.url} download={downloadLink.fname} className="manual-dl-link">
+                ⬇ Cliquer ici pour telecharger : <strong>{downloadLink.fname}</strong>
+              </a>
+              <button onClick={onClearLink} className="manual-dl-close">✕</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -241,6 +251,22 @@ export default function StepOutput({ form, setForm, onDownload, onPreview, loadi
           background: var(--blue-secondary); color: white;
         }
         .btn-preview:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Lien manuel */
+        .manual-dl-banner {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          background: #eafaf1; border: 1.5px solid #27AE60; border-radius: 10px;
+          padding: 12px 16px; margin-top: 8px;
+        }
+        .manual-dl-banner span { color: #1A5C38; font-weight: 700; font-size: 13px; }
+        .manual-dl-link {
+          color: var(--blue-primary); font-size: 13px; font-weight: 600;
+          text-decoration: underline; flex: 1;
+        }
+        .manual-dl-close {
+          background: none; border: none; color: #8a9bb0;
+          font-size: 16px; cursor: pointer; padding: 0 4px;
+        }
 
         /* Barre de progression */
         .progress-wrap {

@@ -62,6 +62,7 @@ export default function App() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [downloadLoading, setDownloadLoading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
+  const [downloadLink, setDownloadLink] = useState(null) // {url, fname} fallback manuel
   const [previewUrl, setPreviewUrl] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -99,6 +100,7 @@ export default function App() {
   const handleDownload = async (type) => {
     setDownloadLoading(true)
     setDownloadProgress(0)
+    setDownloadLink(null)
     setError(null)
     startProgress()
     try {
@@ -109,23 +111,29 @@ export default function App() {
         body: JSON.stringify(buildPayload(form)),
       })
       if (!res.ok) {
-        const detail = await res.json().catch(() => ({}))
-        throw new Error(detail.detail || `Erreur ${res.status}`)
+        let msg = `Erreur serveur ${res.status}`
+        try { const j = await res.json(); msg = j.detail || msg } catch {}
+        throw new Error(msg)
       }
       setDownloadProgress(95)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
       const cd = res.headers.get('content-disposition') || ''
       const fname = cd.match(/filename="(.+)"/)?.[1] || `rapport.${type}`
+
+      // Tentative auto-download
+      const a = document.createElement('a')
+      a.href = url
       a.download = fname
+      a.style.display = 'none'
       document.body.appendChild(a)
       a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      setTimeout(() => document.body.removeChild(a), 100)
+
+      // Lien manuel visible en fallback (si navigateur bloque le download)
+      setDownloadLink({ url, fname })
       setDownloadProgress(100)
-      setTimeout(() => setDownloadProgress(0), 1500)
+      setTimeout(() => setDownloadProgress(0), 2000)
     } catch (e) {
       setError(e.message)
       setDownloadProgress(0)
@@ -172,6 +180,8 @@ export default function App() {
       previewLoading={previewLoading}
       previewUrl={previewUrl}
       progress={downloadProgress}
+      downloadLink={downloadLink}
+      onClearLink={() => setDownloadLink(null)}
       scores={scores}
     />,
   ]
