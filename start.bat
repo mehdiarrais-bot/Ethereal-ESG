@@ -18,7 +18,6 @@ set PYTHON_CMD=
 REM ── 1. Detecter Python (py launcher, puis python, puis python3) ──────────
 where py >nul 2>nul
 if not errorlevel 1 (
-    REM Verifier que "py" pointe vers un vrai Python (pas le Store)
     py --version >nul 2>nul
     if not errorlevel 1 (
         set PYTHON_CMD=py
@@ -28,14 +27,9 @@ if not errorlevel 1 (
 if "%PYTHON_CMD%"=="" (
     where python >nul 2>nul
     if not errorlevel 1 (
-        REM Verifier que "python" n'est pas l'alias Microsoft Store
-        python --version >nul 2>nul
+        python -c "import sys; sys.exit(0)" >nul 2>nul
         if not errorlevel 1 (
-            REM Tester si c'est le vrai Python (le Store retourne errorlevel 9009)
-            python -c "import sys; sys.exit(0)" >nul 2>nul
-            if not errorlevel 1 (
-                set PYTHON_CMD=python
-            )
+            set PYTHON_CMD=python
         )
     )
 )
@@ -51,11 +45,10 @@ if "%PYTHON_CMD%"=="" (
     echo.
     echo [ERREUR] Python 3 introuvable.
     echo.
-    echo Solutions :
     echo   1. Installer Python depuis https://www.python.org/downloads/
     echo      IMPORTANT : cocher "Add Python to PATH" lors de l'installation
-    echo   2. Ou desactiver l'alias Store : Parametres ^> Applications ^>
-    echo      Alias d'execution d'applications ^> desactiver python.exe
+    echo   2. Ou desactiver l'alias Store :
+    echo      Parametres ^> Applications ^> Alias d'execution ^> desactiver python.exe
     echo.
     pause
     exit /b 1
@@ -68,12 +61,8 @@ where node >nul 2>nul
 if errorlevel 1 (
     echo.
     echo [ERREUR] Node.js introuvable.
-    echo.
-    echo Installer Node.js depuis https://nodejs.org/
-    echo Choisir la version LTS, puis relancer ce script.
-    echo.
-    echo Si Node.js est deja installe, fermer et rouvrir cette fenetre
-    echo pour recharger le PATH.
+    echo   Installer depuis https://nodejs.org/ (version LTS)
+    echo   Puis fermer et rouvrir cette fenetre.
     echo.
     pause
     exit /b 1
@@ -83,6 +72,16 @@ for /f "tokens=*" %%i in ('node --version 2^>^&1') do echo [OK] Node %%i
 REM ── 3. Venv Python ───────────────────────────────────────────────────────
 echo.
 echo [1/4] Installation des dependances Python...
+
+REM Supprimer le venv si requirements.txt a change (evite les conflits de versions)
+if exist "%SCRIPT_DIR%backend\venv" (
+    fc /b "%SCRIPT_DIR%backend\requirements.txt" "%SCRIPT_DIR%backend\venv\.requirements_hash" >nul 2>nul
+    if errorlevel 1 (
+        echo       Mise a jour des dependances detectee, reinitialisation du venv...
+        rmdir /s /q "%SCRIPT_DIR%backend\venv"
+    )
+)
+
 if not exist "%SCRIPT_DIR%backend\venv" (
     %PYTHON_CMD% -m venv "%SCRIPT_DIR%backend\venv"
     if errorlevel 1 (
@@ -91,13 +90,35 @@ if not exist "%SCRIPT_DIR%backend\venv" (
         exit /b 1
     )
 )
+
 call "%SCRIPT_DIR%backend\venv\Scripts\activate.bat"
-pip install -q -r "%SCRIPT_DIR%backend\requirements.txt"
+
+REM Upgrade pip silencieusement
+python -m pip install --upgrade pip --quiet
+
+REM Installer uniquement depuis wheels precompiles (--only-binary=:all:)
+REM pour eviter toute compilation C (matplotlib, numpy, etc.)
+pip install --only-binary=:all: -q -r "%SCRIPT_DIR%backend\requirements.txt"
 if errorlevel 1 (
-    echo [ERREUR] Installation des packages Python echouee.
-    pause
-    exit /b 1
+    echo.
+    echo   Tentative avec les wheels standards...
+    pip install -q -r "%SCRIPT_DIR%backend\requirements.txt"
+    if errorlevel 1 (
+        echo.
+        echo [ERREUR] Installation des packages Python echouee.
+        echo.
+        echo   Cause probable : version de Python trop recente sans wheels disponibles.
+        echo   Solution : installer Python 3.12 depuis https://www.python.org/downloads/
+        echo   (choisir Python 3.12.x, la version la plus stable)
+        echo.
+        pause
+        exit /b 1
+    )
 )
+
+REM Sauvegarder l'empreinte du requirements pour detection de changements
+copy /y "%SCRIPT_DIR%backend\requirements.txt" "%SCRIPT_DIR%backend\venv\.requirements_hash" >nul
+
 echo [OK] Dependances Python installees
 
 REM ── 4. Node modules ──────────────────────────────────────────────────────
@@ -130,7 +151,6 @@ echo.
 echo   Fermer cette fenetre pour arreter l'application.
 echo.
 
-REM Ouvrir le navigateur apres 2 secondes
 start "" cmd /c "timeout /t 2 >nul & start http://localhost:8000"
 
 cd "%SCRIPT_DIR%backend"
