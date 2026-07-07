@@ -300,6 +300,26 @@ def section_header(story, title, color, pal, styles, ts):
     story.append(Spacer(1, 0.3 * cm))
 
 
+def insight_callout(story, text, color, pal, ts):
+    """Encadré coloré « lecture métier » — le message clé de la section."""
+    label = "LECTURE" if ts["font"] != "Times-Roman" else "LECTURE"
+    cell = [
+        Paragraph(esc(text), ParagraphStyle("ic", fontSize=10.5, fontName=ts["font"],
+                  textColor=pal["text"], leading=15)),
+    ]
+    t = Table([cell], colWidths=[16.5 * cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+        ('LINEBEFORE', (0, 0), (0, -1), 3, color),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.3 * cm))
+
+
 def score_to_color(score: float, pal: dict) -> colors.Color:
     if score >= 75:
         return pal["env"]
@@ -363,6 +383,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     styles = build_styles(pal, ts)
     ts = styles["_ts"]  # polices résolues (TTF système ou base-14)
     TR = L(request.language)
+    from content_generator import pillar_insights
+    _pi = pillar_insights(request, scores)
 
     doc = SimpleDocTemplate(buf, pagesize=A4,
                              leftMargin=2 * cm, rightMargin=2 * cm,
@@ -552,6 +574,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     section_header(story, TR["pdf_s2"], pal["env"], pal, styles, ts)
     story.append(Paragraph(
         f"{TR['score_env_label']} : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
+    insight_callout(story, _pi["env"], pal["env"], pal, ts)
 
     env_text = content.get("environmental",
         "L'analyse environnementale couvre les émissions de gaz à effet de serre, "
@@ -587,6 +610,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     section_header(story, TR["pdf_s3"], pal["social"], pal, styles, ts)
     story.append(Paragraph(
         f"{TR['score_soc_label']} : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
+    insight_callout(story, _pi["social"], pal["social"], pal, ts)
 
     soc_text = content.get("social",
         "La performance sociale englobe la gestion des ressources humaines, la diversité, "
@@ -613,6 +637,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     section_header(story, TR["pdf_s4"], pal["gov"], pal, styles, ts)
     story.append(Paragraph(
         f"{TR['score_gov_label']} : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
+    insight_callout(story, _pi["gov"], pal["gov"], pal, ts)
 
     gov_text = content.get("governance",
         "La gouvernance évalue la qualité de la direction, l'indépendance du conseil, "

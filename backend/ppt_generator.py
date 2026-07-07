@@ -379,7 +379,7 @@ COVERS = {"classic": cover_classic, "organic": cover_organic,
 
 
 def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
-                       title, subtitle, score, kpis, t):
+                       title, subtitle, score, kpis, t, insight=""):
     """Slide de pilier en infographie : héros illustré à gauche + chips KPI.
 
     kpis : liste de (icon_name, value_str, label). 6 max affichés.
@@ -420,32 +420,48 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
 
     # ── En-tête droite ─────────────────────────────────────────────
     RX = Inches(4.95)
-    add_text(slide, t["key_indicators"], RX, Inches(0.45), Inches(8), Inches(0.6),
-             font_size=22, bold=True, color=theme["text_dark"], font=ft)
-    add_bg_rect(slide, RX, Inches(1.15), Inches(2.0), Inches(0.05), color)
+    RW = Inches(8.05)
+    add_text(slide, t["key_indicators"].upper(), RX, Inches(0.5), Inches(8), Inches(0.5),
+             font_size=15, bold=True, color=theme["muted"], font=fb)
+    add_bg_rect(slide, RX, Inches(1.02), Inches(1.4), Inches(0.045), color)
 
-    # ── Chips KPI (2 colonnes × 3 lignes) ──────────────────────────
-    chip_w, chip_h = Inches(3.95), Inches(1.52)
-    gap_x, gap_y = Inches(0.28), Inches(0.3)
-    top0 = Inches(1.45)
+    # ── Chips KPI (2 × 2, plus grandes et lisibles) ────────────────
+    chip_w, chip_h = Inches(3.9), Inches(1.42)
+    gap_x, gap_y = Inches(0.25), Inches(0.24)
+    top0 = Inches(1.35)
     border = RGBColor(0x3A, 0x40, 0x4A) if dark else RGBColor(0xE2, 0xE8, 0xF0)
-    circ = Inches(0.92)
-    for i, (icon_name, value, label) in enumerate(kpis[:6]):
+    circ = Inches(0.9)
+    for i, (icon_name, value, label) in enumerate(kpis[:4]):
         col, row = i % 2, i // 2
         x = RX + col * (chip_w + gap_x)
         y = top0 + row * (chip_h + gap_y)
         add_shape(slide, ROUNDED_RECT, x, y, chip_w, chip_h, fill=theme["card_bg"],
                   line_color=border, line_width_pt=0.75)
-        add_shape(slide, OVAL, x + Inches(0.22), y + Inches(0.3), circ, circ, fill=color)
+        add_shape(slide, RECT, x, y + Inches(0.18), Inches(0.06), chip_h - Inches(0.36), fill=color)
+        add_shape(slide, OVAL, x + Inches(0.24), y + Inches(0.27), circ, circ, fill=color)
         try:
             add_image_from_bytes(slide, icon_png(icon_name, 130, "#FFFFFF"),
-                                 x + Inches(0.42), y + Inches(0.5), Inches(0.52), Inches(0.52))
+                                 x + Inches(0.43), y + Inches(0.46), Inches(0.52), Inches(0.52))
         except Exception:
             pass
-        add_text(slide, value, x + Inches(1.35), y + Inches(0.26), chip_w - Inches(1.45), Inches(0.7),
-                 font_size=21, bold=True, color=color, font=ft)
-        add_text(slide, label, x + Inches(1.35), y + Inches(0.92), chip_w - Inches(1.45), Inches(0.5),
+        add_text(slide, value, x + Inches(1.35), y + Inches(0.24), chip_w - Inches(1.45), Inches(0.65),
+                 font_size=23, bold=True, color=color, font=ft)
+        add_text(slide, label, x + Inches(1.36), y + Inches(0.9), chip_w - Inches(1.45), Inches(0.45),
                  font_size=10.5, color=theme["muted"], font=fb)
+
+    # ── Carte « Lecture métier » (insight rédigé) ──────────────────
+    iy = top0 + 2 * (chip_h + gap_y) + Inches(0.18)
+    ih = Inches(2.02)
+    add_shape(slide, ROUNDED_RECT, RX, iy, RW, ih,
+              fill=color if dark else theme["card_bg"],
+              line_color=color, line_width_pt=1.5)
+    add_shape(slide, RECT, RX, iy, Inches(0.11), ih, fill=color)
+    lbl_color = white if dark else color
+    add_text(slide, t["key_takeaway"], RX + Inches(0.42), iy + Inches(0.24), RW - Inches(0.7), Inches(0.4),
+             font_size=12.5, bold=True, color=lbl_color, font=fb)
+    txt_color = white if dark else theme["text_dark"]
+    add_text(slide, insight or "", RX + Inches(0.42), iy + Inches(0.72), RW - Inches(0.8), ih - Inches(0.85),
+             font_size=16, color=txt_color, font=fb)
     return slide
 
 
@@ -460,6 +476,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     ft, fb = style["font_title"], style["font_body"]
     ptype = request.presentation_type
     t = L(request.language)
+    from content_generator import pillar_insights, score_verdict
+    _insights = pillar_insights(request, scores)
+    _verdict = score_verdict(request, scores)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
@@ -515,34 +534,39 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
     slide = content_slide(prs, blank_layout, theme, style, t["dashboard"], header_color)
+    dark = style["dark_slides"]
+    white = RGBColor(0xFF, 0xFF, 0xFF)
 
+    # Verdict — l'idée principale, lisible en 5 secondes
+    vb = add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(1.25), Inches(12.73), Inches(0.95),
+                   fill=theme["bg_primary"] if not dark else theme["card_bg"])
+    add_shape(slide, RECT, Inches(0.3), Inches(1.25), Inches(0.1), Inches(0.95), fill=theme["accent"])
+    add_text(slide, _verdict, Inches(0.6), Inches(1.4), Inches(12.1), Inches(0.7),
+             font_size=15.5, bold=True, color=white if not dark else theme["text_dark"], font=ft)
+
+    # 3 cartes score piliers
     pillars = [
-        ("E — " + t["chart_env"], scores.environmental_score, theme["env"], Inches(0.3)),
-        ("S — " + t["chart_soc"], scores.social_score, theme["social"], Inches(4.55)),
-        ("G — " + t["chart_gov"], scores.governance_score, theme["gov"], Inches(8.8)),
+        (t["chart_env"], scores.environmental_score, theme["env"], Inches(0.3)),
+        (t["chart_soc"], scores.social_score, theme["social"], Inches(4.55)),
+        (t["chart_gov"], scores.governance_score, theme["gov"], Inches(8.8)),
     ]
     for label, score, color, left in pillars:
-        kpi_card(slide, left, Inches(1.3), Inches(4.0), Inches(2.4), theme, style, color)
-        lbl_indent = Inches(0.42) if style["card"] == "rounded" else Inches(0.2)
-        add_text(slide, label, left + lbl_indent, Inches(1.5),
-                 Inches(3.5), Inches(0.5), font_size=13, bold=True, color=theme["text_dark"], font=fb)
-        add_text(slide, f"{score:.1f}", left + Inches(0.2), Inches(2.0),
-                 Inches(2.0), Inches(0.9), font_size=44, bold=True, color=color, font=ft)
-        add_text(slide, "/100", left + Inches(1.6), Inches(2.4),
-                 Inches(1.5), Inches(0.4), font_size=14, color=theme["muted"], font=fb)
+        kpi_card(slide, left, Inches(2.45), Inches(4.0), Inches(1.85), theme, style, color)
+        lbl_indent = Inches(0.42) if style["card"] == "rounded" else Inches(0.25)
+        add_text(slide, label.upper(), left + lbl_indent, Inches(2.62),
+                 Inches(3.5), Inches(0.4), font_size=12, bold=True, color=theme["muted"], font=fb)
+        add_text(slide, f"{score:.0f}", left + Inches(0.22), Inches(3.02),
+                 Inches(2.2), Inches(1.0), font_size=48, bold=True, color=color, font=ft)
+        add_text(slide, "/100", left + Inches(1.75), Inches(3.55),
+                 Inches(1.5), Inches(0.4), font_size=15, color=theme["muted"], font=fb)
 
-    sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
-    add_bg_rect(slide, Inches(0.3), Inches(3.9), Inches(12.7), Inches(0.03), sep_color)
-    add_text(slide, t["global_score_line"].format(s=scores.total_esg_score, r=scores.rating),
-             Inches(0.3), Inches(4.05), Inches(12.7), Inches(0.6),
-             font_size=20, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=ft)
-
+    # Graphiques radar + barres, alignés
     if "radar" in chart_images:
         add_image_from_bytes(slide, chart_images["radar"],
-                             Inches(1.2), Inches(4.75), height=Inches(2.55))
+                             Inches(1.0), Inches(4.55), height=Inches(2.7))
     if "bars" in chart_images:
         add_image_from_bytes(slide, chart_images["bars"],
-                             Inches(5.6), Inches(4.8), height=Inches(2.5))
+                             Inches(5.5), Inches(4.65), height=Inches(2.55))
 
     # ── SLIDE 3: Environnement (infographie) ─────────────────────────────
     env = request.environmental
@@ -565,7 +589,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         env_kpis.append(("recycle", f"{env.waste_generated_tonnes:,.0f} t", t["kpi"]["waste"]))
     pillar_infographic(prs, blank_layout, theme, style, "env",
                        t["pillar_env"], t["pillar_env_sub"],
-                       scores.environmental_score, env_kpis, t)
+                       scores.environmental_score, env_kpis, t, _insights["env"])
 
     # ── SLIDE 4: Social (infographie) ────────────────────────────────────
     soc = request.social
@@ -588,7 +612,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         soc_kpis.append(("heart", f"{soc.community_investment_eur:,.0f} €", t["kpi"]["community"]))
     pillar_infographic(prs, blank_layout, theme, style, "social",
                        t["pillar_soc"], t["pillar_soc_sub"],
-                       scores.social_score, soc_kpis, t)
+                       scores.social_score, soc_kpis, t, _insights["social"])
 
     # ── SLIDE 5: Gouvernance (infographie) ───────────────────────────────
     gov = request.governance
@@ -613,7 +637,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         gov_kpis.append(("scale", f"{gov.corruption_cases}", t["kpi"]["corruption"]))
     pillar_infographic(prs, blank_layout, theme, style, "gov",
                        t["pillar_gov"], t["pillar_gov_sub"],
-                       scores.governance_score, gov_kpis, t)
+                       scores.governance_score, gov_kpis, t, _insights["gov"])
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
@@ -730,6 +754,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                  Inches(3.7), Inches(0.7), font_size=13, color=sub_color, font=fb)
 
     frameworks = ["GRI Standards", "TCFD", "CSRD / DPEF", "SFDR", "ISO 14001 / 26000"]
+    sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
     add_bg_rect(slide, Inches(0.3), Inches(5.1), Inches(12.7), Inches(0.03), sep_color)
     add_text(slide, t["frameworks_line"] + "  |  ".join(frameworks),
              Inches(0.3), Inches(5.3), Inches(12.7), Inches(0.6),

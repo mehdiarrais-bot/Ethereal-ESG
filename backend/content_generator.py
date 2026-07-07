@@ -936,3 +936,91 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
             "horizon": hen if en else hfr,
         })
     return out
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# INSIGHTS MÉTIER — message principal de chaque slide (lisible en < 5 s)
+# ══════════════════════════════════════════════════════════════════════════
+
+def _band(score):
+    if score >= 75: return "high"
+    if score >= 60: return "good"
+    if score >= 45: return "mid"
+    return "low"
+
+
+_PILLAR_INSIGHT = {
+    "fr": {
+        "env": {
+            "high": "Performance environnementale de premier plan : la maîtrise du carbone et de l'énergie constitue un actif différenciant.",
+            "good": "Performance environnementale solide, au-dessus de la moyenne sectorielle ; l'intensité carbone reste le principal levier de création de valeur durable.",
+            "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la conformité CSRD.",
+            "low": "Performance environnementale en retrait : la transition bas-carbone doit devenir une priorité stratégique à court terme.",
+        },
+        "social": {
+            "high": "Capital humain valorisé et sécurisé : un atout de marque employeur et de résilience opérationnelle.",
+            "good": "Socle social solide ; la diversité et la formation sont les leviers pour transformer la conformité en avantage compétitif.",
+            "mid": "Performance sociale en construction : parité et sécurité au travail appellent des objectifs chiffrés pour fidéliser les talents.",
+            "low": "Performance sociale à renforcer : le risque de rétention et de conformité justifie un plan d'action RH immédiat.",
+        },
+        "gov": {
+            "high": "Gouvernance exemplaire : indépendance, audit et supervision ESG inspirent confiance aux investisseurs.",
+            "good": "Gouvernance robuste ; l'assurance externe et le comité de durabilité consolident la crédibilité du reporting.",
+            "mid": "Gouvernance à structurer : l'audit indépendant et un comité dédié sont attendus par les marchés financiers.",
+            "low": "Gouvernance insuffisante : l'absence de contrôle ESG expose l'entreprise à un risque réputationnel et réglementaire.",
+        },
+    },
+    "en": {
+        "env": {
+            "high": "Leading environmental performance: carbon and energy control is a differentiating asset.",
+            "good": "Solid environmental performance, above the sector average; carbon intensity remains the main lever for sustainable value creation.",
+            "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive CSRD compliance.",
+            "low": "Lagging environmental performance: the low-carbon transition must become a near-term strategic priority.",
+        },
+        "social": {
+            "high": "Human capital valued and protected: an asset for employer brand and operational resilience.",
+            "good": "Solid social foundation; diversity and training are the levers to turn compliance into a competitive edge.",
+            "mid": "Social performance under construction: gender balance and workplace safety call for quantified targets to retain talent.",
+            "low": "Social performance to strengthen: retention and compliance risk warrants an immediate HR action plan.",
+        },
+        "gov": {
+            "high": "Exemplary governance: independence, audit and ESG oversight inspire investor confidence.",
+            "good": "Robust governance; external assurance and a sustainability committee reinforce reporting credibility.",
+            "mid": "Governance to structure: independent audit and a dedicated committee are expected by financial markets.",
+            "low": "Insufficient governance: the lack of ESG control exposes the company to reputational and regulatory risk.",
+        },
+    },
+}
+
+
+def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
+    lang = "en" if getattr(request, "language", "fr") == "en" else "fr"
+    P = _PILLAR_INSIGHT[lang]
+    return {
+        "env": P["env"][_band(scores.environmental_score)],
+        "social": P["social"][_band(scores.social_score)],
+        "gov": P["gov"][_band(scores.governance_score)],
+    }
+
+
+def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
+    """Message d'ouverture du tableau de bord — l'idée principale en une phrase."""
+    en = getattr(request, "language", "fr") == "en"
+    name = request.company.name
+    pillars = [("env", scores.environmental_score), ("social", scores.social_score),
+               ("gov", scores.governance_score)]
+    labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
+              "en": {"env": "environment", "social": "social", "gov": "governance"}}
+    lab = labels["en" if en else "fr"]
+    best = max(pillars, key=lambda x: x[1]); worst = min(pillars, key=lambda x: x[1])
+    band = _band(scores.total_esg_score)
+    if en:
+        qual = {"high": "a leading", "good": "a solid", "mid": "a developing", "low": "an early-stage"}[band]
+        return (f"{name} shows {qual} ESG profile ({scores.total_esg_score:.0f}/100, {scores.rating}), "
+                f"anchored by {lab[best[0]]} ({best[1]:.0f}/100); "
+                f"{lab[worst[0]]} ({worst[1]:.0f}/100) concentrates the improvement potential.")
+    qual = {"high": "un profil ESG de premier plan", "good": "un profil ESG solide",
+            "mid": "un profil ESG en développement", "low": "un profil ESG en structuration"}[band]
+    return (f"{name} affiche {qual} ({scores.total_esg_score:.0f}/100, {scores.rating}), "
+            f"porté par {lab[best[0]]} ({best[1]:.0f}/100) ; "
+            f"{lab[worst[0]]} ({worst[1]:.0f}/100) concentre le potentiel de progression.")
