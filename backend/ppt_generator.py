@@ -832,38 +832,40 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
              Inches(0.3), Inches(5.3), Inches(12.7), Inches(0.6),
              font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=fb)
 
-    # ── SLIDE 9: Conclusion ──────────────────────────────────────────────
+    # ── SLIDE 9: Conclusion — clôture éditoriale + engagements ──────────
+    from content_generator import enriched_recommendations
+    _eng = enriched_recommendations(request, scores)[:3]
     slide = prs.slides.add_slide(blank_layout)
-    if style["cover"] == "minimal":
-        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-        concl_title_color, concl_text_color = theme["text_dark"], theme["muted"]
-        add_bg_rect(slide, Inches(0.6), Inches(0.7), Inches(0.3), Inches(0.3), theme["accent"])
-        title_top = Inches(1.2)
-    else:
-        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-        add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
-        concl_title_color, concl_text_color = theme["text_light"], theme["subtitle"]
-        title_top = Inches(0.8)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    add_bg_rect(slide, 0, 0, Inches(0.18), SLIDE_H, theme["accent"])
+    tl_color, sub_color = theme["text_light"], theme["subtitle"]
 
-    add_text(slide, maybe_upper(t["conclusion_title"], style), Inches(0.6), title_top,
-             Inches(11), Inches(1.0), font_size=30, bold=True, color=concl_title_color, font=ft)
+    add_text(slide, maybe_upper(t["conclusion_title"], style), Inches(0.65), Inches(0.7),
+             Inches(11.5), Inches(0.9), font_size=30, bold=True, color=tl_color, font=ft)
+    add_bg_rect(slide, Inches(0.68), Inches(1.62), Inches(1.8), Inches(0.06), theme["accent"])
+    # Synthèse en grand (l'idée qui reste)
+    add_text(slide, _verdict, Inches(0.65), Inches(1.95), Inches(12.0), Inches(1.3),
+             font_size=20, bold=True, color=tl_color, font=ft)
 
-    conclusion_text = content.get("conclusion",
-        f"{request.company.name} affiche un score ESG global de {scores.total_esg_score}/100 "
-        f"(note {scores.rating}), témoignant d'une démarche structurée de développement durable. "
-        "La société s'engage à renforcer ses performances sur les axes identifiés "
-        "et à maintenir la transparence de son reporting extra-financier."
-    )
-    add_text(slide, conclusion_text, Inches(0.6), Inches(2.2),
-             Inches(11.5), Inches(2.8), font_size=14, color=concl_text_color, font=fb)
-
-    add_text(slide, t["esg_score_line"].format(s=scores.total_esg_score, r=scores.rating),
-             Inches(0.6), Inches(5.0), Inches(10), Inches(0.7),
-             font_size=22, bold=True, color=theme["accent"], font=ft)
+    # Engagements prioritaires (les prochaines étapes)
+    add_text(slide, t["commitments"], Inches(0.65), Inches(3.55), Inches(8), Inches(0.4),
+             font_size=13, bold=True, color=theme["accent"], font=fb)
+    ecolors = [theme["env"], theme["social"], theme["gov"]]
+    for i, eng in enumerate(_eng):
+        y = Inches(4.15) + i * Inches(0.86)
+        add_text(slide, f"{i + 1:02d}", Inches(0.65), y, Inches(0.9), Inches(0.7),
+                 font_size=30, bold=True, color=theme["accent"], font=ft)
+        add_text(slide, eng["title"], Inches(1.7), y + Inches(0.05), Inches(9.0), Inches(0.5),
+                 font_size=16, bold=True, color=tl_color, font=fb)
+        add_text(slide, eng["horizon"], Inches(10.9), y + Inches(0.08), Inches(1.9), Inches(0.4),
+                 font_size=13, bold=True, color=sub_color, align=PP_ALIGN.RIGHT, font=fb)
+        if i < len(_eng) - 1:
+            add_bg_rect(slide, Inches(1.7), y + Inches(0.72), Inches(11.1), Inches(0.012),
+                        RGBColor(0x55, 0x5B, 0x6B) if not style["dark_slides"] else theme["card_bg"])
 
     add_text(slide, f"© {request.company.reporting_year} {request.company.name} — " + t["confidential"],
-             Inches(0.6), Inches(6.7), Inches(11), Inches(0.4),
-             font_size=9, italic=True, color=concl_text_color, font=fb)
+             Inches(0.65), Inches(7.0), Inches(11), Inches(0.4),
+             font_size=9, italic=True, color=sub_color, font=fb)
 
     buf = io.BytesIO()
     prs.save(buf)
