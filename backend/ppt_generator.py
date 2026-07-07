@@ -318,74 +318,81 @@ def cover_classic(slide, theme, style, request, scores, subtitle, TR):
 def cover_organic(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    # Overlapping organic circles top-right
-    add_shape(slide, OVAL, Inches(9.8), Inches(-2.2), Inches(5.5), Inches(5.5), fill=theme["card_bg"])
-    add_shape(slide, OVAL, Inches(11.2), Inches(-0.8), Inches(3.6), Inches(3.6), fill=theme["env"])
-    add_shape(slide, OVAL, Inches(10.4), Inches(1.6), Inches(1.4), Inches(1.4), fill=theme["accent"])
-    # Title in deep green on light bg
-    add_text(slide, request.company.name, Inches(0.7), Inches(1.6), Inches(9), Inches(1.3),
-             font_size=42, bold=True, color=theme["bg_primary"], font=ft)
-    add_text(slide, subtitle, Inches(0.7), Inches(2.9), Inches(9), Inches(0.7),
-             font_size=20, color=theme["muted"], font=fb)
-    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
-             Inches(0.7), Inches(3.7), Inches(10), Inches(0.5),
-             font_size=13, color=theme["muted"], font=fb)
-    # Bottom rounded band with score
-    add_shape(slide, ROUNDED_RECT, Inches(0.7), Inches(5.3), Inches(11.9), Inches(1.5),
-              fill=theme["bg_primary"])
-    add_text(slide, f"Score ESG : {scores.total_esg_score}/100", Inches(1.2), Inches(5.75),
-             Inches(6), Inches(0.6), font_size=22, bold=True, color=theme["text_light"], font=ft)
-    add_shape(slide, OVAL, Inches(10.2), Inches(5.45), Inches(1.2), Inches(1.2), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(10.2), Inches(5.75), Inches(1.2), Inches(0.6),
-             font_size=22, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
+    # Cercles organiques (identité) en haut à droite
+    add_shape(slide, OVAL, Inches(9.6), Inches(-2.4), Inches(6.0), Inches(6.0), fill=theme["card_bg"])
+    add_shape(slide, OVAL, Inches(11.3), Inches(-0.9), Inches(3.6), Inches(3.6), fill=theme["env"])
+    add_shape(slide, OVAL, Inches(10.5), Inches(1.7), Inches(1.3), Inches(1.3), fill=theme["accent"])
+    # Bloc éditorial
+    add_text(slide, subtitle.upper(), Inches(0.75), Inches(1.35), Inches(8.5), Inches(0.5),
+             font_size=15, bold=True, color=theme["env"], font=fb)
+    add_text(slide, request.company.name, Inches(0.7), Inches(1.95), Inches(9), Inches(1.7),
+             font_size=48, bold=True, color=theme["bg_primary"], font=ft)
+    add_shape(slide, ROUNDED_RECT, Inches(0.75), Inches(3.75), Inches(2.0), Inches(0.08), fill=theme["accent"])
+    add_text(slide, _cover_tag(TR, scores), Inches(0.75), Inches(4.0), Inches(8.5), Inches(0.7),
+             font_size=21, italic=True, color=theme["muted"], font=fb)
+    # Bandeau bas : score mis en scène
+    add_shape(slide, ROUNDED_RECT, Inches(0.7), Inches(5.35), Inches(11.93), Inches(1.5), fill=theme["bg_primary"])
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}   |   {request.company.sector}   |   {request.company.country}",
+             Inches(1.15), Inches(5.65), Inches(7), Inches(0.5), font_size=13, color=theme["subtitle"], font=fb)
+    add_text(slide, f"{TR['chart_global']}", Inches(1.15), Inches(6.15), Inches(7), Inches(0.5),
+             font_size=13, bold=True, color=theme["text_light"], font=fb)
+    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.7), Inches(5.42), Inches(2.2), Inches(1.4),
+             font_size=54, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
+    add_shape(slide, OVAL, Inches(11.15), Inches(5.62), Inches(1.0), Inches(1.0), fill=theme["accent"])
+    add_text(slide, scores.rating, Inches(11.15), Inches(5.78), Inches(1.0), Inches(0.6),
+             font_size=24, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
 def cover_luxe(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
-    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-    # Thin gold frame
-    m, t = Inches(0.4), Inches(0.015)
     gold = theme["accent"]
-    add_bg_rect(slide, m, m, SLIDE_W - m - m, t, gold)
-    add_bg_rect(slide, m, SLIDE_H - m, SLIDE_W - m - m, t, gold)
-    add_bg_rect(slide, m, m, t, SLIDE_H - m - m, gold)
-    add_bg_rect(slide, SLIDE_W - m, m, t, SLIDE_H - m - m + t, gold)
-    # Centered serif composition
-    add_text(slide, subtitle.upper(), Inches(1), Inches(1.5), Inches(11.33), Inches(0.5),
-             font_size=13, color=theme["accent"], align=PP_ALIGN.CENTER, font=fb)
-    add_text(slide, request.company.name.upper(), Inches(1), Inches(2.3), Inches(11.33), Inches(1.4),
-             font_size=44, bold=False, color=theme["text_light"], align=PP_ALIGN.CENTER, font=ft)
-    add_bg_rect(slide, Inches(5.9), Inches(3.9), Inches(1.5), Inches(0.02), gold)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    # Fin cadre or (élégance)
+    m, tk = Inches(0.4), Inches(0.015)
+    add_bg_rect(slide, m, m, SLIDE_W - m - m, tk, gold)
+    add_bg_rect(slide, m, SLIDE_H - m, SLIDE_W - m - m, tk, gold)
+    add_bg_rect(slide, m, m, tk, SLIDE_H - m - m, gold)
+    add_bg_rect(slide, SLIDE_W - m, m, tk, SLIDE_H - m - m + tk, gold)
+    # Composition serif centrée
+    add_text(slide, subtitle.upper(), Inches(1), Inches(1.15), Inches(11.33), Inches(0.5),
+             font_size=14, bold=True, color=gold, align=PP_ALIGN.CENTER, font=fb)
+    add_text(slide, request.company.name.upper(), Inches(1), Inches(1.95), Inches(11.33), Inches(1.4),
+             font_size=46, bold=False, color=theme["text_light"], align=PP_ALIGN.CENTER, font=ft)
+    add_bg_rect(slide, Inches(6.06), Inches(3.5), Inches(1.2), Inches(0.02), gold)
+    add_text(slide, _cover_tag(TR, scores), Inches(1), Inches(3.75), Inches(11.33), Inches(0.6),
+             font_size=17, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
+    # Note mise en scène (le grand signe de qualité)
+    add_text(slide, scores.rating, Inches(1), Inches(4.6), Inches(11.33), Inches(1.3),
+             font_size=64, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, f"{TR['chart_global']}  {scores.total_esg_score:.0f} / 100", Inches(1), Inches(6.0),
+             Inches(11.33), Inches(0.5), font_size=15, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
     add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
-             Inches(1), Inches(4.2), Inches(11.33), Inches(0.5),
-             font_size=13, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"— {scores.rating} —", Inches(1), Inches(5.1), Inches(11.33), Inches(0.8),
-             font_size=34, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"{TR['esg_score_line'].split(chr(58))[0]} {scores.total_esg_score}/100", Inches(1), Inches(5.95),
-             Inches(11.33), Inches(0.5), font_size=14, color=theme["subtitle"],
-             align=PP_ALIGN.CENTER, font=fb)
+             Inches(1), Inches(6.55), Inches(11.33), Inches(0.4),
+             font_size=12, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
 
 
 def cover_minimal(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-    add_bg_rect(slide, Inches(0.7), Inches(1.1), Inches(0.35), Inches(0.35), theme["accent"])
-    add_text(slide, subtitle.upper(), Inches(0.7), Inches(1.7), Inches(11), Inches(0.5),
-             font_size=12, bold=True, color=theme["muted"], font=fb)
-    add_text(slide, request.company.name, Inches(0.65), Inches(2.3), Inches(11.5), Inches(1.6),
-             font_size=52, bold=True, color=theme["text_dark"], font=ft)
-    add_bg_rect(slide, Inches(0.7), Inches(4.2), Inches(11.9), Inches(0.015),
-                RGBColor(0xBD, 0xBD, 0xBD))
-    add_text(slide, f"Exercice {request.company.reporting_year}", Inches(0.7), Inches(4.5),
+    add_bg_rect(slide, Inches(0.7), Inches(1.05), Inches(0.4), Inches(0.4), theme["accent"])
+    add_text(slide, subtitle.upper(), Inches(0.72), Inches(1.65), Inches(11), Inches(0.5),
+             font_size=13, bold=True, color=theme["muted"], font=fb)
+    add_text(slide, request.company.name, Inches(0.65), Inches(2.25), Inches(11.7), Inches(1.7),
+             font_size=54, bold=True, color=theme["text_dark"], font=ft)
+    add_text(slide, _cover_tag(TR, scores), Inches(0.7), Inches(4.0), Inches(9), Inches(0.6),
+             font_size=19, italic=True, color=theme["muted"], font=fb)
+    add_bg_rect(slide, Inches(0.7), Inches(4.85), Inches(11.9), Inches(0.02), RGBColor(0xBD, 0xBD, 0xBD))
+    # Méta gauche + score mis en scène droite
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}", Inches(0.7), Inches(5.15),
              Inches(4), Inches(0.4), font_size=13, color=theme["muted"], font=fb)
-    add_text(slide, request.company.sector, Inches(4.7), Inches(4.5), Inches(4), Inches(0.4),
+    add_text(slide, request.company.sector, Inches(0.7), Inches(5.55), Inches(5), Inches(0.4),
              font_size=13, color=theme["muted"], font=fb)
-    add_text(slide, request.company.country, Inches(8.7), Inches(4.5), Inches(4), Inches(0.4),
+    add_text(slide, request.company.country, Inches(0.7), Inches(5.95), Inches(5), Inches(0.4),
              font_size=13, color=theme["muted"], font=fb)
-    add_text(slide, f"{scores.total_esg_score}", Inches(0.6), Inches(5.1), Inches(4), Inches(1.2),
-             font_size=64, bold=True, color=theme["accent"], font=ft)
-    add_text(slide, f"/100 — Note {scores.rating}", Inches(3.0), Inches(5.75), Inches(5), Inches(0.5),
-             font_size=16, color=theme["muted"], font=fb)
+    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.3), Inches(5.0), Inches(2.6), Inches(1.6),
+             font_size=88, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
+    add_text(slide, f"/100  —  {TR['note']} {scores.rating}", Inches(6.9), Inches(6.5), Inches(4.0), Inches(0.4),
+             font_size=15, bold=True, color=theme["text_dark"], align=PP_ALIGN.RIGHT, font=fb)
 
 
 COVERS = {"classic": cover_classic, "organic": cover_organic,
