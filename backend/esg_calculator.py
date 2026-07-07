@@ -264,8 +264,81 @@ def generate_recommendations(env: EnvironmentalData, social: SocialData, gov: Go
     return recs[:6]
 
 
+def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
+    r = []
+    if env_score >= 70: r.append("Excellent overall environmental performance")
+    if env.renewable_energy_percent and env.renewable_energy_percent >= 50:
+        r.append(f"High share of renewable energy ({env.renewable_energy_percent:.0f}%)")
+    if env.waste_recycled_percent and env.waste_recycled_percent >= 65:
+        r.append(f"High recycling rate ({env.waste_recycled_percent:.0f}%)")
+    if social.female_employees_percent and social.female_employees_percent >= 40:
+        r.append(f"Good gender balance in the workforce ({social.female_employees_percent:.0f}%)")
+    if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
+        r.append(f"Significant investment in training ({social.training_hours_per_employee:.0f} h/year)")
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate < 3:
+        r.append(f"Excellent workplace safety record (rate {social.accident_frequency_rate:.1f})")
+    if gov.esg_audit_conducted: r.append("Independent ESG audit conducted — strengthened transparency")
+    if gov.sustainability_committee: r.append("Sustainability committee operating at Board level")
+    if gov.female_board_percent and gov.female_board_percent >= 40:
+        r.append(f"Exemplary gender balance on the Board ({gov.female_board_percent:.0f}%)")
+    if social_score >= 70: r.append("Exemplary social policy — human capital valued")
+    if gov_score >= 75: r.append("High-quality, transparent governance")
+    if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
+        r.append("Full Scope 1, 2 and 3 emissions reporting")
+    if not r: r.append("ESG approach being structured and formalised")
+    return r[:5]
+
+
+def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov):
+    r = []
+    if env_score < 50: r.append("Insufficient overall environmental performance")
+    if env.renewable_energy_percent is not None and env.renewable_energy_percent < 30:
+        r.append(f"Low share of renewable energy ({env.renewable_energy_percent:.0f}%)")
+    elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
+        r.append(f"Renewable energy to strengthen (currently {env.renewable_energy_percent:.0f}%, target 50%)")
+    if env.scope3_emissions is None:
+        r.append("Scope 3 not measured — a major blind spot in the carbon footprint")
+    if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
+        r.append(f"Low recycling rate ({env.waste_recycled_percent:.0f}%)")
+    if social.female_employees_percent is not None and social.female_employees_percent < 40:
+        r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women — target 40%)")
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
+        r.append(f"Accident rate above sector standards (rate {social.accident_frequency_rate:.1f})")
+    if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
+        r.append(f"Insufficient training volume ({social.training_hours_per_employee:.0f} h/year, target 20 h)")
+    if gov.ethics_violations is not None and gov.ethics_violations > 0:
+        r.append(f"{gov.ethics_violations} ethics incident(s) recorded")
+    if gov.data_breaches is not None and gov.data_breaches > 0:
+        r.append(f"{gov.data_breaches} data breach(es) — cybersecurity to strengthen")
+    if not gov.esg_audit_conducted: r.append("No independent ESG audit")
+    if not gov.sustainability_committee: r.append("No sustainability committee at Board level")
+    if gov_score < 50: r.append("Governance structure to strengthen significantly")
+    return r[:5]
+
+
+def generate_recommendations_en(env, social, gov):
+    r = []
+    if env.renewable_energy_percent is None or env.renewable_energy_percent < 50:
+        r.append("Increase the share of renewable energy to 50% by 2027")
+    if env.scope3_emissions is None:
+        r.append("Implement measurement and reporting of Scope 3 emissions")
+    if social.female_employees_percent is None or social.female_employees_percent < 40:
+        r.append("Set quantified gender-balance targets")
+    if social.training_hours_per_employee is None or social.training_hours_per_employee < 20:
+        r.append("Raise training to at least 20 h/employee/year")
+    if not gov.esg_audit_conducted:
+        r.append("Commission an annual independent ESG audit")
+    if not gov.sustainability_committee:
+        r.append("Create a sustainability committee at Board level")
+    if env.waste_recycled_percent is None or env.waste_recycled_percent < 60:
+        r.append("Target a 60% waste recycling rate")
+    r.append("Align the ESG strategy with the UN SDGs and TCFD recommendations")
+    return r[:6]
+
+
 def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     revenue = request.company.revenue_eur
+    lang = getattr(request, "language", "fr")
 
     env_score, env_details = calculate_environmental_score(request.environmental, revenue)
     social_score, social_details = calculate_social_score(request.social)
@@ -274,9 +347,14 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     total = round((env_score * 0.40 + social_score * 0.35 + gov_score * 0.25), 1)
     rating = get_rating(total)
 
-    strengths = generate_strengths(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
-    weaknesses = generate_weaknesses(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
-    recommendations = generate_recommendations(request.environmental, request.social, request.governance)
+    if lang == "en":
+        strengths = generate_strengths_en(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        weaknesses = generate_weaknesses_en(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        recommendations = generate_recommendations_en(request.environmental, request.social, request.governance)
+    else:
+        strengths = generate_strengths(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        weaknesses = generate_weaknesses(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        recommendations = generate_recommendations(request.environmental, request.social, request.governance)
 
     return ESGScores(
         environmental_score=env_score,

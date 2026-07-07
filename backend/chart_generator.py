@@ -1,3 +1,4 @@
+from i18n import L
 import io
 import matplotlib
 matplotlib.use('Agg')
@@ -93,11 +94,12 @@ def get_colors(theme: AestheticTheme, light_bg: bool = False) -> dict:
     return c
 
 
-def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
-    categories = ['Environnement', 'Social', 'Gouvernance']
+    categories = [LB['chart_env'], LB['chart_soc'], LB['chart_gov']]
     values = [scores.environmental_score, scores.social_score, scores.governance_score]
     values_plot = values + [values[0]]
 
@@ -132,14 +134,15 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False
     return buf.read()
 
 
-def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
     ax.set_facecolor(bg)
 
-    categories = ['Environnement', 'Social', 'Gouvernance', 'Score Global']
+    categories = [LB['chart_env'], LB['chart_soc'], LB['chart_gov'], LB['chart_global']]
     values = [scores.environmental_score, scores.social_score,
               scores.governance_score, scores.total_esg_score]
     bar_colors = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
@@ -152,7 +155,7 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
                 color=colors["text"], fontweight='bold', fontsize=11)
 
     ax.set_xlim(0, 110)
-    ax.set_xlabel('Score / 100', color=colors["text"], fontsize=10)
+    ax.set_xlabel(LB['chart_score_axis'], color=colors["text"], fontsize=10)
     ax.tick_params(colors=colors["text"])
     ax.spines[['top', 'right', 'left']].set_visible(False)
     ax.spines['bottom'].set_color(colors["secondary"])
@@ -173,17 +176,18 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
     return buf.read()
 
 
-def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
     data = {}
     if scope1 is not None:
-        data['Scope 1\n(Direct)'] = scope1
+        data[LB['pie_s1']] = scope1
     if scope2 is not None:
-        data['Scope 2\n(Énergie)'] = scope2
+        data[LB['pie_s2']] = scope2
     if scope3 is not None:
-        data['Scope 3\n(Indirect)'] = scope3
+        data[LB['pie_s3']] = scope3
 
     if not data:
         return None
@@ -207,7 +211,7 @@ def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, lig
         autotext.set_color('white')
         autotext.set_fontweight('bold')
 
-    ax.set_title('Répartition des émissions GES', color=colors["text"],
+    ax.set_title(LB['pie_title'], color=colors["text"],
                  fontsize=12, fontweight='bold', pad=15)
 
     plt.tight_layout()
@@ -223,9 +227,10 @@ def _pillar_hex(colors, pillar):
     return colors.get(pillar, colors["secondary"])
 
 
-def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     """Matrice de double matérialité (impact vs. matérialité financière) — CSRD/ESRS."""
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
     fig, ax = plt.subplots(figsize=(7.2, 6), facecolor=bg)
@@ -246,13 +251,13 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
 
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 10)
-    ax.set_xlabel("Importance financière  →", color=colors["text"], fontsize=10, fontweight="bold")
-    ax.set_ylabel("Impact sur société & environnement  →", color=colors["text"], fontsize=10, fontweight="bold")
+    ax.set_xlabel(LB["mat_x"], color=colors["text"], fontsize=10, fontweight="bold")
+    ax.set_ylabel(LB["mat_y"], color=colors["text"], fontsize=10, fontweight="bold")
     ax.tick_params(colors=colors["secondary"], labelsize=8)
     for spine in ax.spines.values():
         spine.set_color(colors["secondary"])
         spine.set_alpha(0.4)
-    ax.text(7.5, 9.4, "Enjeux prioritaires", ha="center", fontsize=8.5,
+    ax.text(7.5, 9.4, LB["mat_priority"], ha="center", fontsize=8.5,
             color=colors["accent"], fontweight="bold", alpha=0.9)
 
     plt.tight_layout()
@@ -263,9 +268,10 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
     return buf.read()
 
 
-def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     """Objectifs par pilier : actuel vs. cible (barres groupées)."""
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
     fig, ax = plt.subplots(figsize=(8, 4.2), facecolor=bg)
@@ -277,9 +283,9 @@ def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False) 
     ypos = list(range(len(labels)))
 
     ax.barh([y + 0.2 for y in ypos], current, height=0.36,
-            color=[_pillar_hex(colors, p["color"]) for p in pillars], alpha=0.9, label="Actuel")
+            color=[_pillar_hex(colors, p["color"]) for p in pillars], alpha=0.9, label=LB["tgt_current"])
     ax.barh([y - 0.2 for y in ypos], target, height=0.36,
-            color=colors["accent"], alpha=0.55, label="Cible", hatch="//", edgecolor=bg)
+            color=colors["accent"], alpha=0.55, label=LB["tgt_target"], hatch="//", edgecolor=bg)
 
     for y, (c, t) in enumerate(zip(current, target)):
         ax.text(c + 1.5, y + 0.2, f"{c:.0f}", va="center", fontsize=9,
@@ -290,7 +296,7 @@ def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False) 
     ax.set_yticks(ypos)
     ax.set_yticklabels(labels, color=colors["text"], fontsize=10)
     ax.set_xlim(0, 115)
-    ax.set_xlabel("Score / 100", color=colors["text"], fontsize=10)
+    ax.set_xlabel(LB["chart_score_axis"], color=colors["text"], fontsize=10)
     ax.tick_params(colors=colors["text"])
     ax.spines[['top', 'right']].set_visible(False)
     ax.spines[['left', 'bottom']].set_color(colors["secondary"])
@@ -304,9 +310,10 @@ def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False) 
     return buf.read()
 
 
-def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     """Trajectoire de décarbonation type SBTi (1,5°C, -42% à 2030)."""
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
@@ -318,19 +325,19 @@ def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool 
     ax.fill_between(years, values, alpha=0.14, color=colors["env"])
 
     ax.axhline(carbon["base"], color=colors["secondary"], linestyle=':', alpha=0.5, linewidth=1)
-    ax.text(years[0], carbon["base"], f"  Référence {years[0]}", va="bottom",
+    ax.text(years[0], carbon["base"], LB["carbon_ref"].format(y=years[0]), va="bottom",
             fontsize=8, color=colors["secondary"])
-    ax.annotate(f"-{carbon['reduction_pct']}% ({carbon['target_year']})\n{carbon['target']:,} t CO₂e",
+    ax.annotate(LB["carbon_annot"].format(p=carbon["reduction_pct"], y=carbon["target_year"], v=carbon["target"]),
                 (years[-1], values[-1]), xytext=(-10, 22), textcoords="offset points",
                 fontsize=8.5, color=colors["env"], fontweight="bold", ha="right")
 
-    ax.set_xlabel("Année", color=colors["text"], fontsize=10)
-    ax.set_ylabel("Émissions (t CO₂e)", color=colors["text"], fontsize=10)
+    ax.set_xlabel(LB["carbon_x"], color=colors["text"], fontsize=10)
+    ax.set_ylabel(LB["carbon_y"], color=colors["text"], fontsize=10)
     ax.tick_params(colors=colors["text"], labelsize=9)
     ax.set_ylim(0, carbon["base"] * 1.18)
     ax.spines[['top', 'right']].set_visible(False)
     ax.spines[['left', 'bottom']].set_color(colors["secondary"])
-    ax.set_title("Trajectoire de décarbonation alignée SBTi 1,5°C", color=colors["text"],
+    ax.set_title(LB["carbon_title"], color=colors["text"],
                  fontsize=11, fontweight="bold", pad=12)
 
     plt.tight_layout()
@@ -341,12 +348,13 @@ def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool 
     return buf.read()
 
 
-def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     """Barres d'alignement Taxonomie UE (CA / CapEx / OpEx)."""
     colors = get_colors(theme, light_bg)
+    LB = L(lang)
     bg = colors["bg"]
 
-    labels_map = {"turnover": "Chiffre d'affaires", "capex": "CapEx", "opex": "OpEx"}
+    labels_map = {"turnover": LB["tax_turnover"], "capex": LB["tax_capex"], "opex": LB["tax_opex"]}
     items = [(labels_map[k], v) for k, v in vals.items() if v is not None]
 
     fig, ax = plt.subplots(figsize=(7.5, 3.4), facecolor=bg)
@@ -359,13 +367,13 @@ def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False) ->
     ax.barh(ypos, [100] * len(labels), height=0.5, color=colors["secondary"], alpha=0.15)
     bars = ax.barh(ypos, aligned, height=0.5, color=colors["env"], alpha=0.92)
     for y, v in zip(ypos, aligned):
-        ax.text(v + 2, y, f"{v:.0f}% aligné", va="center", fontsize=9.5,
+        ax.text(v + 2, y, LB["tax_aligned"].format(v=v), va="center", fontsize=9.5,
                 color=colors["text"], fontweight="bold")
 
     ax.set_yticks(ypos)
     ax.set_yticklabels(labels, color=colors["text"], fontsize=10, fontweight="bold")
     ax.set_xlim(0, 100)
-    ax.set_xlabel("% aligné Taxonomie UE", color=colors["text"], fontsize=9)
+    ax.set_xlabel(LB["tax_x"], color=colors["text"], fontsize=9)
     ax.tick_params(colors=colors["text"])
     ax.spines[['top', 'right', 'left']].set_visible(False)
     ax.spines['bottom'].set_color(colors["secondary"])

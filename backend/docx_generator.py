@@ -6,6 +6,7 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from models import ESGRequest, ESGScores, AestheticTheme
+from i18n import L
 
 THEME_HEX = {
     AestheticTheme.CORPORATE_BLUE: {
@@ -181,6 +182,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                          charts: dict = None) -> bytes:
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
     style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
+    TR = L(request.language)
 
     doc = Document()
     normal = doc.styles['Normal']
@@ -226,9 +228,9 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_hr(doc, colors["accent"])
 
     type_map = {
-        "white_paper": "Livre Blanc ESG / RSE",
-        "full_report": "Rapport ESG Complet",
-        "executive_summary_pdf": "Synthèse Exécutive ESG",
+        "white_paper": TR["rep_white_paper"],
+        "full_report": TR["rep_full_report"],
+        "executive_summary_pdf": TR["rep_executive_summary_pdf"],
     }
     sub_p = doc.add_paragraph()
     sub_run = sub_p.add_run(type_map.get(request.report_type.value, "Rapport ESG"))
@@ -238,7 +240,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     meta_p = doc.add_paragraph()
     meta_run = meta_p.add_run(
-        f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}"
+        f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}"
     )
     meta_run.font.size = Pt(11)
     meta_run.font.color.rgb = hex_to_rgb("7F8C8D")
@@ -246,7 +248,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # Présentateur
     if request.company.presenter_name:
-        pres_line = f"Présenté par {request.company.presenter_name}"
+        pres_line = f"{TR['presented_by']} {request.company.presenter_name}"
         if request.company.presenter_title:
             pres_line += f" — {request.company.presenter_title}"
         pres_p = doc.add_paragraph()
@@ -269,7 +271,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # Score summary table
     summary_table = doc.add_table(rows=2, cols=4)
     summary_table.style = 'Table Grid'
-    headers = ["Environnement", "Social", "Gouvernance", "Score Global"]
+    headers = [TR["chart_env"], TR["chart_soc"], TR["chart_gov"], TR["score_global_short"]]
     values = [scores.environmental_score, scores.social_score,
               scores.governance_score, scores.total_esg_score]
     value_colors = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
@@ -295,7 +297,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     doc.add_paragraph()
 
     rating_p = doc.add_paragraph()
-    rating_run = rating_p.add_run(f"Note ESG : {scores.rating}")
+    rating_run = rating_p.add_run(f"{TR['note']} : {scores.rating}")
     rating_run.font.size = Pt(16)
     rating_run.bold = True
     rating_run.font.color.rgb = hex_to_rgb(colors["accent"])
@@ -305,7 +307,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     doc.add_page_break()
 
     # ── 1. Synthèse Exécutive ─────────────────────────────────────────────
-    add_heading(doc, "1. Synthèse Exécutive", 1, colors["primary"], style=style)
+    add_heading(doc, TR["pdf_s1"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
     exec_text = content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
@@ -313,61 +315,61 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
 
     # ── 2. Environnement ──────────────────────────────────────────────────
-    add_heading(doc, "2. Pilier Environnemental", 1, colors["env"], style=style)
+    add_heading(doc, TR["pdf_s2"], 1, colors["env"], style=style)
     add_hr(doc, colors["env"])
-    add_score_block(doc, "Score Environnemental", scores.environmental_score, colors["env"])
+    add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"])
 
     env_text = content.get("environmental", "Analyse des données environnementales.")
     doc.add_paragraph(env_text).paragraph_format.space_after = Pt(8)
 
     env = request.environmental
     env_kpis = []
-    if env.co2_emissions_tonnes is not None: env_kpis.append(("CO₂ total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent is not None: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
-    if env.energy_consumption_mwh is not None: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
-    if env.water_consumption_m3 is not None: env_kpis.append(("Eau (m³)", f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent is not None: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
-    if env.scope1_emissions is not None: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
-    if env.scope2_emissions is not None: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions is not None: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
+    if env.co2_emissions_tonnes is not None: env_kpis.append((TR["kpit"]["co2"], f"{env.co2_emissions_tonnes:,.0f}"))
+    if env.renewable_energy_percent is not None: env_kpis.append((TR["kpit"]["renewable"], f"{env.renewable_energy_percent:.1f}%"))
+    if env.energy_consumption_mwh is not None: env_kpis.append((TR["kpit"]["energy"], f"{env.energy_consumption_mwh:,.0f}"))
+    if env.water_consumption_m3 is not None: env_kpis.append((TR["kpit"]["water"], f"{env.water_consumption_m3:,.0f}"))
+    if env.waste_recycled_percent is not None: env_kpis.append((TR["kpit"]["recycling"], f"{env.waste_recycled_percent:.1f}%"))
+    if env.scope1_emissions is not None: env_kpis.append((TR["kpit"]["s1"], f"{env.scope1_emissions:,.0f}"))
+    if env.scope2_emissions is not None: env_kpis.append((TR["kpit"]["s2"], f"{env.scope2_emissions:,.0f}"))
+    if env.scope3_emissions is not None: env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}"))
     add_kpi_table(doc, env_kpis, colors)
 
     # ── 3. Social ──────────────────────────────────────────────────────────
-    add_heading(doc, "3. Pilier Social", 1, colors["social"], style=style)
+    add_heading(doc, TR["pdf_s3"], 1, colors["social"], style=style)
     add_hr(doc, colors["social"])
-    add_score_block(doc, "Score Social", scores.social_score, colors["social"])
+    add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"])
 
     soc_text = content.get("social", "Analyse des données sociales.")
     doc.add_paragraph(soc_text).paragraph_format.space_after = Pt(8)
 
     soc = request.social
     soc_kpis = []
-    if soc.total_employees is not None: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
-    if soc.female_employees_percent is not None: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent is not None: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee is not None: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate is not None: soc_kpis.append(("TF accidents", f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score is not None: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
+    if soc.total_employees is not None: soc_kpis.append((TR["kpit"]["employees"], f"{soc.total_employees:,}"))
+    if soc.female_employees_percent is not None: soc_kpis.append((TR["kpit"]["women"], f"{soc.female_employees_percent:.1f}%"))
+    if soc.employee_turnover_percent is not None: soc_kpis.append((TR["kpit"]["turnover"], f"{soc.employee_turnover_percent:.1f}%"))
+    if soc.training_hours_per_employee is not None: soc_kpis.append((TR["kpit"]["training"], f"{soc.training_hours_per_employee:.0f}"))
+    if soc.accident_frequency_rate is not None: soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}"))
+    if soc.customer_satisfaction_score is not None: soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
     add_kpi_table(doc, soc_kpis, colors)
 
     # ── 4. Gouvernance ────────────────────────────────────────────────────
-    add_heading(doc, "4. Pilier Gouvernance", 1, colors["gov"], style=style)
+    add_heading(doc, TR["pdf_s4"], 1, colors["gov"], style=style)
     add_hr(doc, colors["gov"])
-    add_score_block(doc, "Score Gouvernance", scores.governance_score, colors["gov"])
+    add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"])
 
     gov_text = content.get("governance", "Analyse des données de gouvernance.")
     doc.add_paragraph(gov_text).paragraph_format.space_after = Pt(8)
 
     gov = request.governance
     gov_kpis = []
-    if gov.board_members is not None: gov_kpis.append(("Membres CA", str(gov.board_members)))
-    if gov.female_board_percent is not None: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent is not None: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
-    if gov.csr_budget_eur is not None: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
+    if gov.board_members is not None: gov_kpis.append((TR["kpit"]["board"], str(gov.board_members)))
+    if gov.female_board_percent is not None: gov_kpis.append((TR["kpit"]["women_board"], f"{gov.female_board_percent:.1f}%"))
+    if gov.independent_board_percent is not None: gov_kpis.append((TR["kpit"]["independent"], f"{gov.independent_board_percent:.1f}%"))
+    if gov.csr_budget_eur is not None: gov_kpis.append((TR["kpit"]["csr"], f"{gov.csr_budget_eur:,.0f}"))
     if gov.esg_audit_conducted is not None:
-        gov_kpis.append(("Audit ESG", "✓ Oui" if gov.esg_audit_conducted else "✗ Non"))
+        gov_kpis.append((TR["kpit"]["audit"], TR["kpit"]["yes"] if gov.esg_audit_conducted else TR["kpit"]["no"]))
     if gov.sustainability_committee is not None:
-        gov_kpis.append(("Comité durable", "✓ Oui" if gov.sustainability_committee else "✗ Non"))
+        gov_kpis.append((TR["kpit"]["committee"], TR["kpit"]["yes"] if gov.sustainability_committee else TR["kpit"]["no"]))
     add_kpi_table(doc, gov_kpis, colors)
 
     doc.add_page_break()
@@ -385,43 +387,43 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             except Exception:
                 pass
 
-    add_heading(doc, "5. Analyses de Durabilité (CSRD / ESRS)", 1, colors["primary"], style=style)
+    add_heading(doc, TR["pdf_s5"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
 
-    add_heading(doc, "Double matérialité", 2, colors["secondary"], style=style)
+    add_heading(doc, TR["sub_materiality"], 2, colors["secondary"], style=style)
     if content.get("materiality"):
         doc.add_paragraph(content["materiality"]).paragraph_format.space_after = Pt(6)
     _docx_img("materiality", 12)
 
-    add_heading(doc, "Objectifs & trajectoire", 2, colors["secondary"], style=style)
+    add_heading(doc, TR["sub_targets"], 2, colors["secondary"], style=style)
     if content.get("targets"):
         doc.add_paragraph(content["targets"]).paragraph_format.space_after = Pt(6)
     _docx_img("targets", 15)
     _docx_img("carbon_trajectory", 15)
 
     if content.get("taxonomy"):
-        add_heading(doc, "Taxonomie européenne", 2, colors["secondary"], style=style)
+        add_heading(doc, TR["sub_taxonomy"], 2, colors["secondary"], style=style)
         doc.add_paragraph(content["taxonomy"]).paragraph_format.space_after = Pt(6)
         _docx_img("taxonomy", 14)
 
-    add_heading(doc, "Risques climatiques (TCFD)", 2, colors["secondary"], style=style)
+    add_heading(doc, TR["sub_climate"], 2, colors["secondary"], style=style)
     if content.get("climate_risk"):
         doc.add_paragraph(content["climate_risk"]).paragraph_format.space_after = Pt(8)
 
     doc.add_page_break()
 
     # ── 6. Analyse Stratégique ────────────────────────────────────────────
-    add_heading(doc, "6. Analyse Stratégique ESG", 1, colors["primary"], style=style)
+    add_heading(doc, TR["pdf_s6"], 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
 
-    add_heading(doc, "Points Forts", 2, colors["env"], style=style)
+    add_heading(doc, TR["strengths"], 2, colors["env"], style=style)
     add_bullet_list(doc, scores.strengths, "✅", colors["env"])
 
-    add_heading(doc, "Axes d'Amélioration", 2, "E74C3C", style=style)
+    add_heading(doc, TR["weaknesses"], 2, "E74C3C", style=style)
     add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
 
     if request.include_recommendations and scores.recommendations:
-        add_heading(doc, "7. Recommandations Prioritaires", 1, colors["primary"], style=style)
+        add_heading(doc, TR["pdf_s7"], 1, colors["primary"], style=style)
         add_hr(doc, colors["accent"])
         for i, rec in enumerate(scores.recommendations, 1):
             p = doc.add_paragraph()
@@ -432,18 +434,14 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             p.paragraph_format.space_after = Pt(4)
 
     # ── 7. Référentiels ───────────────────────────────────────────────────
-    add_heading(doc, "8. Cadres de Référence & Alignement ODD", 1, colors["primary"], style=style)
+    add_heading(doc, TR["pdf_s8"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
-    ref_text = (
-        "Ce rapport s'inscrit dans les cadres de référence suivants : GRI Standards, TCFD, CSRD, SFDR et ISO 14001/26000. "
-        "L'organisation contribue aux ODD de l'ONU : ODD 7 (Énergie propre), ODD 8 (Travail décent), "
-        "ODD 10 (Inégalités), ODD 12 (Consommation responsable), ODD 13 (Action climatique), ODD 16 (Institutions)."
-    )
+    ref_text = TR["ref_text_docx"]
     doc.add_paragraph(ref_text)
 
     # ── Conclusion ────────────────────────────────────────────────────────
     doc.add_page_break()
-    add_heading(doc, "9. Conclusion", 1, colors["primary"], style=style)
+    add_heading(doc, TR["pdf_concl"], 1, colors["primary"], style=style)
     add_hr(doc, colors["primary"])
     conclusion = content.get("conclusion",
         f"{request.company.name} réaffirme son engagement vers un modèle d'affaires durable. "
@@ -453,7 +451,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     doc.add_paragraph()
     footer_p = doc.add_paragraph(
-        f"© {request.company.reporting_year} {request.company.name} — Document généré par la Plateforme ESG"
+        f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]
     )
     footer_p.runs[0].font.size = Pt(8)
     footer_p.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")

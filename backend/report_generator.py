@@ -12,6 +12,7 @@ import os
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from models import ESGRequest, ESGScores, AestheticTheme, ReportType
+from i18n import L
 
 # ── Enregistrement de polices TrueType système (Windows) ────────────────────
 # Chaque famille : (regular, bold, italic) → repli sur les polices PDF de base
@@ -67,14 +68,14 @@ _PDF_CHARS = str.maketrans({
 def pdf_txt(v) -> str:
     """Texte brut sûr pour canvas.drawString (translittéré, latin-1)."""
     s = str(v).translate(_PDF_CHARS)
-    return s.encode('latin-1', 'ignore').decode('latin-1')
+    return s.encode('cp1252', 'ignore').decode('cp1252')
 
 
 def esc(v) -> str:
     """Adapte une chaîne aux Paragraph reportlab : glyphes indisponibles
     translittérés, caractères hors latin-1 retirés, puis échappement XML."""
     s = str(v).translate(_PDF_CHARS)
-    s = s.encode('latin-1', 'ignore').decode('latin-1')
+    s = s.encode('cp1252', 'ignore').decode('cp1252')
     return _xml_escape(s)
 
 PALETTE = {
@@ -198,7 +199,7 @@ PDF_STYLES = {
 }
 
 
-def page_decorator(pal, ts, company_name: str, minimal: bool = False):
+def page_decorator(pal, ts, company_name: str, minimal: bool = False, footer_label: str = "Rapport ESG"):
     """En-tête et pied de page dessinés sur chaque page."""
     font = ts["font"]
     name = pdf_txt(company_name)
@@ -226,7 +227,7 @@ def page_decorator(pal, ts, company_name: str, minimal: bool = False):
         except Exception:
             canvas.setFont("Helvetica", 7.5)
         canvas.drawString(2 * cm, 1.15 * cm, name)
-        canvas.drawRightString(w - 2 * cm, 1.15 * cm, f"Rapport ESG  |  page {canvas.getPageNumber()}")
+        canvas.drawRightString(w - 2 * cm, 1.15 * cm, footer_label + f"  |  page {canvas.getPageNumber()}")
         canvas.restoreState()
 
     return draw
@@ -361,6 +362,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
     styles = build_styles(pal, ts)
     ts = styles["_ts"]  # polices résolues (TTF système ou base-14)
+    TR = L(request.language)
 
     doc = SimpleDocTemplate(buf, pagesize=A4,
                              leftMargin=2 * cm, rightMargin=2 * cm,
@@ -369,12 +371,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── Cover (varies per theme) ──────────────────────────────────────────
     type_labels = {
-        "white_paper": "Livre Blanc ESG / RSE",
-        "full_report": "Rapport ESG Complet",
-        "executive_summary_pdf": "Synthèse Exécutive ESG",
+        "white_paper": TR["rep_white_paper"],
+        "full_report": TR["rep_full_report"],
+        "executive_summary_pdf": TR["rep_executive_summary_pdf"],
     }
-    type_label = type_labels.get(request.report_type.value, "Rapport ESG")
-    meta_line = esc(f"Exercice {request.company.reporting_year}  •  Secteur : {request.company.sector}  •  {request.company.country}")
+    type_label = type_labels.get(request.report_type.value, TR["rep_default"])
+    meta_line = esc(f"{TR['exercise']} {request.company.reporting_year}  •  {TR['sector']} : {request.company.sector}  •  {request.company.country}")
 
     if ts["cover"] == "luxe":
         # Dark Premium: full dark block, centered serif, gold accents
@@ -465,7 +467,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # Présentateur
     if request.company.presenter_name:
-        pres_line = f"Présenté par {request.company.presenter_name}"
+        pres_line = f"{TR['presented_by']} {request.company.presenter_name}"
         if request.company.presenter_title:
             pres_line += f" — {request.company.presenter_title}"
         story.append(Paragraph(esc(pres_line), ParagraphStyle(
@@ -486,10 +488,10 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # Score summary table
     score_data = [
-        [Paragraph("Score Environnemental", styles["kpi_label"]),
-         Paragraph("Score Social", styles["kpi_label"]),
-         Paragraph("Score Gouvernance", styles["kpi_label"]),
-         Paragraph("Score ESG Global", ParagraphStyle(
+        [Paragraph(TR["score_env_short"], styles["kpi_label"]),
+         Paragraph(TR["score_soc_short"], styles["kpi_label"]),
+         Paragraph(TR["score_gov_short"], styles["kpi_label"]),
+         Paragraph(TR["score_global_short"], ParagraphStyle(
              "kpi_label_w", fontSize=9, textColor=colors.white,
              fontName=ts["font_bold"], alignment=TA_CENTER))],
         [Paragraph(f"<font color='#{pal['env'].hexval()[2:]}'><b>{scores.environmental_score:.1f}</b></font>",
@@ -506,7 +508,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                                   alignment=TA_CENTER))],
         [Paragraph("/100", styles["caption"]), Paragraph("/100", styles["caption"]),
          Paragraph("/100", styles["caption"]),
-         Paragraph(f"Note : {scores.rating}", ParagraphStyle(
+         Paragraph(f"{TR['note']} : {scores.rating}", ParagraphStyle(
              "rating", fontSize=12, leading=14, fontName=ts["font_bold"],
              textColor=colors.white, alignment=TA_CENTER))],
     ]
@@ -529,13 +531,13 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         img = Image(io.BytesIO(chart_images["radar"]), width=7 * cm, height=7 * cm)
         img.hAlign = 'CENTER'
         story.append(img)
-        story.append(Paragraph("Profil ESG — Radar des piliers", styles["caption"]))
+        story.append(Paragraph(TR["cap_radar"], styles["caption"]))
         story.append(Spacer(1, 0.3 * cm))
 
     story.append(PageBreak())
 
     # ── Executive Summary ──────────────────────────────────────────────────
-    section_header(story, "1. Synthèse Exécutive", pal["secondary"], pal, styles, ts)
+    section_header(story, TR["pdf_s1"], pal["secondary"], pal, styles, ts)
 
     exec_text = content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG pour l'exercice {request.company.reporting_year}. "
@@ -547,9 +549,9 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
-    section_header(story, "2. Pilier Environnemental", pal["env"], pal, styles, ts)
+    section_header(story, TR["pdf_s2"], pal["env"], pal, styles, ts)
     story.append(Paragraph(
-        f"Score environnemental : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_env_label']} : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
 
     env_text = content.get("environmental",
         "L'analyse environnementale couvre les émissions de gaz à effet de serre, "
@@ -559,14 +561,14 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     env = request.environmental
     env_kpis = []
-    if env.co2_emissions_tonnes is not None: env_kpis.append(("CO2 total (t)", f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent is not None: env_kpis.append(("Renouvelable %", f"{env.renewable_energy_percent:.1f}%"))
-    if env.energy_consumption_mwh is not None: env_kpis.append(("Énergie (MWh)", f"{env.energy_consumption_mwh:,.0f}"))
-    if env.water_consumption_m3 is not None: env_kpis.append(("Eau (m3)", f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent is not None: env_kpis.append(("Recyclage %", f"{env.waste_recycled_percent:.1f}%"))
-    if env.scope1_emissions is not None: env_kpis.append(("Scope 1 (t)", f"{env.scope1_emissions:,.0f}"))
-    if env.scope2_emissions is not None: env_kpis.append(("Scope 2 (t)", f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions is not None: env_kpis.append(("Scope 3 (t)", f"{env.scope3_emissions:,.0f}"))
+    if env.co2_emissions_tonnes is not None: env_kpis.append((TR["kpit"]["co2"], f"{env.co2_emissions_tonnes:,.0f}"))
+    if env.renewable_energy_percent is not None: env_kpis.append((TR["kpit"]["renewable"], f"{env.renewable_energy_percent:.1f}%"))
+    if env.energy_consumption_mwh is not None: env_kpis.append((TR["kpit"]["energy"], f"{env.energy_consumption_mwh:,.0f}"))
+    if env.water_consumption_m3 is not None: env_kpis.append((TR["kpit"]["water"], f"{env.water_consumption_m3:,.0f}"))
+    if env.waste_recycled_percent is not None: env_kpis.append((TR["kpit"]["recycling"], f"{env.waste_recycled_percent:.1f}%"))
+    if env.scope1_emissions is not None: env_kpis.append((TR["kpit"]["s1"], f"{env.scope1_emissions:,.0f}"))
+    if env.scope2_emissions is not None: env_kpis.append((TR["kpit"]["s2"], f"{env.scope2_emissions:,.0f}"))
+    if env.scope3_emissions is not None: env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}"))
 
     if env_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -577,14 +579,14 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         img = Image(io.BytesIO(chart_images["emissions_pie"]), width=8 * cm, height=7 * cm)
         img.hAlign = 'CENTER'
         story.append(img)
-        story.append(Paragraph("Répartition des émissions par scope", styles["caption"]))
+        story.append(Paragraph(TR["cap_pie"], styles["caption"]))
 
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Social ────────────────────────────────────────────────────────────
-    section_header(story, "3. Pilier Social", pal["social"], pal, styles, ts)
+    section_header(story, TR["pdf_s3"], pal["social"], pal, styles, ts)
     story.append(Paragraph(
-        f"Score social : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_soc_label']} : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
 
     soc_text = content.get("social",
         "La performance sociale englobe la gestion des ressources humaines, la diversité, "
@@ -594,12 +596,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     soc = request.social
     soc_kpis = []
-    if soc.total_employees is not None: soc_kpis.append(("Effectif", f"{soc.total_employees:,}"))
-    if soc.female_employees_percent is not None: soc_kpis.append(("Femmes %", f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent is not None: soc_kpis.append(("Turnover %", f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee is not None: soc_kpis.append(("Formation (h)", f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate is not None: soc_kpis.append(("Taux freq. acc.", f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score is not None: soc_kpis.append(("Satisfaction /10", f"{soc.customer_satisfaction_score:.1f}"))
+    if soc.total_employees is not None: soc_kpis.append((TR["kpit"]["employees"], f"{soc.total_employees:,}"))
+    if soc.female_employees_percent is not None: soc_kpis.append((TR["kpit"]["women"], f"{soc.female_employees_percent:.1f}%"))
+    if soc.employee_turnover_percent is not None: soc_kpis.append((TR["kpit"]["turnover"], f"{soc.employee_turnover_percent:.1f}%"))
+    if soc.training_hours_per_employee is not None: soc_kpis.append((TR["kpit"]["training"], f"{soc.training_hours_per_employee:.0f}"))
+    if soc.accident_frequency_rate is not None: soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}"))
+    if soc.customer_satisfaction_score is not None: soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
 
     if soc_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -608,9 +610,9 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Gouvernance ──────────────────────────────────────────────────────
-    section_header(story, "4. Pilier Gouvernance", pal["gov"], pal, styles, ts)
+    section_header(story, TR["pdf_s4"], pal["gov"], pal, styles, ts)
     story.append(Paragraph(
-        f"Score gouvernance : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_gov_label']} : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
 
     gov_text = content.get("governance",
         "La gouvernance évalue la qualité de la direction, l'indépendance du conseil, "
@@ -620,12 +622,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     gov = request.governance
     gov_kpis = []
-    if gov.board_members is not None: gov_kpis.append(("Membres CA", str(gov.board_members)))
-    if gov.female_board_percent is not None: gov_kpis.append(("Femmes CA %", f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent is not None: gov_kpis.append(("Indépendants %", f"{gov.independent_board_percent:.1f}%"))
-    if gov.csr_budget_eur is not None: gov_kpis.append(("Budget RSE (€)", f"{gov.csr_budget_eur:,.0f}"))
-    gov_kpis.append(("Audit ESG", "Oui" if gov.esg_audit_conducted else ("Non" if gov.esg_audit_conducted is not None else "Non renseigné")))
-    gov_kpis.append(("Comité durable", "Oui" if gov.sustainability_committee else ("Non" if gov.sustainability_committee is not None else "Non renseigné")))
+    if gov.board_members is not None: gov_kpis.append((TR["kpit"]["board"], str(gov.board_members)))
+    if gov.female_board_percent is not None: gov_kpis.append((TR["kpit"]["women_board"], f"{gov.female_board_percent:.1f}%"))
+    if gov.independent_board_percent is not None: gov_kpis.append((TR["kpit"]["independent"], f"{gov.independent_board_percent:.1f}%"))
+    if gov.csr_budget_eur is not None: gov_kpis.append((TR["kpit"]["csr"], f"{gov.csr_budget_eur:,.0f}"))
+    gov_kpis.append((TR["kpit"]["audit"], TR["kpit"]["yes"] if gov.esg_audit_conducted else (TR["kpit"]["no"] if gov.esg_audit_conducted is not None else TR["kpit"]["na"])))
+    gov_kpis.append((TR["kpit"]["committee"], TR["kpit"]["yes"] if gov.sustainability_committee else (TR["kpit"]["no"] if gov.sustainability_committee is not None else TR["kpit"]["na"])))
 
     if gov_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -646,90 +648,86 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             except Exception:
                 pass
 
-    section_header(story, "5. Analyses de Durabilité (CSRD / ESRS)", pal["secondary"], pal, styles, ts)
+    section_header(story, TR["pdf_s5"], pal["secondary"], pal, styles, ts)
 
-    story.append(Paragraph("Double matérialité", styles["h2"]))
+    story.append(Paragraph(TR["sub_materiality"], styles["h2"]))
     story.append(Paragraph(esc(content.get("materiality", "")), styles["body"]))
-    _img("materiality", 11, 9.2, "Matrice de double matérialité — enjeux ESG prioritaires")
+    _img("materiality", 11, 9.2, TR["cap_materiality"])
 
     story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph("Objectifs & trajectoire", styles["h2"]))
+    story.append(Paragraph(TR["sub_targets"], styles["h2"]))
     story.append(Paragraph(esc(content.get("targets", "")), styles["body"]))
-    _img("targets", 15, 7.9, "Objectifs par pilier — situation actuelle vs. cible")
-    _img("carbon_trajectory", 15, 7.5, "Trajectoire de décarbonation alignée SBTi 1,5°C")
+    _img("targets", 15, 7.9, TR["cap_targets"])
+    _img("carbon_trajectory", 15, 7.5, TR["cap_carbon"])
 
     if content.get("taxonomy"):
         story.append(Spacer(1, 0.3 * cm))
-        story.append(Paragraph("Taxonomie européenne", styles["h2"]))
+        story.append(Paragraph(TR["sub_taxonomy"], styles["h2"]))
         story.append(Paragraph(esc(content["taxonomy"]), styles["body"]))
-        _img("taxonomy", 14, 6.3, "Part des activités alignées sur la Taxonomie UE")
+        _img("taxonomy", 14, 6.3, TR["cap_taxonomy"])
 
     story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph("Risques climatiques (TCFD)", styles["h2"]))
+    story.append(Paragraph(TR["sub_climate"], styles["h2"]))
     story.append(Paragraph(esc(content.get("climate_risk", "")), styles["body"]))
 
     story.append(PageBreak())
 
     # ── Forces & Faiblesses ───────────────────────────────────────────────
-    section_header(story, "6. Analyse Stratégique", pal["accent"], pal, styles, ts)
+    section_header(story, TR["pdf_s6"], pal["accent"], pal, styles, ts)
 
-    story.append(Paragraph("Points forts identifiés", styles["h2"]))
+    story.append(Paragraph(TR["strengths_ident"], styles["h2"]))
     for s in scores.strengths:
         story.append(Paragraph(f"•  {esc(s)}", styles["bullet"]))
 
     story.append(Spacer(1, 0.4 * cm))
-    story.append(Paragraph("Axes d'amélioration", styles["h2"]))
+    story.append(Paragraph(TR["weaknesses_axes"], styles["h2"]))
     for w in scores.weaknesses:
         story.append(Paragraph(f"–  {esc(w)}", styles["bullet"]))
 
     if request.include_recommendations:
         story.append(Spacer(1, 0.4 * cm))
-        section_header(story, "7. Recommandations Prioritaires", pal["accent"], pal, styles, ts)
+        section_header(story, TR["pdf_s7"], pal["accent"], pal, styles, ts)
         for i, rec in enumerate(scores.recommendations, 1):
             story.append(Paragraph(f"<b>{i}.</b>  {esc(rec)}", styles["bullet"]))
 
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
-    section_header(story, "8. Cadres de Référence & Alignement ODD", pal["secondary"], pal, styles, ts)
+    section_header(story, TR["pdf_s8"], pal["secondary"], pal, styles, ts)
 
-    ref_text = (
-        "Ce rapport s'inscrit dans les cadres de référence suivants : <b>GRI Standards</b> (Global Reporting Initiative), "
-        "<b>TCFD</b> (Task Force on Climate-related Financial Disclosures), <b>CSRD</b> (Corporate Sustainability Reporting Directive), "
-        "<b>SFDR</b> (Sustainable Finance Disclosure Regulation) et les normes <b>ISO 14001 / 26000</b>. "
-        "L'organisation contribue aux Objectifs de Développement Durable (ODD) de l'ONU, notamment les ODD 7, 8, 10, 12, 13 et 16."
-    )
+    ref_text = TR["ref_text"]
     story.append(Paragraph(ref_text, styles["body"]))
 
     # ── Section spécifique White Paper : Vision Stratégique ──────────────
     if request.report_type.value == "white_paper":
         story.append(Spacer(1, 0.5 * cm))
-        section_header(story, "9. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
-        story.append(Paragraph(
-            "Ce livre blanc a vocation à documenter la trajectoire ESG de l'organisation sur le long terme. "
-            "Il constitue un document de référence stratégique, destiné à éclairer les décisions "
-            "d'investissement et à démontrer la maturité extra-financière de l'entreprise. "
-            "Les engagements formulés dans ce document s'inscrivent dans une perspective de transformation "
-            "durable, alignée sur l'Accord de Paris et les Objectifs de Développement Durable (ODD).",
-            styles["body"]))
+        section_header(story, TR["pdf_s9_wp"], pal["accent"], pal, styles, ts)
+        story.append(Paragraph(TR["wp_intro"], styles["body"]))
         story.append(Spacer(1, 0.3 * cm))
         # Objectifs 2027
         obj_data = [
-            [Paragraph("<b>Horizon 2027 — Objectifs ESG cibles</b>",
+            [Paragraph("<b>" + TR["wp_horizon"].format(y=max(request.company.target_year, request.company.reporting_year + 1)) + "</b>",
                        ParagraphStyle("ot", fontSize=11, fontName=ts["font_bold"],
                                       textColor=pal["primary"]))],
         ]
-        pillars_obj = [
-            ("Environnement", f"Score E cible : {min(100, scores.environmental_score + 15):.0f}/100 | +50% renouvelable | Scope 3 mesuré"),
-            ("Social", f"Score S cible : {min(100, scores.social_score + 10):.0f}/100 | Parité 40% | 30h formation/an"),
-            ("Gouvernance", f"Score G cible : {min(100, scores.governance_score + 5):.0f}/100 | Audit annuel | Comité durable"),
-        ]
+        if request.language == "en":
+            pillars_obj = [
+                ("Environmental", f"Target E score: {min(100, scores.environmental_score + 15):.0f}/100 | +50% renewable | Scope 3 measured"),
+                ("Social", f"Target S score: {min(100, scores.social_score + 10):.0f}/100 | 40% gender balance | 30h training/year"),
+                ("Governance", f"Target G score: {min(100, scores.governance_score + 5):.0f}/100 | Annual audit | Sustainability committee"),
+            ]
+        else:
+            pillars_obj = [
+                ("Environnement", f"Score E cible : {min(100, scores.environmental_score + 15):.0f}/100 | +50% renouvelable | Scope 3 mesuré"),
+                ("Social", f"Score S cible : {min(100, scores.social_score + 10):.0f}/100 | Parité 40% | 30h formation/an"),
+                ("Gouvernance", f"Score G cible : {min(100, scores.governance_score + 5):.0f}/100 | Audit annuel | Comité durable"),
+            ]
         for label, obj in pillars_obj:
             story.append(Paragraph(f"<b>• {label} :</b> {obj}", styles["bullet"]))
 
 
     # ── Conclusion ────────────────────────────────────────────────────────
     story.append(PageBreak())
-    section_header(story, "10. Conclusion" if request.report_type.value == "white_paper" else "9. Conclusion", pal["primary"], pal, styles, ts)
+    section_header(story, TR["pdf_concl_wp"] if request.report_type.value == "white_paper" else TR["pdf_concl"], pal["primary"], pal, styles, ts)
 
     conclusion = content.get("conclusion",
         f"{request.company.name} démontre une démarche ESG globale avec un score de "
@@ -742,11 +740,12 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 1 * cm))
     story.append(HRFlowable(width="100%", thickness=1, color=pal["secondary"]))
     story.append(Paragraph(
-        esc(f"© {request.company.reporting_year} {request.company.name} — Document généré automatiquement par la Plateforme ESG"),
+        esc(f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]),
         styles["footer"]))
 
     decor = page_decorator(pal, ts, request.company.name,
-                           minimal=(ts["header"] == "minimal"))
+                           minimal=(ts["header"] == "minimal"),
+                           footer_label=TR["rep_default"])
     doc.build(story, onFirstPage=decor, onLaterPages=decor)
     buf.seek(0)
     return buf.read()

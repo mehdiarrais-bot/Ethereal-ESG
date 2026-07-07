@@ -5,6 +5,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
 from visual_kit import pillar_hero, icon_png, ring_png
+from i18n import L
 
 
 def _hexstr(rgb) -> str:
@@ -279,7 +280,7 @@ def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3), 
 
 # ── Covers ────────────────────────────────────────────────────────────────
 
-def cover_classic(slide, theme, style, request, scores, subtitle):
+def cover_classic(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
     add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
@@ -289,18 +290,18 @@ def cover_classic(slide, theme, style, request, scores, subtitle):
              font_size=40, bold=True, color=theme["text_light"], font=ft)
     add_text(slide, subtitle, Inches(0.6), Inches(2.5), Inches(9), Inches(0.7),
              font_size=22, color=theme["subtitle"], font=fb)
-    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
              Inches(0.6), Inches(3.3), Inches(10), Inches(0.5),
              font_size=14, color=theme["subtitle"], font=fb)
     add_bg_rect(slide, Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5), theme["accent"])
     add_text(slide, f"ESG {scores.rating}", Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5),
              font_size=28, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"Score Global : {scores.total_esg_score}/100",
+    add_text(slide, f"{TR['chart_global']} : {scores.total_esg_score}/100",
              Inches(0.6), Inches(5.8), Inches(6), Inches(0.5),
              font_size=14, color=theme["subtitle"], font=fb)
 
 
-def cover_organic(slide, theme, style, request, scores, subtitle):
+def cover_organic(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
     # Overlapping organic circles top-right
@@ -312,7 +313,7 @@ def cover_organic(slide, theme, style, request, scores, subtitle):
              font_size=42, bold=True, color=theme["bg_primary"], font=ft)
     add_text(slide, subtitle, Inches(0.7), Inches(2.9), Inches(9), Inches(0.7),
              font_size=20, color=theme["muted"], font=fb)
-    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
              Inches(0.7), Inches(3.7), Inches(10), Inches(0.5),
              font_size=13, color=theme["muted"], font=fb)
     # Bottom rounded band with score
@@ -325,7 +326,7 @@ def cover_organic(slide, theme, style, request, scores, subtitle):
              font_size=22, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
-def cover_luxe(slide, theme, style, request, scores, subtitle):
+def cover_luxe(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
     # Thin gold frame
@@ -341,17 +342,17 @@ def cover_luxe(slide, theme, style, request, scores, subtitle):
     add_text(slide, request.company.name.upper(), Inches(1), Inches(2.3), Inches(11.33), Inches(1.4),
              font_size=44, bold=False, color=theme["text_light"], align=PP_ALIGN.CENTER, font=ft)
     add_bg_rect(slide, Inches(5.9), Inches(3.9), Inches(1.5), Inches(0.02), gold)
-    add_text(slide, f"Exercice {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
              Inches(1), Inches(4.2), Inches(11.33), Inches(0.5),
              font_size=13, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, f"— {scores.rating} —", Inches(1), Inches(5.1), Inches(11.33), Inches(0.8),
              font_size=34, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"Score ESG {scores.total_esg_score}/100", Inches(1), Inches(5.95),
+    add_text(slide, f"{TR['esg_score_line'].split(chr(58))[0]} {scores.total_esg_score}/100", Inches(1), Inches(5.95),
              Inches(11.33), Inches(0.5), font_size=14, color=theme["subtitle"],
              align=PP_ALIGN.CENTER, font=fb)
 
 
-def cover_minimal(slide, theme, style, request, scores, subtitle):
+def cover_minimal(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
     add_bg_rect(slide, Inches(0.7), Inches(1.1), Inches(0.35), Inches(0.35), theme["accent"])
@@ -378,7 +379,7 @@ COVERS = {"classic": cover_classic, "organic": cover_organic,
 
 
 def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
-                       title, subtitle, score, kpis):
+                       title, subtitle, score, kpis, t):
     """Slide de pilier en infographie : héros illustré à gauche + chips KPI.
 
     kpis : liste de (icon_name, value_str, label). 6 max affichés.
@@ -414,12 +415,12 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
         pass
     add_text(slide, f"{score:.0f}", Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
              font_size=38, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, "SCORE / 100", Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
+    add_text(slide, t["score_100_caps"], Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
              font_size=11, bold=True, color=white, align=PP_ALIGN.CENTER, font=fb)
 
     # ── En-tête droite ─────────────────────────────────────────────
     RX = Inches(4.95)
-    add_text(slide, "Indicateurs clés", RX, Inches(0.45), Inches(8), Inches(0.6),
+    add_text(slide, t["key_indicators"], RX, Inches(0.45), Inches(8), Inches(0.6),
              font_size=22, bold=True, color=theme["text_dark"], font=ft)
     add_bg_rect(slide, RX, Inches(1.15), Inches(2.0), Inches(0.05), color)
 
@@ -458,19 +459,20 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     style = STYLES.get(request.aesthetic_theme, STYLES[AestheticTheme.CORPORATE_BLUE])
     ft, fb = style["font_title"], style["font_body"]
     ptype = request.presentation_type
+    t = L(request.language)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
     slide = prs.slides.add_slide(blank_layout)
     subtitle_map = {
-        PresentationType.EXECUTIVE_SUMMARY: "Rapport ESG — Synthèse Exécutive",
-        PresentationType.INVESTOR_DECK: "ESG Investor Deck",
-        PresentationType.DETAILED_REPORT: "Rapport ESG Détaillé",
-        PresentationType.STAKEHOLDER_BRIEF: "Communication Parties Prenantes",
-        PresentationType.ANNUAL_REPORT: "Rapport Annuel ESG / RSE",
+        PresentationType.EXECUTIVE_SUMMARY: t["pres_executive_summary"],
+        PresentationType.INVESTOR_DECK: t["pres_investor_deck"],
+        PresentationType.DETAILED_REPORT: t["pres_detailed_report"],
+        PresentationType.STAKEHOLDER_BRIEF: t["pres_stakeholder_brief"],
+        PresentationType.ANNUAL_REPORT: t["pres_annual_report"],
     }
     COVERS[style["cover"]](slide, theme, style, request, scores,
-                           subtitle_map.get(ptype, "Rapport ESG"))
+                           subtitle_map.get(ptype, t["pres_default"]), t)
 
     # Logo entreprise sur la couverture
     if logo_bytes:
@@ -488,7 +490,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # Présentateur
     if request.company.presenter_name:
-        line = f"Présenté par {request.company.presenter_name}"
+        line = f"{t['presented_by']} {request.company.presenter_name}"
         if request.company.presenter_title:
             line += f" — {request.company.presenter_title}"
         pres_y = Inches(6.9) if style["cover"] == "organic" else Inches(6.55)
@@ -503,7 +505,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         bg = theme["bg_primary"] if style["dark_slides"] else theme["bg_secondary"]
         add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, bg)
         add_image_from_bytes(slide, chart_images["cover_art"], 0, 0, SLIDE_W, Inches(4.4))
-        add_text(slide, maybe_upper(f"Rapport ESG {request.company.reporting_year}", style),
+        add_text(slide, maybe_upper(f"{t['pres_default']} {request.company.reporting_year}", style),
                  Inches(0.7), Inches(4.9), Inches(11.9), Inches(0.9),
                  font_size=32, bold=True, color=theme["text_dark"], font=ft)
         add_text(slide, f"{request.company.name}  •  {request.company.sector}",
@@ -512,12 +514,12 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
-    slide = content_slide(prs, blank_layout, theme, style, "Tableau de Bord ESG", header_color)
+    slide = content_slide(prs, blank_layout, theme, style, t["dashboard"], header_color)
 
     pillars = [
-        ("E — Environnement", scores.environmental_score, theme["env"], Inches(0.3)),
-        ("S — Social", scores.social_score, theme["social"], Inches(4.55)),
-        ("G — Gouvernance", scores.governance_score, theme["gov"], Inches(8.8)),
+        ("E — " + t["chart_env"], scores.environmental_score, theme["env"], Inches(0.3)),
+        ("S — " + t["chart_soc"], scores.social_score, theme["social"], Inches(4.55)),
+        ("G — " + t["chart_gov"], scores.governance_score, theme["gov"], Inches(8.8)),
     ]
     for label, score, color, left in pillars:
         kpi_card(slide, left, Inches(1.3), Inches(4.0), Inches(2.4), theme, style, color)
@@ -531,7 +533,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
     add_bg_rect(slide, Inches(0.3), Inches(3.9), Inches(12.7), Inches(0.03), sep_color)
-    add_text(slide, f"Score ESG Global : {scores.total_esg_score}/100  —  Note : {scores.rating}",
+    add_text(slide, t["global_score_line"].format(s=scores.total_esg_score, r=scores.rating),
              Inches(0.3), Inches(4.05), Inches(12.7), Inches(0.6),
              font_size=20, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=ft)
 
@@ -546,88 +548,87 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     env = request.environmental
     env_kpis = []
     if env.co2_emissions_tonnes is not None:
-        env_kpis.append(("cloud", f"{env.co2_emissions_tonnes:,.0f} t", "Émissions CO2 totales"))
+        env_kpis.append(("cloud", f"{env.co2_emissions_tonnes:,.0f} t", t["kpi"]["co2_total"]))
     if env.renewable_energy_percent is not None:
-        env_kpis.append(("recycle", f"{env.renewable_energy_percent:.0f}%", "Énergie renouvelable"))
+        env_kpis.append(("recycle", f"{env.renewable_energy_percent:.0f}%", t["kpi"]["renewable"]))
     if env.energy_consumption_mwh is not None:
-        env_kpis.append(("bolt", f"{env.energy_consumption_mwh:,.0f}", "Consommation (MWh)"))
+        env_kpis.append(("bolt", f"{env.energy_consumption_mwh:,.0f}", t["kpi"]["energy"]))
     if env.water_consumption_m3 is not None:
-        env_kpis.append(("drop", f"{env.water_consumption_m3:,.0f}", "Eau prélevée (m3)"))
+        env_kpis.append(("drop", f"{env.water_consumption_m3:,.0f}", t["kpi"]["water"]))
     if env.waste_recycled_percent is not None:
-        env_kpis.append(("leaf", f"{env.waste_recycled_percent:.0f}%", "Taux de recyclage"))
+        env_kpis.append(("leaf", f"{env.waste_recycled_percent:.0f}%", t["kpi"]["recycling"]))
     if env.biodiversity_initiatives is not None:
-        env_kpis.append(("tree", f"{env.biodiversity_initiatives}", "Initiatives biodiversité"))
+        env_kpis.append(("tree", f"{env.biodiversity_initiatives}", t["kpi"]["biodiversity"]))
     if env.scope3_emissions is not None:
-        env_kpis.append(("cloud", f"{env.scope3_emissions:,.0f} t", "Scope 3 (chaîne de valeur)"))
+        env_kpis.append(("cloud", f"{env.scope3_emissions:,.0f} t", t["kpi"]["scope3"]))
     if env.waste_generated_tonnes is not None:
-        env_kpis.append(("recycle", f"{env.waste_generated_tonnes:,.0f} t", "Déchets générés"))
+        env_kpis.append(("recycle", f"{env.waste_generated_tonnes:,.0f} t", t["kpi"]["waste"]))
     pillar_infographic(prs, blank_layout, theme, style, "env",
-                       "Pilier Environnemental", "Climat • Énergie • Ressources",
-                       scores.environmental_score, env_kpis)
+                       t["pillar_env"], t["pillar_env_sub"],
+                       scores.environmental_score, env_kpis, t)
 
     # ── SLIDE 4: Social (infographie) ────────────────────────────────────
     soc = request.social
     soc_kpis = []
     if soc.total_employees is not None:
-        soc_kpis.append(("people", f"{soc.total_employees:,}", "Effectif total"))
+        soc_kpis.append(("people", f"{soc.total_employees:,}", t["kpi"]["employees"]))
     if soc.female_employees_percent is not None:
-        soc_kpis.append(("people", f"{soc.female_employees_percent:.0f}%", "Femmes dans l'effectif"))
+        soc_kpis.append(("people", f"{soc.female_employees_percent:.0f}%", t["kpi"]["women_workforce"]))
     if soc.training_hours_per_employee is not None:
-        soc_kpis.append(("cap", f"{soc.training_hours_per_employee:.0f} h", "Formation / an"))
+        soc_kpis.append(("cap", f"{soc.training_hours_per_employee:.0f} h", t["kpi"]["training"]))
     if soc.accident_frequency_rate is not None:
-        soc_kpis.append(("shield", f"{soc.accident_frequency_rate:.1f}", "Taux fréquence accidents"))
+        soc_kpis.append(("shield", f"{soc.accident_frequency_rate:.1f}", t["kpi"]["accident_rate"]))
     if soc.customer_satisfaction_score is not None:
-        soc_kpis.append(("heart", f"{soc.customer_satisfaction_score:.1f}/10", "Satisfaction client"))
+        soc_kpis.append(("heart", f"{soc.customer_satisfaction_score:.1f}/10", t["kpi"]["satisfaction"]))
     if soc.employee_turnover_percent is not None:
-        soc_kpis.append(("chart", f"{soc.employee_turnover_percent:.0f}%", "Turnover"))
+        soc_kpis.append(("chart", f"{soc.employee_turnover_percent:.0f}%", t["kpi"]["turnover"]))
     if soc.disabled_employees_percent is not None:
-        soc_kpis.append(("heart", f"{soc.disabled_employees_percent:.1f}%", "Salariés en situation de handicap"))
+        soc_kpis.append(("heart", f"{soc.disabled_employees_percent:.1f}%", t["kpi"]["disabled"]))
     if soc.community_investment_eur is not None:
-        soc_kpis.append(("heart", f"{soc.community_investment_eur:,.0f} €", "Investissement communauté"))
+        soc_kpis.append(("heart", f"{soc.community_investment_eur:,.0f} €", t["kpi"]["community"]))
     pillar_infographic(prs, blank_layout, theme, style, "social",
-                       "Pilier Social", "Capital humain • Diversité • Sécurité",
-                       scores.social_score, soc_kpis)
+                       t["pillar_soc"], t["pillar_soc_sub"],
+                       scores.social_score, soc_kpis, t)
 
     # ── SLIDE 5: Gouvernance (infographie) ───────────────────────────────
     gov = request.governance
     gov_kpis = []
     if gov.board_members is not None:
-        gov_kpis.append(("columns", f"{gov.board_members}", "Membres du Conseil"))
+        gov_kpis.append(("columns", f"{gov.board_members}", t["kpi"]["board"]))
     if gov.female_board_percent is not None:
-        gov_kpis.append(("people", f"{gov.female_board_percent:.0f}%", "Femmes au CA"))
+        gov_kpis.append(("people", f"{gov.female_board_percent:.0f}%", t["kpi"]["women_board"]))
     if gov.independent_board_percent is not None:
-        gov_kpis.append(("badge", f"{gov.independent_board_percent:.0f}%", "Administrateurs indépendants"))
+        gov_kpis.append(("badge", f"{gov.independent_board_percent:.0f}%", t["kpi"]["independent"]))
     if gov.esg_audit_conducted is not None:
-        gov_kpis.append(("badge", "Oui" if gov.esg_audit_conducted else "Non", "Audit ESG indépendant"))
+        gov_kpis.append(("badge", t["kpi"]["yes"] if gov.esg_audit_conducted else t["kpi"]["no"], t["kpi"]["audit"]))
     if gov.data_breaches is not None:
-        gov_kpis.append(("lock", f"{gov.data_breaches}", "Violations de données"))
+        gov_kpis.append(("lock", f"{gov.data_breaches}", t["kpi"]["breaches"]))
     if gov.ethics_violations is not None:
-        gov_kpis.append(("scale", f"{gov.ethics_violations}", "Manquements éthiques"))
+        gov_kpis.append(("scale", f"{gov.ethics_violations}", t["kpi"]["ethics"]))
     if gov.csr_budget_eur is not None:
-        gov_kpis.append(("chart", f"{gov.csr_budget_eur:,.0f} €", "Budget RSE"))
+        gov_kpis.append(("chart", f"{gov.csr_budget_eur:,.0f} €", t["kpi"]["csr_budget"]))
     if gov.sustainability_committee is not None:
-        gov_kpis.append(("columns", "Oui" if gov.sustainability_committee else "Non", "Comité de durabilité"))
+        gov_kpis.append(("columns", t["kpi"]["yes"] if gov.sustainability_committee else t["kpi"]["no"], t["kpi"]["committee"]))
     if gov.corruption_cases is not None:
-        gov_kpis.append(("scale", f"{gov.corruption_cases}", "Cas de corruption"))
+        gov_kpis.append(("scale", f"{gov.corruption_cases}", t["kpi"]["corruption"]))
     pillar_infographic(prs, blank_layout, theme, style, "gov",
-                       "Pilier Gouvernance", "Éthique • Conseil • Contrôle",
-                       scores.governance_score, gov_kpis)
+                       t["pillar_gov"], t["pillar_gov_sub"],
+                       scores.governance_score, gov_kpis, t)
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              "Double Matérialité — CSRD / ESRS", header_color)
+                              t["materiality_title"], header_color)
         add_image_from_bytes(slide, chart_images["materiality"],
                              Inches(0.4), Inches(1.3), height=Inches(5.7))
-        add_text(slide, "Enjeux ESG positionnés selon leur impact et leur importance financière. "
-                        "Le quadrant supérieur droit concentre les priorités stratégiques.",
+        add_text(slide, t["materiality_desc"],
                  Inches(7.7), Inches(2.0), Inches(5.3), Inches(4), font_size=14,
                  color=theme["text_dark"], font=fb)
 
     # ── SLIDE 5c: Objectifs & trajectoire ───────────────────────────────
     if "targets" in chart_images or "carbon_trajectory" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              "Objectifs & Trajectoire ESG", header_color)
+                              t["targets_title"], header_color)
         if "targets" in chart_images:
             add_image_from_bytes(slide, chart_images["targets"],
                                  Inches(0.4), Inches(1.3), width=Inches(6.3))
@@ -635,31 +636,28 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             add_image_from_bytes(slide, chart_images["carbon_trajectory"],
                                  Inches(6.9), Inches(1.4), width=Inches(6.1))
         else:
-            add_text(slide, "Cibles de progression par pilier à horizon "
-                            f"{max(request.company.target_year, request.company.reporting_year + 1)}, "
-                            "avec suivi annuel piloté par la gouvernance ESG.",
+            add_text(slide, t["targets_desc"].format(y=max(request.company.target_year, request.company.reporting_year + 1)),
                      Inches(7.0), Inches(2.2), Inches(5.9), Inches(3), font_size=14,
                      color=theme["text_dark"], font=fb)
 
     # ── SLIDE 5d: Taxonomie UE ──────────────────────────────────────────
     if "taxonomy" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              "Alignement Taxonomie Européenne", header_color)
+                              t["taxonomy_title"], header_color)
         add_image_from_bytes(slide, chart_images["taxonomy"],
                              Inches(0.6), Inches(1.6), width=Inches(8.2))
-        add_text(slide, "Part des activités durables sur le plan environnemental "
-                        "(contribution substantielle, principe DNSH, garanties minimales).",
+        add_text(slide, t["taxonomy_desc"],
                  Inches(9.1), Inches(2.2), Inches(3.9), Inches(4), font_size=13,
                  color=theme["text_dark"], font=fb)
 
     # ── SLIDE 6: Forces & Faiblesses ────────────────────────────────────
-    slide = content_slide(prs, blank_layout, theme, style, "Analyse Stratégique ESG", header_color)
+    slide = content_slide(prs, blank_layout, theme, style, t["strategic"], header_color)
 
     red = RGBColor(0xE7, 0x4C, 0x3C)
     panel_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
     for (px, pw, ptitle, pcolor, items) in [
-        (Inches(0.3), Inches(6.0), "✅  Points Forts", theme["env"], scores.strengths),
-        (Inches(6.9), Inches(6.1), "⚠️  Axes d'Amélioration", red, scores.weaknesses),
+        (Inches(0.3), Inches(6.0), t["strengths_check"], theme["env"], scores.strengths),
+        (Inches(6.9), Inches(6.1), t["weaknesses_warn"], red, scores.weaknesses),
     ]:
         if style["card"] == "outline":
             add_shape(slide, RECT, px, Inches(1.2), pw, Inches(5.8), fill=theme["card_bg"],
@@ -677,7 +675,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 7: Recommandations ─────────────────────────────────────────
     if request.include_recommendations:
-        slide = content_slide(prs, blank_layout, theme, style, "Recommandations Prioritaires", header_color)
+        slide = content_slide(prs, blank_layout, theme, style, t["recommendations"], header_color)
 
         rec_colors = [theme["env"], theme["social"], theme["gov"], theme["accent"],
                       theme["env"], theme["social"]]
@@ -694,16 +692,10 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style,
-                          "Alignement — ODD & Cadres de Référence", header_color)
+                          t["odd_title"], header_color)
 
-    odds = [
-        ("ODD 7", "Énergie propre", theme["accent"]),
-        ("ODD 8", "Travail décent", theme["social"]),
-        ("ODD 10", "Inégalités réduites", theme["gov"]),
-        ("ODD 12", "Conso. responsable", theme["env"]),
-        ("ODD 13", "Action climatique", theme["env"]),
-        ("ODD 16", "Paix & Institutions", theme["gov"]),
-    ]
+    _odd_colors = [theme["accent"], theme["social"], theme["gov"], theme["env"], theme["env"], theme["gov"]]
+    odds = [(num, lab, _odd_colors[i]) for i, (num, lab) in enumerate(t["odds"])]
     odd_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
     for idx, (odd_num, odd_label, odd_color) in enumerate(odds):
         col = Inches(0.3) + (idx % 3) * Inches(4.3)
@@ -722,7 +714,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     frameworks = ["GRI Standards", "TCFD", "CSRD / DPEF", "SFDR", "ISO 14001 / 26000"]
     add_bg_rect(slide, Inches(0.3), Inches(5.1), Inches(12.7), Inches(0.03), sep_color)
-    add_text(slide, "Cadres reportés : " + "  |  ".join(frameworks),
+    add_text(slide, t["frameworks_line"] + "  |  ".join(frameworks),
              Inches(0.3), Inches(5.3), Inches(12.7), Inches(0.6),
              font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=fb)
 
@@ -739,7 +731,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         concl_title_color, concl_text_color = theme["text_light"], theme["subtitle"]
         title_top = Inches(0.8)
 
-    add_text(slide, maybe_upper("Conclusion & Engagements", style), Inches(0.6), title_top,
+    add_text(slide, maybe_upper(t["conclusion_title"], style), Inches(0.6), title_top,
              Inches(11), Inches(1.0), font_size=30, bold=True, color=concl_title_color, font=ft)
 
     conclusion_text = content.get("conclusion",
@@ -751,11 +743,11 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     add_text(slide, conclusion_text, Inches(0.6), Inches(2.2),
              Inches(11.5), Inches(2.8), font_size=14, color=concl_text_color, font=fb)
 
-    add_text(slide, f"Score ESG : {scores.total_esg_score}/100  —  Note : {scores.rating}",
+    add_text(slide, t["esg_score_line"].format(s=scores.total_esg_score, r=scores.rating),
              Inches(0.6), Inches(5.0), Inches(10), Inches(0.7),
              font_size=22, bold=True, color=theme["accent"], font=ft)
 
-    add_text(slide, f"© {request.company.reporting_year} {request.company.name} — Document confidentiel",
+    add_text(slide, f"© {request.company.reporting_year} {request.company.name} — " + t["confidential"],
              Inches(0.6), Inches(6.7), Inches(11), Inches(0.4),
              font_size=9, italic=True, color=concl_text_color, font=fb)
 

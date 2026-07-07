@@ -106,6 +106,16 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         </div>
 
         <div className="output-section">
+          <div className="output-section-title">🌍 Langue des livrables</div>
+          <div className="lang-toggle">
+            <button type="button" className={`lang-btn ${(form.language || 'fr') === 'fr' ? 'active' : ''}`}
+              onClick={() => set('language')('fr')}>🇫🇷 Français</button>
+            <button type="button" className={`lang-btn ${form.language === 'en' ? 'active' : ''}`}
+              onClick={() => set('language')('en')}>🇬🇧 English</button>
+          </div>
+        </div>
+
+        <div className="output-section">
           <div className="output-section-title">⚙️ Options</div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             <label className="checkbox-label">
@@ -207,6 +217,15 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           gap: 14px;
         }
         .options-grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .lang-toggle { display: inline-flex; gap: 0; border: 1px solid var(--glass-border); border-radius: var(--radius-pill); overflow: hidden; }
+        .lang-btn {
+          padding: 10px 22px; border: none; background: rgba(8,5,22,0.5);
+          color: var(--text-dim); font-size: 14px; font-weight: 600; cursor: pointer;
+          transition: background var(--fast), color var(--fast);
+        }
+        .lang-btn:first-child { border-right: 1px solid var(--glass-border); }
+        .lang-btn:hover { background: rgba(124,92,246,0.14); color: var(--text); }
+        .lang-btn.active { background: linear-gradient(135deg, var(--violet), var(--neon-blue)); color: #fff; }
         .option-card {
           position: relative; padding: 16px 18px 15px;
           border: 1px solid var(--glass-border); border-radius: var(--radius);

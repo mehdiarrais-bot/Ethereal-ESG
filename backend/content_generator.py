@@ -235,6 +235,13 @@ PERF_DESC = {
 
 
 def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
+    """Dispatche vers le générateur FR ou EN selon request.language."""
+    if getattr(request, "language", "fr") == "en":
+        return _generate_en(request, scores)
+    return _generate_fr(request, scores)
+
+
+def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     company = request.company
     env = request.environmental
     soc = request.social
@@ -490,5 +497,371 @@ def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
         "targets": targets_txt,
         "taxonomy": taxonomy,
         "climate_risk": climate_risk,
+        "conclusion": conclusion,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ENGLISH CONTENT GENERATOR
+# ══════════════════════════════════════════════════════════════════════════
+
+SECTOR_CTX_EN = {
+    "Énergie": ("the energy sector, exposed to low-carbon transition challenges", "decarbonising its assets"),
+    "Energy": ("the energy sector, exposed to low-carbon transition challenges", "decarbonising its assets"),
+    "Finance": ("the financial sector, a driver of sustainable finance", "embedding ESG into its investment criteria"),
+    "Industrie": ("manufacturing industry, at the heart of carbon-efficiency challenges", "optimising its industrial footprint"),
+    "Industry": ("manufacturing industry, at the heart of carbon-efficiency challenges", "optimising its industrial footprint"),
+    "BTP": ("the construction sector, committed to sustainable building", "eco-design and waste reduction"),
+    "Construction": ("the construction sector, committed to sustainable building", "eco-design and waste reduction"),
+    "Agroalimentaire": ("the agri-food sector, exposed to biodiversity and water risks", "the traceability of its supply chains"),
+    "Numérique": ("the technology sector, with a growing carbon footprint", "the energy efficiency of its data centres"),
+    "Tech": ("the technology sector, with a growing carbon footprint", "the energy efficiency of its data centres"),
+    "Logistique": ("logistics, a carbon-intensive sector", "decarbonising its fleet and flows"),
+    "Transport": ("logistics, a carbon-intensive sector", "decarbonising its fleet and flows"),
+    "Pharmaceutique": ("the pharmaceutical sector, with high governance standards", "the responsible management of its substances"),
+    "Commerce": ("retail, under pressure across its supply chains", "the sustainability of its upstream value chain"),
+    "Chimie": ("the chemical industry, facing major regulatory challenges", "reducing its pollutant emissions"),
+    "Chemical": ("the chemical industry, facing major regulatory challenges", "reducing its pollutant emissions"),
+}
+
+
+def _ctx_en(sector):
+    for k, v in SECTOR_CTX_EN.items():
+        if k.lower() in sector.lower():
+            return v
+    return ("its industry", "the continuous improvement of its ESG practices")
+
+
+PERF_DESC_EN = {
+    "AAA": "leading performance, on par with global ESG leaders",
+    "AA": "strong performance, exceeding recognised sector standards",
+    "A": "good performance, well above the sector average",
+    "BBB": "satisfactory performance with identified room for improvement",
+    "BB": "developing performance — a structured action plan is under way",
+    "B": "limited performance — deep transformation is needed across all pillars",
+    "CCC": "insufficient performance — urgent mobilisation is required",
+}
+
+EXEC_OPENINGS_EN = [
+    "{n} presents its {y} ESG report, asserting its position within {ctx}.",
+    "As part of its extra-financial commitment, {n} publishes its {y} ESG review for {ctx}.",
+    "{n} consolidates its {y} sustainability reporting, rooted in the realities of {ctx}.",
+    "The {y} fiscal year marks a structuring step in the ESG trajectory of {n}, a player in {ctx}.",
+    "This {y} ESG report reflects the sustainability strategy of {n} within {ctx}.",
+    "As a player in {ctx}, {n} reports on its {y} extra-financial commitments.",
+    "The CSR approach of {n} reaches a documented level of maturity in {y} ({ctx}).",
+]
+EXEC_SCORE_EN = [
+    "The extra-financial assessment results in an overall score of {sc}/100, rating {r} — {p}.",
+    "The multi-pillar analysis positions {n} at {sc}/100 ({r}), reflecting {p}.",
+    "The consolidated ESG rating stands at {sc}/100 ({r}), a mark of {p}.",
+    "With {sc}/100 and a {r} rating, {n} shows {p} across the full extra-financial scope.",
+    "The composite score of {sc}/100 ({r}) confirms {p} on the E, S and G criteria.",
+    "The ESG assessment places {n} at {sc}/100 (rating {r}), i.e. {p}.",
+    "The {sc}/100 level ({r}) reflects {p}, confirmed by the analysis of the three pillars.",
+]
+EXEC_PILLAR_EN = [
+    "The {bn} pillar ({bs}/100) is the cornerstone; the {wn} pillar ({ws}/100) remains the main lever for progress.",
+    "Relative strength concentrates on {bn} ({bs}/100); {wn} ({ws}/100) calls for priority efforts.",
+    "{bn} stands out as a strength ({bs}/100); {wn} ({ws}/100) is identified as a transformation area.",
+    "The breakdown highlights the robustness of {bn} ({bs}/100) and the need to strengthen {wn} ({ws}/100).",
+    "{bn} leads the ESG profile ({bs}/100) while {wn} ({ws}/100) is the priority area for improvement.",
+    "The analysis reveals an edge on {bn} ({bs}/100) and a gap to close on {wn} ({ws}/100).",
+    "In terms of balance, {bn} leads ({bs}/100) and {wn} ({ws}/100) requires priority attention.",
+]
+ENV_INTROS_EN = [
+    "On the environmental front, {n} scores {sc}/100.",
+    "The climate and environmental performance of {n} reaches {sc}/100.",
+    "{n} achieves {sc}/100 on the environmental dimension of its reporting.",
+    "The ecological footprint of {n} is assessed at {sc}/100.",
+    "On environment and climate, {n} stands at {sc}/100.",
+    "The environmental review of {n} results in a score of {sc}/100.",
+    "{sc}/100 — that is the environmental performance measured for {n} this year.",
+]
+ENV_LIAISONS_EN = [
+    "The reported indicators cover: ", "The reporting scope includes: ",
+    "The key environmental data are: ", "The environmental inventory comprises: ",
+    "The disclosed metrics include: ", "The environmental review documents: ",
+    "The main environmental indicators are: ",
+]
+ENV_OUTLOOK_EN = [
+    "The decarbonisation pathway centres on {p} for the coming years.",
+    "The priority area for progress is {p}, in line with sector expectations.",
+    "Upcoming efforts focus on {p}, an improvement lever set out in the roadmap.",
+    "The environmental plan prioritises {p}, in line with sustainability commitments.",
+    "The environmental roadmap targets {p} as an operational priority.",
+    "{p} is the environmental priority embedded in the multi-year strategy.",
+    "The multi-year environmental programme places {p} at the top of its 3-year objectives.",
+]
+SOC_INTROS_EN = [
+    "The social dimension of {n} stands at {sc}/100.",
+    "The social and human performance of {n} reaches {sc}/100.",
+    "{n} scores {sc}/100 on the social axis of its extra-financial reporting.",
+    "The social indicators of {n} reflect a score of {sc}/100.",
+    "On the Social pillar, {n} achieves {sc}/100.",
+    "The social review of {n} is assessed at {sc}/100 for the year.",
+    "{sc}/100: that is the social rating of {n}, {trend}.",
+]
+SOC_LIAISONS_EN = [
+    "The key social indicators are: ", "Social reporting covers: ",
+    "The disclosed human and social data include: ", "The social review shows: ",
+    "The reported HR and social indicators include: ", "Social performance translates into: ",
+    "The documented social metrics encompass: ",
+]
+SOC_STRATEGIES_EN = [
+    "HR policy targets talent attractiveness, gender balance and occupational risk prevention.",
+    "The social ambition combines skills development, equity and quality of working life.",
+    "The people strategy rests on retention, diversity promotion and lower accident rates.",
+    "The social model prioritises training investment, professional equality and community engagement.",
+    "The social approach blends upskilling, strengthened social dialogue and lasting inclusion.",
+    "The social vision integrates employee fulfilment, safety and regional contribution.",
+    "The organisation places social performance at the heart of its employer brand and local roots.",
+]
+GOV_INTROS_EN = [
+    "The Governance pillar of {n} stands at {sc}/100.",
+    "The governance quality of {n} is assessed at {sc}/100.",
+    "{n} positions its Governance axis at {sc}/100.",
+    "On governance criteria, {n} achieves {sc}/100.",
+    "The governance structure of {n} generates a score of {sc}/100.",
+    "The governance assessment of {n} results in {sc}/100.",
+    "The extra-financial governance of {n} is rated {sc}/100.",
+]
+GOV_LIAISONS_EN = [
+    "The governance structure rests on: ", "The governance framework relies on: ",
+    "Governance foundations include: ", "The governance architecture comprises: ",
+    "The governance framework is built around: ", "ESG governance is organised around: ",
+    "The documented governance pillars are: ",
+]
+GOV_AUDITS_EN = [
+    "An independent ESG audit reinforces the credibility and transparency of extra-financial reporting.",
+    "External assurance of ESG data ensures the reliability and comparability of reporting.",
+    "The independent audit conducted guarantees the integrity of the data published in this report.",
+    "External certification of ESG indicators demonstrates the rigour of the reporting process.",
+    "An independent third party has verified the consistency and accuracy of the extra-financial data.",
+    "Third-party assurance of ESG data strengthens the confidence of investors and stakeholders.",
+    "External assurance of ESG reporting is a mark of quality and transparency for all stakeholders.",
+]
+GOV_NO_AUDIT_EN = [
+    "An independent ESG audit is recommended to strengthen the credibility of reporting.",
+    "Introducing external assurance is identified as a priority for the next reporting cycle.",
+    "Engaging a third-party auditor to validate extra-financial data is planned.",
+    "External assurance of ESG data would strengthen stakeholder confidence.",
+    "Rolling out external ESG certification is a short-term area for progress.",
+    "Independent verification of ESG reporting is a commitment set out in the roadmap.",
+    "Engaging an independent third party will strengthen the robustness of the reporting process.",
+]
+GOV_COMMITTEES_EN = [
+    "A sustainability committee operating at Board level ensures strategic oversight of ESG issues.",
+    "ESG governance benefits from a dedicated committee, guaranteeing sustainability integration at the highest level.",
+    "The Board's CSR committee steers the sustainability strategy and monitors its execution.",
+    "A specialised governance body oversees the ESG trajectory and the achievement of objectives.",
+    "The ESG dimension is driven by an active sustainability committee anchored in the governance structure.",
+    "ESG oversight is provided by a dedicated committee reporting directly to the Board.",
+    "The Board has a permanent sustainability committee ensuring the consistency of the ESG strategy.",
+]
+GOV_NO_COMMITTEE_EN = [
+    "Creating a sustainability committee at Board level is strongly recommended.",
+    "Establishing a dedicated ESG governance body is a priority improvement lever.",
+    "Strengthening ESG oversight through a dedicated body is identified as a structuring action.",
+    "Setting up a CSR committee within the Board is a priority recommendation.",
+    "Strengthened ESG governance requires creating a sustainability committee at executive level.",
+    "The absence of a dedicated committee is a documented area for progress in the governance roadmap.",
+    "Establishing a sustainability committee is planned to strengthen the strategic anchoring of ESG.",
+]
+CONCLUSION_HIGH_EN = [
+    ("demonstrates a mature and structured ESG approach", "Building on these achievements,", "intends to consolidate its progress while accelerating on its improvement areas"),
+    ("confirms its commitment to an ambitious sustainability strategy", "On this solid foundation,", "is equipped to take a further step in its extra-financial performance"),
+    ("illustrates the growing maturity of its sustainability approach", "Capitalising on these results,", "commits to amplifying its efforts on the identified priority areas"),
+    ("positions {n} among the responsible players in its sector", "In this positive momentum,", "continues to embed sustainability across all its strategic decisions"),
+    ("validates the relevance of the ESG strategy pursued in recent years", "Strengthened by these results,", "accelerates the delivery of its long-term roadmap"),
+]
+CONCLUSION_MID_EN = [
+    ("has resolutely engaged in transforming its ESG practices", "From this foundation,", "accelerates the delivery of its sustainability roadmap"),
+    ("is building positive momentum across all ESG pillars", "Driven by these early results,", "is structuring a path of progress for the coming years"),
+    ("shows measured, steady progress on its key indicators", "In this continuity,", "intensifies its efforts to reach its 3-year objectives"),
+]
+CONCLUSION_LOW_EN = [
+    ("has initiated a structured ESG reflection that now calls for action", "Aware of this room for progress,", "is committing to an ambitious transformation approach"),
+    ("stands at a pivotal moment in its ESG trajectory", "Faced with these challenges,", "mobilises its resources to accelerate its sustainable transformation"),
+    ("acknowledges the significant areas for progress identified in this report", "With determination,", "commits to structuring a concrete, measurable ESG action plan"),
+]
+CONCLUSION_REFS_EN = [
+    "in alignment with the GRI Standards, TCFD, CSRD and the UN Sustainable Development Goals.",
+    "in line with the GRI, ESRS (CSRD), TCFD frameworks and the 17 Sustainable Development Goals.",
+    "consistent with the GRI standards, CSRD requirements, the TCFD framework and the 2030 Agenda SDGs.",
+    "compliant with the international GRI frameworks, the ESRS requirements of the CSRD directive and the SDGs.",
+    "grounded in recognised reporting frameworks: GRI Standards, TCFD, CSRD/ESRS and UN SDGs.",
+    "in response to the expectations of the GRI, ESRS, TCFD frameworks and the 2030 Agenda SDGs.",
+    "through the lens of the CSRD/ESRS, GRI Standards, TCFD and UN SDG frameworks.",
+]
+
+
+def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
+    company = request.company
+    env, soc, gov = request.environmental, request.social, request.governance
+    year, name = company.reporting_year, company.name
+    s = _seed(name)
+    sector_long, sector_priority = _ctx_en(company.sector)
+    perf = PERF_DESC_EN.get(scores.rating, "measured performance")
+
+    labels = {"Environnemental": "Environmental", "Social": "Social", "Gouvernance": "Governance"}
+    best = max(("Environmental", scores.environmental_score), ("Social", scores.social_score),
+               ("Governance", scores.governance_score), key=lambda x: x[1])
+    worst = min(("Environmental", scores.environmental_score), ("Social", scores.social_score),
+                ("Governance", scores.governance_score), key=lambda x: x[1])
+
+    opening = _pick(s, 0, EXEC_OPENINGS_EN).format(n=name, y=year, ctx=sector_long)
+    score_ph = _pick(s, 1, EXEC_SCORE_EN).format(n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
+    pillar_ph = _pick(s, 2, EXEC_PILLAR_EN).format(bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
+    sector_note = f" Within {sector_long}, the strategic priority focuses on {sector_priority}."
+    executive_summary = f"{opening} {score_ph} {pillar_ph}{sector_note}"
+
+    # Environment
+    env_intro = _pick(s, 3, ENV_INTROS_EN).format(n=name, sc=f"{scores.environmental_score:.0f}")
+    items = []
+    if env.co2_emissions_tonnes:
+        inten = ""
+        if company.revenue_eur and company.revenue_eur > 0:
+            inten = f" (intensity: {env.co2_emissions_tonnes / company.revenue_eur * 1e6:.1f} t/€M revenue)"
+        items.append(f"{env.co2_emissions_tonnes:,.0f} t CO₂e total{inten}")
+    if env.scope1_emissions and env.scope2_emissions and env.scope3_emissions:
+        items.append(f"full Scope 1/2/3 carbon footprint ({env.scope1_emissions:,.0f} / {env.scope2_emissions:,.0f} / {env.scope3_emissions:,.0f} t CO₂e)")
+    if env.renewable_energy_percent is not None:
+        rc = ("exemplary" if env.renewable_energy_percent >= 75 else "50% target met" if env.renewable_energy_percent >= 50
+              else "progress under way" if env.renewable_energy_percent >= 30 else "acceleration required")
+        items.append(f"{env.renewable_energy_percent:.0f}% renewable energy ({rc})")
+    if env.energy_consumption_mwh:
+        items.append(f"{env.energy_consumption_mwh:,.0f} MWh consumed")
+    if env.water_consumption_m3:
+        items.append(f"{env.water_consumption_m3:,.0f} m³ withdrawn")
+    if env.waste_recycled_percent is not None:
+        wl = "excellent" if env.waste_recycled_percent >= 70 else "satisfactory" if env.waste_recycled_percent >= 40 else "to improve"
+        items.append(f"{env.waste_recycled_percent:.0f}% recycling ({wl})")
+    if env.biodiversity_initiatives:
+        items.append(f"{env.biodiversity_initiatives} biodiversity initiative(s)")
+    env_detail = (_pick(s, 5, ENV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The environmental scope is being structured."
+    environmental = f"{env_intro} {env_detail} {_pick(s, 6, ENV_OUTLOOK_EN).format(p=sector_priority)}"
+
+    # Social
+    trend = "improving" if scores.social_score >= 60 else "with priority areas to strengthen"
+    soc_intro = _pick(s, 7, SOC_INTROS_EN).format(n=name, sc=f"{scores.social_score:.0f}", trend=trend)
+    items = []
+    if soc.total_employees:
+        items.append(f"{soc.total_employees:,} employees ({company.country})")
+    if soc.female_employees_percent is not None:
+        gap = 40 - soc.female_employees_percent
+        fn = "legal 40% target met" if gap <= 0 else f"{gap:.0f} pt(s) from the 40% target" if gap <= 5 else f"{gap:.0f} pts below the 40% target"
+        items.append(f"{soc.female_employees_percent:.0f}% women ({fn})")
+    if soc.training_hours_per_employee is not None:
+        lvl = "excellent" if soc.training_hours_per_employee >= 40 else "satisfactory" if soc.training_hours_per_employee >= 20 else "to strengthen"
+        items.append(f"{soc.training_hours_per_employee:.0f} h/year training per employee ({lvl})")
+    if soc.accident_frequency_rate is not None:
+        sf = "excellent" if soc.accident_frequency_rate < 2 else "satisfactory" if soc.accident_frequency_rate < 5 else "a priority to improve"
+        items.append(f"accident frequency rate {soc.accident_frequency_rate:.1f} ({sf})")
+    if soc.employee_turnover_percent is not None:
+        items.append(f"{soc.employee_turnover_percent:.0f}% turnover")
+    if soc.customer_satisfaction_score:
+        items.append(f"customer satisfaction {soc.customer_satisfaction_score:.1f}/10")
+    if soc.disabled_employees_percent is not None:
+        items.append(f"{soc.disabled_employees_percent:.1f}% employees with disabilities")
+    soc_detail = (_pick(s, 8, SOC_LIAISONS_EN) + "; ".join(items) + ".") if items else "Social indicators are being formalised."
+    social = f"{soc_intro} {soc_detail} {_pick(s, 9, SOC_STRATEGIES_EN)}"
+
+    # Governance
+    gov_intro = _pick(s, 0, GOV_INTROS_EN).format(n=name, sc=f"{scores.governance_score:.0f}")
+    items = []
+    if gov.board_members:
+        items.append(f"{gov.board_members}-member Board")
+    if gov.female_board_percent is not None:
+        rx = "compliant with the 40% quota" if gov.female_board_percent >= 40 else f"{40 - gov.female_board_percent:.0f} pt(s) below the 40% quota"
+        items.append(f"{gov.female_board_percent:.0f}% women on the Board ({rx})")
+    if gov.independent_board_percent is not None:
+        ind = "≥50% independence met" if gov.independent_board_percent >= 50 else "below the 50% independence threshold"
+        items.append(f"{gov.independent_board_percent:.0f}% independent directors ({ind})")
+    if gov.csr_budget_eur:
+        items.append(f"CSR budget €{gov.csr_budget_eur:,.0f}")
+    if gov.ethics_violations is not None:
+        items.append(f"{gov.ethics_violations} ethics breach(es)")
+    if gov.data_breaches is not None and gov.data_breaches > 0:
+        items.append(f"{gov.data_breaches} cybersecurity incident(s) reported")
+    if gov.corruption_cases is not None and gov.corruption_cases == 0:
+        items.append("zero corruption cases recorded")
+    gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The governance structure is being documented."
+    audit_sent = _pick(s, 2, GOV_AUDITS_EN if gov.esg_audit_conducted else GOV_NO_AUDIT_EN)
+    committee_sent = _pick(s, 3, GOV_COMMITTEES_EN if gov.sustainability_committee else GOV_NO_COMMITTEE_EN)
+    governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
+
+    # CSRD sections
+    materiality = (
+        f"In line with the CSRD directive and the ESRS standards, {name} has conducted a double "
+        f"materiality assessment. It evaluates each ESG topic from two angles: impact materiality "
+        f"(the organisation's effects on society and the environment) and financial materiality "
+        f"(the effects of sustainability matters on the performance and position of {name}). Topics "
+        f"in the upper-right quadrant — combining high impact and high financial importance — are the "
+        f"strategic priorities of extra-financial reporting and concentrate management efforts."
+    )
+    ty = max(company.target_year, year + 1)
+    targets_txt = f"{name} embeds its ESG approach in a quantified path of progress towards {ty}."
+    if env.co2_emissions_tonnes and env.co2_emissions_tonnes > 0:
+        targets_txt += (
+            f" On climate, the company targets a 42% reduction in greenhouse gas emissions by 2030 "
+            f"versus the {year} baseline, consistent with a 1.5°C pathway under the Paris Agreement "
+            f"(Science Based Targets initiative methodology). ")
+    else:
+        targets_txt += (" Defining a quantified carbon trajectory aligned with the Science Based "
+                        "Targets initiative is a roadmap priority. ")
+    targets_txt += "Each pillar is assigned a progression target, with annual monitoring of key indicators reviewed by ESG governance."
+
+    taxonomy = None
+    tx = request.taxonomy
+    if tx and any(v is not None for v in (tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)):
+        parts = []
+        if tx.turnover_aligned_percent is not None:
+            parts.append(f"{tx.turnover_aligned_percent:.0f}% of turnover")
+        if tx.capex_aligned_percent is not None:
+            parts.append(f"{tx.capex_aligned_percent:.0f}% of CapEx")
+        if tx.opex_aligned_percent is not None:
+            parts.append(f"{tx.opex_aligned_percent:.0f}% of OpEx")
+        taxonomy = (
+            f"Under the EU Taxonomy Regulation, {name} discloses the share of its environmentally "
+            f"sustainable activities: " + ", ".join(parts) + " aligned. These indicators reflect a "
+            f"substantial contribution to at least one environmental objective, in compliance with the "
+            f"DNSH principle (‘do no significant harm’) and minimum social safeguards. Aligned "
+            f"CapEx, forward-looking, reflects the company's investment path towards a low-carbon economy."
+        )
+
+    climate_risk = (
+        f"In line with TCFD recommendations, {name} identifies two categories of climate risk. "
+        f"Physical risks (acute and chronic) cover the exposure of assets and the supply chain to "
+        f"extreme weather events and changing environmental conditions. Transition risks — "
+        f"regulatory, technological, market and reputational — stem from the shift to a low-carbon "
+        f"economy, notably through carbon pricing and evolving stakeholder expectations. These risks, "
+        f"together with the associated opportunities (energy efficiency, new sustainable markets), are "
+        f"integrated into the organisation's strategy and risk-management framework."
+    )
+
+    n_r = len(scores.recommendations)
+    if scores.total_esg_score >= 70:
+        traj_list = CONCLUSION_HIGH_EN
+    elif scores.total_esg_score >= 50:
+        traj_list = CONCLUSION_MID_EN
+    else:
+        traj_list = CONCLUSION_LOW_EN
+    trajectory, bridge, forward = _pick(s, 4, traj_list)
+    trajectory = trajectory.replace("{n}", name)
+    ref = _pick(s, 5, CONCLUSION_REFS_EN)
+    s_txt = f"{len(scores.strengths)} consolidated strength(s)" if scores.strengths else "emerging strengths"
+    w_txt = f"{len(scores.weaknesses)} priority area(s) for improvement" if scores.weaknesses else "identified areas for progress"
+    conclusion = (
+        f"With an ESG score of {scores.total_esg_score:.1f}/100 ({scores.rating}), {name} {trajectory}. "
+        f"The analysis highlights {s_txt} and {w_txt}. {bridge} {name} {forward}, drawing on the "
+        f"{n_r} recommendations set out as an operational roadmap. The organisation reaffirms its "
+        f"commitment to transparent, rigorous reporting, {ref}"
+    )
+
+    return {
+        "executive_summary": executive_summary, "environmental": environmental,
+        "social": social, "governance": governance, "materiality": materiality,
+        "targets": targets_txt, "taxonomy": taxonomy, "climate_risk": climate_risk,
         "conclusion": conclusion,
     }
