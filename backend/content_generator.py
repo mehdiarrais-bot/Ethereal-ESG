@@ -1053,3 +1053,53 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
         return "A priority area for action" if en else "Un chantier prioritaire"
 
     return {k: phrase(k, sc) for k, sc in pil}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# TITRES-CONCLUSION DE SECTION (une slide = une idée forte)
+# ══════════════════════════════════════════════════════════════════════════
+
+def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
+    """Titres qui portent déjà la conclusion, par slide. FR/EN."""
+    en = getattr(request, "language", "fr") == "en"
+    from esg_advanced import materiality_topics
+    env = request.environmental
+    tx = request.taxonomy
+    ty = max(request.company.target_year, request.company.reporting_year + 1)
+
+    # Matérialité : enjeu le plus prioritaire (impact + financier)
+    topics = materiality_topics(request, scores, "en" if en else "fr")
+    top_topic = max(topics, key=lambda t: t["impact"] + t["financial"])["label"]
+
+    # Taxonomie : métrique la mieux alignée
+    tax_items = []
+    if tx:
+        if tx.turnover_aligned_percent is not None:
+            tax_items.append((tx.turnover_aligned_percent, "du chiffre d'affaires" if not en else "of turnover"))
+        if tx.capex_aligned_percent is not None:
+            tax_items.append((tx.capex_aligned_percent, "des investissements (CapEx)" if not en else "of CapEx"))
+        if tx.opex_aligned_percent is not None:
+            tax_items.append((tx.opex_aligned_percent, "des dépenses (OpEx)" if not en else "of OpEx"))
+    tax_top = max(tax_items, key=lambda x: x[0]) if tax_items else None
+
+    ns, nw = len(scores.strengths), len(scores.weaknesses)
+
+    if en:
+        materiality = f"{top_topic} is the top-priority ESG issue"
+        objectives = ("A -42% emissions pathway by 2030" if env.co2_emissions_tonnes
+                      else f"Quantified ESG objectives by {ty}")
+        taxonomy = (f"{tax_top[0]:.0f}% {tax_top[1]} already EU Taxonomy-aligned"
+                    if tax_top else "EU Taxonomy alignment under way")
+        strategic = f"{ns} established strengths, {nw} levers for progress"
+        odd = "An ESG strategy anchored in the UN SDGs"
+    else:
+        materiality = f"Le {top_topic.lower()} concentre les enjeux ESG prioritaires"
+        objectives = ("Une trajectoire de -42 % des émissions d'ici 2030" if env.co2_emissions_tonnes
+                      else f"Des objectifs ESG chiffrés à horizon {ty}")
+        taxonomy = (f"{tax_top[0]:.0f} % {tax_top[1]} déjà alignés à la Taxonomie UE"
+                    if tax_top else "Alignement Taxonomie UE en cours")
+        strategic = f"{ns} forces établies, {nw} leviers de progression"
+        odd = "Une stratégie ESG ancrée dans les ODD de l'ONU"
+
+    return {"materiality": materiality, "objectives": objectives,
+            "taxonomy": taxonomy, "strategic": strategic, "odd": odd}

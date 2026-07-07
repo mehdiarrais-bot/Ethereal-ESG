@@ -204,43 +204,57 @@ def maybe_upper(text: str, style: dict) -> str:
     return text.upper() if style["uppercase_titles"] else text
 
 
-def content_slide(prs, blank_layout, theme, style, title, color: RGBColor):
-    """Create a content slide with a themed header. Returns the slide."""
+def _fit_title(base, title):
+    """Réduit la taille du titre s'il est long (titres-conclusion)."""
+    n = len(title)
+    if n > 52:
+        return base * 0.66
+    if n > 38:
+        return base * 0.78
+    if n > 28:
+        return base * 0.9
+    return base
+
+
+def content_slide(prs, blank_layout, theme, style, title, color: RGBColor, kicker=None):
+    """Slide à en-tête thématisé. `kicker` = petit sur-titre optionnel."""
     slide = prs.slides.add_slide(blank_layout)
     title = maybe_upper(title, style)
-    ft = style["font_title"]
+    ft, fb = style["font_title"], style["font_body"]
 
     if style["header"] == "band":
-        # Corporate: full-width colored band + accent side bar
         add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-        add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.1), color)
-        add_bg_rect(slide, 0, Inches(1.1), Inches(0.07), SLIDE_H - Inches(1.1), theme["accent"])
-        add_text(slide, title, Inches(0.3), Inches(0.15), Inches(12), Inches(0.8),
-                 font_size=26, bold=True, color=theme["text_light"], font=ft)
+        add_bg_rect(slide, 0, 0, SLIDE_W, Inches(1.25), color)
+        add_bg_rect(slide, 0, Inches(1.25), Inches(0.07), SLIDE_H - Inches(1.25), theme["accent"])
+        if kicker:
+            add_text(slide, kicker.upper(), Inches(0.32), Inches(0.14), Inches(12), Inches(0.32),
+                     font_size=11, bold=True, color=theme["accent"], font=fb)
+        add_text(slide, title, Inches(0.3), Inches(0.42 if kicker else 0.2), Inches(12.7), Inches(0.78),
+                 font_size=_fit_title(26, title), bold=True, color=theme["text_light"], font=ft)
 
     elif style["header"] == "pill":
-        # Nature: light bg, rounded pill title block, decorative circles
         add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
-        c1 = add_shape(slide, OVAL, Inches(11.8), Inches(-1.2), Inches(3), Inches(3), fill=theme["card_bg"])
-        c2 = add_shape(slide, OVAL, Inches(12.6), Inches(6.4), Inches(2), Inches(2), fill=theme["card_bg"])
-        add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(0.25), Inches(7.2), Inches(0.75), fill=color)
-        add_text(slide, title, Inches(0.6), Inches(0.32), Inches(6.8), Inches(0.6),
-                 font_size=22, bold=True, color=theme["text_light"], font=ft)
+        add_shape(slide, OVAL, Inches(11.8), Inches(-1.2), Inches(3), Inches(3), fill=theme["card_bg"])
+        add_shape(slide, OVAL, Inches(12.6), Inches(6.4), Inches(2), Inches(2), fill=theme["card_bg"])
+        add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(0.22), Inches(11.2), Inches(0.95), fill=color)
+        add_text(slide, title, Inches(0.6), Inches(0.3), Inches(10.8), Inches(0.8),
+                 font_size=_fit_title(22, title), bold=True, color=theme["text_light"], font=ft)
 
     elif style["header"] == "hairline":
-        # Premium: dark bg everywhere, serif title, thin gold hairline
         add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-        add_text(slide, title, Inches(0.5), Inches(0.3), Inches(12), Inches(0.7),
-                 font_size=24, bold=False, color=color, font=ft)
-        add_bg_rect(slide, Inches(0.5), Inches(1.05), Inches(12.3), Inches(0.02), theme["accent"])
+        if kicker:
+            add_text(slide, kicker.upper(), Inches(0.5), Inches(0.24), Inches(12), Inches(0.3),
+                     font_size=11, bold=True, color=theme["accent"], font=fb)
+        add_text(slide, title, Inches(0.5), Inches(0.5 if kicker else 0.32), Inches(12.3), Inches(0.7),
+                 font_size=_fit_title(24, title), bold=False, color=color, font=ft)
+        add_bg_rect(slide, Inches(0.5), Inches(1.28), Inches(12.3), Inches(0.02), theme["accent"])
 
     else:  # minimal
-        # Minimal: white bg, small color chip + uppercase title, thin underline
         add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
         add_bg_rect(slide, Inches(0.5), Inches(0.42), Inches(0.22), Inches(0.22), color)
-        add_text(slide, title, Inches(0.9), Inches(0.28), Inches(11.5), Inches(0.55),
-                 font_size=18, bold=True, color=theme["text_dark"], font=ft)
-        add_bg_rect(slide, Inches(0.5), Inches(1.0), Inches(2.2), Inches(0.02), theme["text_dark"])
+        add_text(slide, title, Inches(0.9), Inches(0.26), Inches(11.8), Inches(0.75),
+                 font_size=_fit_title(20, title), bold=True, color=theme["text_dark"], font=ft)
+        add_bg_rect(slide, Inches(0.5), Inches(1.12), Inches(2.2), Inches(0.02), theme["text_dark"])
 
     return slide
 
@@ -423,10 +437,11 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
     except Exception:
         add_bg_rect(slide, 0, 0, HERO_W, SLIDE_H, color)
 
-    add_text(slide, title, Inches(0.35), Inches(0.45), Inches(3.9), Inches(1.3),
-             font_size=27, bold=True, color=white, font=ft)
-    add_text(slide, subtitle, Inches(0.37), Inches(1.5), Inches(3.85), Inches(1.0),
-             font_size=15, bold=True, color=theme["accent"], font=fb)
+    # Kicker = identité du pilier ; grand titre = la conclusion (information scent)
+    add_text(slide, title.upper(), Inches(0.37), Inches(0.42), Inches(3.85), Inches(0.35),
+             font_size=13, bold=True, color=theme["accent"], font=fb)
+    add_text(slide, subtitle, Inches(0.35), Inches(0.85), Inches(3.95), Inches(2.5),
+             font_size=_fit_title(24, subtitle), bold=True, color=white, font=ft)
 
     # Anneau de score en bas du héros
     try:
@@ -500,8 +515,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import pillar_insights, score_verdict
     _insights = pillar_insights(request, scores)
     _verdict = score_verdict(request, scores)
-    from content_generator import pillar_headline
+    from content_generator import pillar_headline, section_headlines
     _headlines = pillar_headline(request, scores)
+    _sh = section_headlines(request, scores)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
@@ -684,7 +700,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              t["materiality_title"], header_color)
+                              _sh["materiality"], header_color, kicker=t["materiality_title"])
         add_text(slide, t["materiality_desc"],
                  Inches(0.6), Inches(1.25), Inches(12.1), Inches(0.7), font_size=13,
                  color=theme["muted"], font=fb)
@@ -695,7 +711,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     # ── SLIDE 5c: Objectifs & trajectoire (hero : chiffre clé + viz) ────
     if "targets" in chart_images or "carbon_trajectory" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              t["targets_title"], header_color)
+                              _sh["objectives"], header_color, kicker=t["targets_title"])
         co2 = request.environmental.co2_emissions_tonnes
         has_carbon = "carbon_trajectory" in chart_images and co2 and co2 > 0
         # Chiffre clé dominant à gauche
@@ -730,7 +746,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     # ── SLIDE 5d: Taxonomie UE (hero : % dominant + viz) ────────────────
     if "taxonomy" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
-                              t["taxonomy_title"], header_color)
+                              _sh["taxonomy"], header_color, kicker=t["taxonomy_title"])
         tx = request.taxonomy
         vals = [v for v in (tx.turnover_aligned_percent, tx.capex_aligned_percent,
                             tx.opex_aligned_percent) if v is not None]
@@ -750,7 +766,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                              Inches(6.3), Inches(2.5), width=Inches(6.7))
 
     # ── SLIDE 6: Analyse Stratégique — Solide vs. À progresser ──────────
-    slide = content_slide(prs, blank_layout, theme, style, t["strategic"], header_color)
+    slide = content_slide(prs, blank_layout, theme, style, _sh["strategic"], header_color, kicker=t["strategic"])
     dark = style["dark_slides"]
     red = RGBColor(0xE7, 0x4C, 0x3C)
     panel_shape = ROUNDED_RECT if style["card"] != "flat" else RECT
@@ -810,7 +826,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style,
-                          t["odd_title"], header_color)
+                          _sh["odd"], header_color, kicker=t["odd_title"])
 
     _odd_colors = [theme["accent"], theme["social"], theme["gov"], theme["env"], theme["env"], theme["gov"]]
     odds = [(num, lab, _odd_colors[i]) for i, (num, lab) in enumerate(t["odds"])]
