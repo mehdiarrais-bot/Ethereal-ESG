@@ -177,7 +177,8 @@ def add_bullet_list(doc, items, icon, color_hex):
 
 
 def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
-                         logo_bytes: bytes = None, cover_art: bytes = None) -> bytes:
+                         logo_bytes: bytes = None, cover_art: bytes = None,
+                         charts: dict = None) -> bytes:
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
     style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
 
@@ -371,8 +372,46 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     doc.add_page_break()
 
-    # ── 5. Analyse Stratégique ────────────────────────────────────────────
-    add_heading(doc, "5. Analyse Stratégique ESG", 1, colors["primary"], style=style)
+    # ── 5. Analyses de Durabilité (CSRD / ESRS) ───────────────────────────
+    charts = charts or {}
+
+    def _docx_img(key, width_cm):
+        if key in charts:
+            try:
+                pic_p = doc.add_paragraph()
+                pic_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                pic_p.add_run().add_picture(io.BytesIO(charts[key]), width=Cm(width_cm))
+                pic_p.paragraph_format.space_after = Pt(8)
+            except Exception:
+                pass
+
+    add_heading(doc, "5. Analyses de Durabilité (CSRD / ESRS)", 1, colors["primary"], style=style)
+    add_hr(doc, colors["secondary"])
+
+    add_heading(doc, "Double matérialité", 2, colors["secondary"], style=style)
+    if content.get("materiality"):
+        doc.add_paragraph(content["materiality"]).paragraph_format.space_after = Pt(6)
+    _docx_img("materiality", 12)
+
+    add_heading(doc, "Objectifs & trajectoire", 2, colors["secondary"], style=style)
+    if content.get("targets"):
+        doc.add_paragraph(content["targets"]).paragraph_format.space_after = Pt(6)
+    _docx_img("targets", 15)
+    _docx_img("carbon_trajectory", 15)
+
+    if content.get("taxonomy"):
+        add_heading(doc, "Taxonomie européenne", 2, colors["secondary"], style=style)
+        doc.add_paragraph(content["taxonomy"]).paragraph_format.space_after = Pt(6)
+        _docx_img("taxonomy", 14)
+
+    add_heading(doc, "Risques climatiques (TCFD)", 2, colors["secondary"], style=style)
+    if content.get("climate_risk"):
+        doc.add_paragraph(content["climate_risk"]).paragraph_format.space_after = Pt(8)
+
+    doc.add_page_break()
+
+    # ── 6. Analyse Stratégique ────────────────────────────────────────────
+    add_heading(doc, "6. Analyse Stratégique ESG", 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
 
     add_heading(doc, "Points Forts", 2, colors["env"], style=style)
@@ -382,7 +421,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
 
     if request.include_recommendations and scores.recommendations:
-        add_heading(doc, "6. Recommandations Prioritaires", 1, colors["primary"], style=style)
+        add_heading(doc, "7. Recommandations Prioritaires", 1, colors["primary"], style=style)
         add_hr(doc, colors["accent"])
         for i, rec in enumerate(scores.recommendations, 1):
             p = doc.add_paragraph()
@@ -393,7 +432,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             p.paragraph_format.space_after = Pt(4)
 
     # ── 7. Référentiels ───────────────────────────────────────────────────
-    add_heading(doc, "7. Cadres de Référence & Alignement ODD", 1, colors["primary"], style=style)
+    add_heading(doc, "8. Cadres de Référence & Alignement ODD", 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
     ref_text = (
         "Ce rapport s'inscrit dans les cadres de référence suivants : GRI Standards, TCFD, CSRD, SFDR et ISO 14001/26000. "
@@ -404,7 +443,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── Conclusion ────────────────────────────────────────────────────────
     doc.add_page_break()
-    add_heading(doc, "8. Conclusion", 1, colors["primary"], style=style)
+    add_heading(doc, "9. Conclusion", 1, colors["primary"], style=style)
     add_hr(doc, colors["primary"])
     conclusion = content.get("conclusion",
         f"{request.company.name} réaffirme son engagement vers un modèle d'affaires durable. "

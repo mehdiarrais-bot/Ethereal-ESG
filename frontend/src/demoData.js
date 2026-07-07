@@ -5,6 +5,12 @@ export const DEMO_DATA = {
     country: 'France',
     revenue_eur: 85000000,
     reporting_year: 2024,
+    target_year: 2030,
+  },
+  taxonomy: {
+    turnover_aligned_percent: 38,
+    capex_aligned_percent: 52,
+    opex_aligned_percent: 29,
   },
   environmental: {
     co2_emissions_tonnes: 8840,
@@ -47,4 +53,5 @@ export const DEMO_DATA = {
   language: 'fr',
   include_recommendations: true,
   include_benchmarks: true,
+  include_cover_image: true,
 }

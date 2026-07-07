@@ -22,7 +22,8 @@ const STEPS = [
 
 const EMPTY_FORM = {
   company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024,
-    presenter_name: '', presenter_title: '', logo_base64: null },
+    target_year: 2030, presenter_name: '', presenter_title: '', logo_base64: null },
+  taxonomy: { turnover_aligned_percent: '', capex_aligned_percent: '', opex_aligned_percent: '' },
   environmental: {
     co2_emissions_tonnes: '', energy_consumption_mwh: '', renewable_energy_percent: '',
     water_consumption_m3: '', waste_generated_tonnes: '', waste_recycled_percent: '',

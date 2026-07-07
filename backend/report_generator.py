@@ -633,8 +633,45 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     story.append(PageBreak())
 
+    # ── 5. Analyses de Durabilité (CSRD / ESRS) ───────────────────────────
+    def _img(key, w_cm, h_cm, caption=None):
+        if key in chart_images:
+            try:
+                im = Image(io.BytesIO(chart_images[key]), width=w_cm * cm, height=h_cm * cm)
+                im.hAlign = 'CENTER'
+                story.append(im)
+                if caption:
+                    story.append(Paragraph(caption, styles["caption"]))
+                story.append(Spacer(1, 0.3 * cm))
+            except Exception:
+                pass
+
+    section_header(story, "5. Analyses de Durabilité (CSRD / ESRS)", pal["secondary"], pal, styles, ts)
+
+    story.append(Paragraph("Double matérialité", styles["h2"]))
+    story.append(Paragraph(esc(content.get("materiality", "")), styles["body"]))
+    _img("materiality", 11, 9.2, "Matrice de double matérialité — enjeux ESG prioritaires")
+
+    story.append(Spacer(1, 0.3 * cm))
+    story.append(Paragraph("Objectifs & trajectoire", styles["h2"]))
+    story.append(Paragraph(esc(content.get("targets", "")), styles["body"]))
+    _img("targets", 15, 7.9, "Objectifs par pilier — situation actuelle vs. cible")
+    _img("carbon_trajectory", 15, 7.5, "Trajectoire de décarbonation alignée SBTi 1,5°C")
+
+    if content.get("taxonomy"):
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph("Taxonomie européenne", styles["h2"]))
+        story.append(Paragraph(esc(content["taxonomy"]), styles["body"]))
+        _img("taxonomy", 14, 6.3, "Part des activités alignées sur la Taxonomie UE")
+
+    story.append(Spacer(1, 0.3 * cm))
+    story.append(Paragraph("Risques climatiques (TCFD)", styles["h2"]))
+    story.append(Paragraph(esc(content.get("climate_risk", "")), styles["body"]))
+
+    story.append(PageBreak())
+
     # ── Forces & Faiblesses ───────────────────────────────────────────────
-    section_header(story, "5. Analyse Stratégique", pal["accent"], pal, styles, ts)
+    section_header(story, "6. Analyse Stratégique", pal["accent"], pal, styles, ts)
 
     story.append(Paragraph("Points forts identifiés", styles["h2"]))
     for s in scores.strengths:
@@ -647,13 +684,13 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     if request.include_recommendations:
         story.append(Spacer(1, 0.4 * cm))
-        section_header(story, "6. Recommandations Prioritaires", pal["accent"], pal, styles, ts)
+        section_header(story, "7. Recommandations Prioritaires", pal["accent"], pal, styles, ts)
         for i, rec in enumerate(scores.recommendations, 1):
             story.append(Paragraph(f"<b>{i}.</b>  {esc(rec)}", styles["bullet"]))
 
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
-    section_header(story, "7. Cadres de Référence & Alignement ODD", pal["secondary"], pal, styles, ts)
+    section_header(story, "8. Cadres de Référence & Alignement ODD", pal["secondary"], pal, styles, ts)
 
     ref_text = (
         "Ce rapport s'inscrit dans les cadres de référence suivants : <b>GRI Standards</b> (Global Reporting Initiative), "
@@ -666,7 +703,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Section spécifique White Paper : Vision Stratégique ──────────────
     if request.report_type.value == "white_paper":
         story.append(Spacer(1, 0.5 * cm))
-        section_header(story, "8. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
+        section_header(story, "9. Vision Stratégique & Perspectives", pal["accent"], pal, styles, ts)
         story.append(Paragraph(
             "Ce livre blanc a vocation à documenter la trajectoire ESG de l'organisation sur le long terme. "
             "Il constitue un document de référence stratégique, destiné à éclairer les décisions "
@@ -692,7 +729,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── Conclusion ────────────────────────────────────────────────────────
     story.append(PageBreak())
-    section_header(story, "9. Conclusion" if request.report_type.value == "white_paper" else "8. Conclusion", pal["primary"], pal, styles, ts)
+    section_header(story, "10. Conclusion" if request.report_type.value == "white_paper" else "9. Conclusion", pal["primary"], pal, styles, ts)
 
     conclusion = content.get("conclusion",
         f"{request.company.name} démontre une démarche ESG globale avec un score de "

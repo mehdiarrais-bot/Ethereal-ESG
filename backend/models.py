@@ -98,6 +98,21 @@ class SocialData(BaseModel):
         return self
 
 
+class TaxonomyData(BaseModel):
+    """Alignement Taxonomie UE (part du CA / CapEx / OpEx alignés, en %)."""
+    turnover_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
+    capex_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
+    opex_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
+
+    @model_validator(mode='after')
+    def clean(self):
+        for f in ['turnover_aligned_percent', 'capex_aligned_percent', 'opex_aligned_percent']:
+            v = getattr(self, f)
+            if v is not None and not math.isfinite(v):
+                setattr(self, f, None)
+        return self
+
+
 class GovernanceData(BaseModel):
     board_members: Optional[int] = Field(None, ge=0, le=999)
     female_board_percent: Optional[float] = Field(None, ge=0, le=100)
@@ -140,6 +155,7 @@ class CompanyInfo(BaseModel):
     country: str = Field(..., min_length=1, max_length=100)
     revenue_eur: Optional[float] = Field(None, ge=0, le=1e13)
     reporting_year: int = Field(2024, ge=2000, le=2035)
+    target_year: int = Field(2030, ge=2025, le=2050)
     logo_description: Optional[str] = Field(None, max_length=200)
     presenter_name: Optional[str] = Field(None, max_length=100)
     presenter_title: Optional[str] = Field(None, max_length=100)
@@ -198,6 +214,7 @@ class ESGRequest(BaseModel):
     environmental: EnvironmentalData
     social: SocialData
     governance: GovernanceData
+    taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
     presentation_type: PresentationType = PresentationType.EXECUTIVE_SUMMARY
     aesthetic_theme: AestheticTheme = AestheticTheme.CORPORATE_BLUE
     report_type: ReportType = ReportType.FULL_REPORT

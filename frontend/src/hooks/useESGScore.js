@@ -21,6 +21,7 @@ export function useESGScore(form) {
     environmental: cleanNumeric(f.environmental),
     social: cleanNumeric(f.social),
     governance: cleanNumeric(f.governance),
+    taxonomy: cleanNumeric(f.taxonomy || {}),
     presentation_type: f.presentation_type,
     aesthetic_theme: f.aesthetic_theme,
     report_type: f.report_type,

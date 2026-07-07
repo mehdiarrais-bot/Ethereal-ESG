@@ -156,6 +156,34 @@ def build_extras(request: ESGRequest) -> tuple:
     return logo_bytes, art
 
 
+def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
+    """Graphiques ESG avancés : matérialité, objectifs, trajectoire carbone, taxonomie."""
+    from esg_advanced import materiality_topics, esg_targets, taxonomy_summary
+    from chart_generator import (materiality_matrix, targets_chart,
+                                 carbon_trajectory_chart, taxonomy_chart)
+    theme = request.aesthetic_theme
+    out = {}
+    try:
+        out["materiality"] = materiality_matrix(
+            materiality_topics(request, scores), theme, light_bg=light_bg)
+    except Exception as e:
+        print(f"Materiality chart error: {e}")
+    try:
+        tg = esg_targets(request, scores)
+        out["targets"] = targets_chart(tg["pillars"], theme, light_bg=light_bg)
+        if tg["carbon"]:
+            out["carbon_trajectory"] = carbon_trajectory_chart(tg["carbon"], theme, light_bg=light_bg)
+    except Exception as e:
+        print(f"Targets chart error: {e}")
+    try:
+        tx = taxonomy_summary(request)
+        if tx:
+            out["taxonomy"] = taxonomy_chart(tx, theme, light_bg=light_bg)
+    except Exception as e:
+        print(f"Taxonomy chart error: {e}")
+    return out
+
+
 @app.post("/api/generate/pptx")
 def generate_presentation(request: ESGRequest):
     """Generate PowerPoint presentation."""
@@ -184,6 +212,8 @@ def generate_presentation(request: ESGRequest):
             )
         except Exception as e:
             print(f"Pie chart error: {e}")
+
+    chart_images.update(build_advanced_charts(request, scores, light_bg=False))
 
     pptx_bytes = generate_pptx(request, scores, content, chart_images, logo_bytes=logo_bytes)
 
@@ -219,6 +249,8 @@ def generate_report(request: ESGRequest):
             )
         except Exception as e:
             print(f"Pie chart error: {e}")
+
+    chart_images.update(build_advanced_charts(request, scores, light_bg=True))
 
     pdf_bytes = generate_pdf_report(request, scores, content, chart_images, logo_bytes=logo_bytes)
 
@@ -256,8 +288,10 @@ def generate_word(request: ESGRequest):
     scores = calculate_esg_scores(request)
     content = generate_esg_content(request, scores)
     logo_bytes, art = build_extras(request)
+    adv_charts = build_advanced_charts(request, scores, light_bg=True)
     docx_bytes = generate_word_report(request, scores, content,
-                                      logo_bytes=logo_bytes, cover_art=art)
+                                      logo_bytes=logo_bytes, cover_art=art,
+                                      charts=adv_charts)
     type_suffix = {
         "white_paper": "Livre_Blanc",
         "full_report": "Rapport_ESG",

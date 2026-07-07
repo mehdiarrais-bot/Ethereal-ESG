@@ -219,6 +219,165 @@ def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, lig
     return buf.read()
 
 
+def _pillar_hex(colors, pillar):
+    return colors.get(pillar, colors["secondary"])
+
+
+def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    """Matrice de double matérialité (impact vs. matérialité financière) — CSRD/ESRS."""
+    colors = get_colors(theme, light_bg)
+    bg = colors["bg"]
+
+    fig, ax = plt.subplots(figsize=(7.2, 6), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    # Quadrant de fond (zone "prioritaire" en haut à droite)
+    ax.axhspan(5, 10, xmin=0.5, xmax=1.0, color=colors["accent"], alpha=0.08, zorder=0)
+    ax.axhline(5, color=colors["secondary"], alpha=0.35, linewidth=1, linestyle='--')
+    ax.axvline(5, color=colors["secondary"], alpha=0.35, linewidth=1, linestyle='--')
+
+    for t in topics:
+        c = _pillar_hex(colors, t["pillar"])
+        ax.scatter(t["financial"], t["impact"], s=260, color=c, alpha=0.82,
+                   edgecolors=bg, linewidths=1.5, zorder=3)
+        ax.annotate(t["label"], (t["financial"], t["impact"]),
+                    xytext=(0, 11), textcoords="offset points",
+                    ha="center", fontsize=7.5, color=colors["text"], fontweight="bold")
+
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+    ax.set_xlabel("Importance financière  →", color=colors["text"], fontsize=10, fontweight="bold")
+    ax.set_ylabel("Impact sur société & environnement  →", color=colors["text"], fontsize=10, fontweight="bold")
+    ax.tick_params(colors=colors["secondary"], labelsize=8)
+    for spine in ax.spines.values():
+        spine.set_color(colors["secondary"])
+        spine.set_alpha(0.4)
+    ax.text(7.5, 9.4, "Enjeux prioritaires", ha="center", fontsize=8.5,
+            color=colors["accent"], fontweight="bold", alpha=0.9)
+
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
+def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    """Objectifs par pilier : actuel vs. cible (barres groupées)."""
+    colors = get_colors(theme, light_bg)
+    bg = colors["bg"]
+
+    fig, ax = plt.subplots(figsize=(8, 4.2), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    labels = [p["label"] for p in pillars]
+    current = [p["current"] for p in pillars]
+    target = [p["target"] for p in pillars]
+    ypos = list(range(len(labels)))
+
+    ax.barh([y + 0.2 for y in ypos], current, height=0.36,
+            color=[_pillar_hex(colors, p["color"]) for p in pillars], alpha=0.9, label="Actuel")
+    ax.barh([y - 0.2 for y in ypos], target, height=0.36,
+            color=colors["accent"], alpha=0.55, label="Cible", hatch="//", edgecolor=bg)
+
+    for y, (c, t) in enumerate(zip(current, target)):
+        ax.text(c + 1.5, y + 0.2, f"{c:.0f}", va="center", fontsize=9,
+                color=colors["text"], fontweight="bold")
+        ax.text(t + 1.5, y - 0.2, f"{t:.0f}", va="center", fontsize=9,
+                color=colors["accent"], fontweight="bold")
+
+    ax.set_yticks(ypos)
+    ax.set_yticklabels(labels, color=colors["text"], fontsize=10)
+    ax.set_xlim(0, 115)
+    ax.set_xlabel("Score / 100", color=colors["text"], fontsize=10)
+    ax.tick_params(colors=colors["text"])
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.spines[['left', 'bottom']].set_color(colors["secondary"])
+    ax.legend(loc="lower right", fontsize=9, framealpha=0.2, labelcolor=colors["text"])
+
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
+def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    """Trajectoire de décarbonation type SBTi (1,5°C, -42% à 2030)."""
+    colors = get_colors(theme, light_bg)
+    bg = colors["bg"]
+
+    fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    years, values = carbon["years"], carbon["values"]
+    ax.plot(years, values, 'o-', linewidth=2.6, color=colors["env"],
+            markersize=6, markerfacecolor=colors["accent"], markeredgecolor=bg, zorder=3)
+    ax.fill_between(years, values, alpha=0.14, color=colors["env"])
+
+    ax.axhline(carbon["base"], color=colors["secondary"], linestyle=':', alpha=0.5, linewidth=1)
+    ax.text(years[0], carbon["base"], f"  Référence {years[0]}", va="bottom",
+            fontsize=8, color=colors["secondary"])
+    ax.annotate(f"-{carbon['reduction_pct']}% ({carbon['target_year']})\n{carbon['target']:,} t CO₂e",
+                (years[-1], values[-1]), xytext=(-10, 22), textcoords="offset points",
+                fontsize=8.5, color=colors["env"], fontweight="bold", ha="right")
+
+    ax.set_xlabel("Année", color=colors["text"], fontsize=10)
+    ax.set_ylabel("Émissions (t CO₂e)", color=colors["text"], fontsize=10)
+    ax.tick_params(colors=colors["text"], labelsize=9)
+    ax.set_ylim(0, carbon["base"] * 1.18)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.spines[['left', 'bottom']].set_color(colors["secondary"])
+    ax.set_title("Trajectoire de décarbonation alignée SBTi 1,5°C", color=colors["text"],
+                 fontsize=11, fontweight="bold", pad=12)
+
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
+def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False) -> bytes:
+    """Barres d'alignement Taxonomie UE (CA / CapEx / OpEx)."""
+    colors = get_colors(theme, light_bg)
+    bg = colors["bg"]
+
+    labels_map = {"turnover": "Chiffre d'affaires", "capex": "CapEx", "opex": "OpEx"}
+    items = [(labels_map[k], v) for k, v in vals.items() if v is not None]
+
+    fig, ax = plt.subplots(figsize=(7.5, 3.4), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    labels = [i[0] for i in items]
+    aligned = [i[1] for i in items]
+    ypos = list(range(len(labels)))
+
+    ax.barh(ypos, [100] * len(labels), height=0.5, color=colors["secondary"], alpha=0.15)
+    bars = ax.barh(ypos, aligned, height=0.5, color=colors["env"], alpha=0.92)
+    for y, v in zip(ypos, aligned):
+        ax.text(v + 2, y, f"{v:.0f}% aligné", va="center", fontsize=9.5,
+                color=colors["text"], fontweight="bold")
+
+    ax.set_yticks(ypos)
+    ax.set_yticklabels(labels, color=colors["text"], fontsize=10, fontweight="bold")
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("% aligné Taxonomie UE", color=colors["text"], fontsize=9)
+    ax.tick_params(colors=colors["text"])
+    ax.spines[['top', 'right', 'left']].set_visible(False)
+    ax.spines['bottom'].set_color(colors["secondary"])
+
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
 def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     colors = get_colors(theme)
     bg = colors["bg"]

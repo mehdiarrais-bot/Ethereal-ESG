@@ -410,10 +410,85 @@ def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
         f"L'organisation réaffirme son engagement envers un reporting transparent et rigoureux, {ref}"
     )
 
+    # ── Double matérialité (CSRD/ESRS) ─────────────────────────────────────
+    materiality = (
+        f"Conformément aux exigences de la directive CSRD et des normes ESRS, {name} a conduit "
+        f"une analyse de double matérialité. Celle-ci évalue chaque enjeu ESG sous deux angles : "
+        f"la matérialité d'impact (effets de l'organisation sur la société et l'environnement) et "
+        f"la matérialité financière (effets des enjeux de durabilité sur la performance et la "
+        f"situation de {name}). Les enjeux situés dans le quadrant supérieur droit — combinant "
+        f"impact et importance financière élevés — constituent les priorités stratégiques du "
+        f"reporting extra-financier et concentrent les efforts de pilotage."
+    )
+
+    # ── Objectifs & trajectoire (SBTi) ─────────────────────────────────────
+    ty = max(company.target_year, year + 1)
+    targets_intro = [
+        f"{name} inscrit sa démarche ESG dans une trajectoire de progrès chiffrée à horizon {ty}.",
+        f"La feuille de route de durabilité de {name} fixe des cibles mesurables à l'échéance {ty}.",
+        f"Des objectifs ESG quantifiés structurent l'ambition de {name} d'ici {ty}.",
+    ]
+    targets_txt = _pick(s, 6, targets_intro)
+    if env.co2_emissions_tonnes and env.co2_emissions_tonnes > 0:
+        targets_txt += (
+            f" Sur le plan climatique, l'entreprise vise une réduction de 42% de ses émissions "
+            f"de gaz à effet de serre d'ici 2030 par rapport à l'année de référence {year}, "
+            f"en cohérence avec une trajectoire alignée sur l'objectif 1,5°C de l'Accord de Paris "
+            f"(méthodologie Science Based Targets initiative). "
+        )
+    else:
+        targets_txt += (
+            " La définition d'une trajectoire carbone chiffrée, alignée sur l'initiative "
+            "Science Based Targets, constitue une priorité de la feuille de route. "
+        )
+    targets_txt += (
+        f"Chaque pilier fait l'objet d'une cible de progression, avec un suivi annuel des "
+        f"indicateurs clés et une revue par la gouvernance ESG."
+    )
+
+    # ── Taxonomie UE ───────────────────────────────────────────────────────
+    taxonomy = None
+    tx = request.taxonomy
+    if tx and any(v is not None for v in
+                  (tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)):
+        parts = []
+        if tx.turnover_aligned_percent is not None:
+            parts.append(f"{tx.turnover_aligned_percent:.0f}% du chiffre d'affaires")
+        if tx.capex_aligned_percent is not None:
+            parts.append(f"{tx.capex_aligned_percent:.0f}% des CapEx")
+        if tx.opex_aligned_percent is not None:
+            parts.append(f"{tx.opex_aligned_percent:.0f}% des OpEx")
+        taxonomy = (
+            f"Au titre du règlement Taxonomie de l'Union européenne, {name} déclare la part de ses "
+            f"activités durables sur le plan environnemental : " + ", ".join(parts) + " alignés. "
+            f"Ces indicateurs traduisent la contribution substantielle des activités à au moins un "
+            f"objectif environnemental, dans le respect du principe DNSH (« ne pas causer de "
+            f"préjudice important ») et des garanties minimales sociales. Le CapEx aligné, "
+            f"prospectif, reflète la trajectoire d'investissement de l'entreprise vers une "
+            f"économie bas-carbone."
+        )
+
+    # ── Risques climatiques (TCFD) ─────────────────────────────────────────
+    climate_risk = (
+        f"En ligne avec les recommandations de la TCFD, {name} identifie deux catégories de "
+        f"risques climatiques. Les risques physiques (aigus et chroniques) recouvrent l'exposition "
+        f"des actifs et de la chaîne d'approvisionnement aux événements climatiques extrêmes et à "
+        f"l'évolution des conditions environnementales. Les risques de transition — réglementaires, "
+        f"technologiques, de marché et de réputation — découlent du passage à une économie "
+        f"bas-carbone, notamment via la tarification du carbone et l'évolution des attentes des "
+        f"parties prenantes. Ces risques, ainsi que les opportunités associées (efficacité "
+        f"énergétique, nouveaux marchés durables), sont intégrés à la stratégie et au dispositif "
+        f"de gestion des risques de l'organisation."
+    )
+
     return {
         "executive_summary": executive_summary,
         "environmental": environmental,
         "social": social,
         "governance": governance,
+        "materiality": materiality,
+        "targets": targets_txt,
+        "taxonomy": taxonomy,
+        "climate_risk": climate_risk,
         "conclusion": conclusion,
     }

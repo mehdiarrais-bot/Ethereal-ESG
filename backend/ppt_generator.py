@@ -557,6 +557,45 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
              Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
              font_size=16, bold=True, color=theme["gov"], align=PP_ALIGN.RIGHT, font=ft)
 
+    # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
+    if "materiality" in chart_images:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              "Double Matérialité — CSRD / ESRS", header_color)
+        add_image_from_bytes(slide, chart_images["materiality"],
+                             Inches(0.4), Inches(1.3), height=Inches(5.7))
+        add_text(slide, "Enjeux ESG positionnés selon leur impact et leur importance financière. "
+                        "Le quadrant supérieur droit concentre les priorités stratégiques.",
+                 Inches(7.7), Inches(2.0), Inches(5.3), Inches(4), font_size=14,
+                 color=theme["text_dark"], font=fb)
+
+    # ── SLIDE 5c: Objectifs & trajectoire ───────────────────────────────
+    if "targets" in chart_images or "carbon_trajectory" in chart_images:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              "Objectifs & Trajectoire ESG", header_color)
+        if "targets" in chart_images:
+            add_image_from_bytes(slide, chart_images["targets"],
+                                 Inches(0.4), Inches(1.3), width=Inches(6.3))
+        if "carbon_trajectory" in chart_images:
+            add_image_from_bytes(slide, chart_images["carbon_trajectory"],
+                                 Inches(6.9), Inches(1.4), width=Inches(6.1))
+        else:
+            add_text(slide, "Cibles de progression par pilier à horizon "
+                            f"{max(request.company.target_year, request.company.reporting_year + 1)}, "
+                            "avec suivi annuel piloté par la gouvernance ESG.",
+                     Inches(7.0), Inches(2.2), Inches(5.9), Inches(3), font_size=14,
+                     color=theme["text_dark"], font=fb)
+
+    # ── SLIDE 5d: Taxonomie UE ──────────────────────────────────────────
+    if "taxonomy" in chart_images:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              "Alignement Taxonomie Européenne", header_color)
+        add_image_from_bytes(slide, chart_images["taxonomy"],
+                             Inches(0.6), Inches(1.6), width=Inches(8.2))
+        add_text(slide, "Part des activités durables sur le plan environnemental "
+                        "(contribution substantielle, principe DNSH, garanties minimales).",
+                 Inches(9.1), Inches(2.2), Inches(3.9), Inches(4), font_size=13,
+                 color=theme["text_dark"], font=fb)
+
     # ── SLIDE 6: Forces & Faiblesses ────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style, "Analyse Stratégique ESG", header_color)
 

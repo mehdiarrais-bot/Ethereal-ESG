@@ -2,7 +2,9 @@ import { FormField, NumberInput, SectionTitle } from '../FormField'
 
 export default function StepEnvironmental({ form, updateSection }) {
   const { environmental: env } = form
+  const tax = form.taxonomy || {}
   const set = (field) => (val) => updateSection('environmental', { [field]: val })
+  const setTax = (field) => (val) => updateSection('taxonomy', { [field]: val })
 
   return (
     <div className="card">
@@ -52,6 +54,21 @@ export default function StepEnvironmental({ form, updateSection }) {
           </FormField>
           <FormField label="Initiatives biodiversité (nombre)">
             <NumberInput value={env.biodiversity_initiatives} onChange={set('biodiversity_initiatives')} placeholder="Ex: 3" min={0} step={1} />
+          </FormField>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <SectionTitle icon="🇪🇺">Taxonomie UE — Activités durables</SectionTitle>
+        <div className="form-grid">
+          <FormField label="CA aligné Taxonomie (%)" hint="Part du chiffre d'affaires issu d'activités durables">
+            <NumberInput value={tax.turnover_aligned_percent} onChange={setTax('turnover_aligned_percent')} placeholder="Ex: 38" min={0} max={100} />
+          </FormField>
+          <FormField label="CapEx aligné Taxonomie (%)" hint="Investissements verts (prospectif)">
+            <NumberInput value={tax.capex_aligned_percent} onChange={setTax('capex_aligned_percent')} placeholder="Ex: 52" min={0} max={100} />
+          </FormField>
+          <FormField label="OpEx aligné Taxonomie (%)" hint="Dépenses opérationnelles durables">
+            <NumberInput value={tax.opex_aligned_percent} onChange={setTax('opex_aligned_percent')} placeholder="Ex: 29" min={0} max={100} />
           </FormField>
         </div>
       </div>
