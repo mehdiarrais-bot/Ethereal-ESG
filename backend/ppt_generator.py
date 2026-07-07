@@ -683,30 +683,62 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_image_from_bytes(slide, chart_images["materiality"],
                              Inches(1.35), Inches(2.15), height=Inches(4.95))
 
-    # ── SLIDE 5c: Objectifs & trajectoire ───────────────────────────────
+    # ── SLIDE 5c: Objectifs & trajectoire (hero : chiffre clé + viz) ────
     if "targets" in chart_images or "carbon_trajectory" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
                               t["targets_title"], header_color)
-        if "targets" in chart_images:
-            add_image_from_bytes(slide, chart_images["targets"],
-                                 Inches(0.4), Inches(1.3), width=Inches(6.3))
-        if "carbon_trajectory" in chart_images:
-            add_image_from_bytes(slide, chart_images["carbon_trajectory"],
-                                 Inches(6.9), Inches(1.4), width=Inches(6.1))
+        co2 = request.environmental.co2_emissions_tonnes
+        has_carbon = "carbon_trajectory" in chart_images and co2 and co2 > 0
+        # Chiffre clé dominant à gauche
+        if has_carbon:
+            big, cap = "-42%", t["obj_kpi_cap"]
+            sub = f"{t['obj_target']} 2030 : {co2 * 0.58:,.0f} {t['obj_unit']}"
         else:
-            add_text(slide, t["targets_desc"].format(y=max(request.company.target_year, request.company.reporting_year + 1)),
-                     Inches(7.0), Inches(2.2), Inches(5.9), Inches(3), font_size=14,
-                     color=theme["text_dark"], font=fb)
+            avg_target = round((min(100, scores.environmental_score + 15) +
+                                min(100, scores.social_score + 10) +
+                                min(100, scores.governance_score + 5)) / 3)
+            big, cap = f"{avg_target}", t["pillars_caption"]
+            sub = f"{t['obj_target']} {max(request.company.target_year, request.company.reporting_year + 1)}"
+        add_text(slide, big, Inches(0.45), Inches(1.7), Inches(5.4), Inches(1.9),
+                 font_size=96, bold=True, color=theme["accent"], font=ft)
+        add_text(slide, cap, Inches(0.6), Inches(3.75), Inches(5.3), Inches(0.9),
+                 font_size=15, bold=True, color=theme["text_dark"], font=fb)
+        add_text(slide, sub, Inches(0.6), Inches(4.55), Inches(5.3), Inches(0.5),
+                 font_size=13, color=theme["muted"], font=fb)
+        # Carte lecture métier
+        add_shape(slide, ROUNDED_RECT, Inches(0.55), Inches(5.15), Inches(5.35), Inches(1.85),
+                  fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
+        add_shape(slide, RECT, Inches(0.55), Inches(5.15), Inches(0.09), Inches(1.85), fill=theme["accent"])
+        add_text(slide, t["key_takeaway"], Inches(0.85), Inches(5.32), Inches(4.8), Inches(0.4),
+                 font_size=11.5, bold=True, color=theme["accent"], font=fb)
+        add_text(slide, t["obj_insight"], Inches(0.85), Inches(5.72), Inches(4.85), Inches(1.2),
+                 font_size=13, color=theme["text_dark"], font=fb)
+        # Visualisation à droite
+        chart_key = "carbon_trajectory" if has_carbon else "targets"
+        add_image_from_bytes(slide, chart_images[chart_key],
+                             Inches(6.35), Inches(2.3), width=Inches(6.6))
 
-    # ── SLIDE 5d: Taxonomie UE ──────────────────────────────────────────
+    # ── SLIDE 5d: Taxonomie UE (hero : % dominant + viz) ────────────────
     if "taxonomy" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
                               t["taxonomy_title"], header_color)
+        tx = request.taxonomy
+        vals = [v for v in (tx.turnover_aligned_percent, tx.capex_aligned_percent,
+                            tx.opex_aligned_percent) if v is not None]
+        top = max(vals) if vals else 0
+        add_text(slide, f"{top:.0f}%", Inches(0.45), Inches(1.7), Inches(5.4), Inches(1.9),
+                 font_size=96, bold=True, color=theme["env"], font=ft)
+        add_text(slide, t["tax_kpi_cap"], Inches(0.6), Inches(3.75), Inches(5.3), Inches(0.9),
+                 font_size=15, bold=True, color=theme["text_dark"], font=fb)
+        add_shape(slide, ROUNDED_RECT, Inches(0.55), Inches(4.7), Inches(5.35), Inches(2.3),
+                  fill=theme["card_bg"], line_color=theme["env"], line_width_pt=1.25)
+        add_shape(slide, RECT, Inches(0.55), Inches(4.7), Inches(0.09), Inches(2.3), fill=theme["env"])
+        add_text(slide, t["key_takeaway"], Inches(0.85), Inches(4.88), Inches(4.8), Inches(0.4),
+                 font_size=11.5, bold=True, color=theme["env"], font=fb)
+        add_text(slide, t["tax_insight"], Inches(0.85), Inches(5.28), Inches(4.85), Inches(1.6),
+                 font_size=13, color=theme["text_dark"], font=fb)
         add_image_from_bytes(slide, chart_images["taxonomy"],
-                             Inches(0.6), Inches(1.6), width=Inches(8.2))
-        add_text(slide, t["taxonomy_desc"],
-                 Inches(9.1), Inches(2.2), Inches(3.9), Inches(4), font_size=13,
-                 color=theme["text_dark"], font=fb)
+                             Inches(6.3), Inches(2.5), width=Inches(6.7))
 
     # ── SLIDE 6: Forces & Faiblesses ────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style, t["strategic"], header_color)
