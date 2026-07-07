@@ -468,3 +468,44 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     plt.close()
     buf.seek(0)
     return buf.read()
+
+
+def benchmark_chart(comp: dict, avg: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+    """Barres groupées : entreprise vs. moyenne du secteur (E/S/G/Global)."""
+    colors = get_colors(theme, light_bg)
+    LB = L(lang)
+    bg = colors["bg"]
+    fig, ax = plt.subplots(figsize=(7.4, 4.6), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    cats = [LB["chart_env"], LB["chart_soc"], LB["chart_gov"], LB["chart_global"]]
+    keys = ["env", "social", "gov", "global"]
+    you = [comp[k] for k in keys]
+    sect = [avg[k] for k in keys]
+    ypos = list(range(len(cats)))
+    h = 0.34
+    you_label = "Vous" if lang != "en" else "You"
+    sect_label = "Secteur" if lang != "en" else "Sector"
+    bar_cols = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
+
+    ax.barh([y + h/2 for y in ypos], you, height=h, color=bar_cols, zorder=3, label=you_label)
+    ax.barh([y - h/2 for y in ypos], sect, height=h, color=colors["secondary"], alpha=0.45, zorder=3, label=sect_label)
+    for y, (v, sv) in enumerate(zip(you, sect)):
+        ax.text(v + 1.5, y + h/2, f"{v:.0f}", va="center", fontsize=10, fontweight="bold", color=colors["text"])
+        ax.text(sv + 1.5, y - h/2, f"{sv:.0f}", va="center", fontsize=9, color=colors["secondary"])
+        d = v - sv
+        ax.text(107, y, f"{'+' if d>=0 else ''}{d:.0f}", va="center", ha="right", fontsize=10,
+                fontweight="bold", color=(colors["env"] if d >= 0 else "#E74C3C"))
+
+    ax.set_yticks(ypos); ax.set_yticklabels(cats, color=colors["text"], fontsize=11)
+    ax.set_xlim(0, 112); ax.set_ylim(-0.6, len(cats)-0.4)
+    ax.tick_params(colors=colors["text"])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.spines[["left", "bottom"]].set_color(colors["secondary"])
+    ax.legend(loc="lower right", fontsize=9, framealpha=0.15, labelcolor=colors["text"])
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=bg, edgecolor="none")
+    plt.close()
+    buf.seek(0)
+    return buf.read()

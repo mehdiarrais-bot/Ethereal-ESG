@@ -191,9 +191,9 @@ def build_extras(request: ESGRequest) -> tuple:
 
 def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
     """Graphiques ESG avancés : matérialité, objectifs, trajectoire carbone, taxonomie."""
-    from esg_advanced import materiality_topics, esg_targets, taxonomy_summary
+    from esg_advanced import materiality_topics, esg_targets, taxonomy_summary, sector_benchmark
     from chart_generator import (materiality_matrix, targets_chart,
-                                 carbon_trajectory_chart, taxonomy_chart)
+                                 carbon_trajectory_chart, taxonomy_chart, benchmark_chart)
     theme = request.aesthetic_theme
     lang = request.language
     out = {}
@@ -215,6 +215,13 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
             out["taxonomy"] = taxonomy_chart(tx, theme, light_bg=light_bg, lang=lang)
     except Exception as e:
         print(f"Taxonomy chart error: {e}")
+    try:
+        bm = sector_benchmark(request, scores)
+        comp = {"env": scores.environmental_score, "social": scores.social_score,
+                "gov": scores.governance_score, "global": scores.total_esg_score}
+        out["benchmark"] = benchmark_chart(comp, bm["avg"], theme, light_bg=light_bg, lang=lang)
+    except Exception as e:
+        print(f"Benchmark chart error: {e}")
     return out
 
 

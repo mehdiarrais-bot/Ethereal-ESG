@@ -515,9 +515,11 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import pillar_insights, score_verdict
     _insights = pillar_insights(request, scores)
     _verdict = score_verdict(request, scores)
-    from content_generator import pillar_headline, section_headlines
+    from content_generator import pillar_headline, section_headlines, benchmark_verdict, maturity_text
     _headlines = pillar_headline(request, scores)
     _sh = section_headlines(request, scores)
+    _bv = benchmark_verdict(request, scores)
+    _mat = maturity_text(request, scores)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
@@ -625,6 +627,43 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                              Inches(9.15), Inches(3.55), height=Inches(3.55))
 
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
+
+    # ── SLIDE 2b: Benchmark sectoriel + maturité (diagnostic) ───────────
+    if "benchmark" in chart_images:
+        _dk = style["dark_slides"]
+        slide = content_slide(prs, blank_layout, theme, style,
+                              _bv["title"], header_color, kicker=t["benchmark_kicker"])
+        add_image_from_bytes(slide, chart_images["benchmark"],
+                             Inches(0.35), Inches(1.7), width=Inches(7.5))
+        # Carte lecture métier (positionnement)
+        cx, cw = Inches(8.15), Inches(4.85)
+        add_shape(slide, ROUNDED_RECT, cx, Inches(1.75), cw, Inches(2.35),
+                  fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
+        add_shape(slide, RECT, cx, Inches(1.75), Inches(0.09), Inches(2.35), fill=theme["accent"])
+        add_text(slide, t["key_takeaway"], cx + Inches(0.3), Inches(1.93), cw - Inches(0.5), Inches(0.35),
+                 font_size=12, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=fb)
+        add_text(slide, _bv["insight"], cx + Inches(0.3), Inches(2.35), cw - Inches(0.55), Inches(1.7),
+                 font_size=14, color=theme["text_dark"], font=fb)
+        # Échelle de maturité ESG (5 stades)
+        add_text(slide, t["maturity_title"], cx + Inches(0.02), Inches(4.4), cw, Inches(0.35),
+                 font_size=12, bold=True, color=theme["muted"], font=fb)
+        stages = [t["mat_initiated"], t["mat_structuring"], t["mat_structured"], t["mat_advanced"], t["mat_exemplary"]]
+        seg_w = Inches(0.92); seg_h = Inches(0.5); gap = Inches(0.06)
+        for i, st in enumerate(stages):
+            sx = cx + i * (seg_w + gap)
+            active = (i == _mat["stage"])
+            fill = theme["accent"] if active else theme["card_bg"]
+            add_shape(slide, ROUNDED_RECT, sx, Inches(4.85), seg_w, seg_h,
+                      fill=fill, line_color=theme["accent"] if not active else fill, line_width_pt=1.0)
+            add_text(slide, str(i + 1), sx, Inches(4.9), seg_w, Inches(0.4),
+                     font_size=14, bold=True, align=PP_ALIGN.CENTER,
+                     color=(theme["bg_primary"] if active else theme["muted"]), font=ft)
+        add_text(slide, stages[_mat["stage"]], cx, Inches(5.5), cw, Inches(0.4),
+                 font_size=16, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=ft)
+        add_text(slide, _mat["next_hint"], cx, Inches(5.95), cw, Inches(0.7),
+                 font_size=12.5, color=theme["text_dark"], font=fb)
+        add_text(slide, t["bench_note"], Inches(0.4), Inches(6.95), Inches(7.5), Inches(0.35),
+                 font_size=9, italic=True, color=theme["muted"], font=fb)
 
     # ── SLIDE 3: Environnement (infographie) ─────────────────────────────
     env = request.environmental

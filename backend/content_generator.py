@@ -1103,3 +1103,58 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
 
     return {"materiality": materiality, "objectives": objectives,
             "taxonomy": taxonomy, "strategic": strategic, "odd": odd}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# VERDICT BENCHMARK & MATURITÉ (diagnostic personnalisé)
+# ══════════════════════════════════════════════════════════════════════════
+
+def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
+    """Titre-conclusion + lecture du positionnement vs. secteur."""
+    from esg_advanced import sector_benchmark
+    en = getattr(request, "language", "fr") == "en"
+    bm = sector_benchmark(request, scores)
+    gd = bm["deltas"]["global"]
+    name, sector = request.company.name, request.company.sector
+    d = bm["deltas"]
+    labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
+              "en": {"env": "environment", "social": "social", "gov": "governance"}}[("en" if en else "fr")]
+    lead = max(("env", "social", "gov"), key=lambda k: d[k])
+    lag = min(("env", "social", "gov"), key=lambda k: d[k])
+    agd = abs(gd)
+    if en:
+        title = (f"{name} outperforms its sector by {gd:.0f} points" if gd >= 8 else
+                 f"{name} is above its sector average (+{gd:.0f} pts)" if gd >= 2 else
+                 f"{name} is in line with its sector average" if gd >= -2 else
+                 f"{name} is {agd:.0f} pts below its sector average")
+        insight = (f"Your edge is on {labels[lead]} (+{d[lead]:.0f} pts vs sector); "
+                   f"{labels[lag]} ({d[lag]:+.0f} pts) is where the gap must be closed.")
+    else:
+        title = (f"{name} surperforme son secteur de {gd:.0f} points" if gd >= 8 else
+                 f"{name} devance la moyenne de son secteur (+{gd:.0f} pts)" if gd >= 2 else
+                 f"{name} est aligné sur la moyenne de son secteur" if gd >= -2 else
+                 f"{name} se situe {agd:.0f} pts sous la moyenne de son secteur")
+        insight = (f"Votre avance se joue sur {labels[lead]} (+{d[lead]:.0f} pts vs secteur) ; "
+                   f"{labels[lag]} ({d[lag]:+.0f} pts) est l'écart à combler en priorité.")
+    return {"title": title, "insight": insight, "bm": bm}
+
+
+def maturity_text(request: ESGRequest, scores: ESGScores) -> dict:
+    """Stade de maturité + ce qui fait passer le cap suivant."""
+    from esg_advanced import esg_maturity
+    en = getattr(request, "language", "fr") == "en"
+    m = esg_maturity(request, scores)
+    gap_txt = {"fr": {"scope3": "mesurer le Scope 3", "audit": "faire auditer le reporting",
+                      "committee": "créer un comité de durabilité"},
+               "en": {"scope3": "measure Scope 3", "audit": "get the reporting audited",
+                      "committee": "set up a sustainability committee"}}[("en" if en else "fr")]
+    levers = [gap_txt[g] for g in m["gaps"][:2]]
+    if m["next"] and levers:
+        joiner = " and " if en else " et "
+        nxt = (f"To reach the next level: {joiner.join(levers)}." if en
+               else f"Pour franchir le cap suivant : {joiner.join(levers)}.")
+    elif m["next"]:
+        nxt = "Consolidate the current level to progress." if en else "Consolider le niveau actuel pour progresser."
+    else:
+        nxt = "Highest maturity level reached." if en else "Niveau de maturité maximal atteint."
+    return {"stage": m["stage"], "key": m["key"], "next_hint": nxt}
