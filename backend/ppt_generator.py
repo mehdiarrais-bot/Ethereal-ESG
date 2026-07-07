@@ -280,25 +280,39 @@ def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3), 
 
 # ── Covers ────────────────────────────────────────────────────────────────
 
+def _cover_tag(TR, scores):
+    b = "high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60 \
+        else "mid" if scores.total_esg_score >= 45 else "low"
+    return TR["cover_tag_" + b]
+
+
 def cover_classic(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-    add_bg_rect(slide, 0, 0, Inches(0.15), SLIDE_H, theme["accent"])
-    add_shape(slide, OVAL, Inches(10.5), Inches(-1.5), Inches(4), Inches(4),
-              fill=RGBColor(0xFF, 0xFF, 0xFF))
-    add_text(slide, request.company.name.upper(), Inches(0.6), Inches(1.2), Inches(9), Inches(1.2),
-             font_size=40, bold=True, color=theme["text_light"], font=ft)
-    add_text(slide, subtitle, Inches(0.6), Inches(2.5), Inches(9), Inches(0.7),
-             font_size=22, color=theme["subtitle"], font=fb)
-    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
-             Inches(0.6), Inches(3.3), Inches(10), Inches(0.5),
-             font_size=14, color=theme["subtitle"], font=fb)
-    add_bg_rect(slide, Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5), theme["accent"])
-    add_text(slide, f"ESG {scores.rating}", Inches(10.5), Inches(5.5), Inches(2.2), Inches(1.5),
-             font_size=28, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"{TR['chart_global']} : {scores.total_esg_score}/100",
-             Inches(0.6), Inches(5.8), Inches(6), Inches(0.5),
-             font_size=14, color=theme["subtitle"], font=fb)
+    add_bg_rect(slide, 0, 0, Inches(0.18), SLIDE_H, theme["accent"])
+    # Aplat sombre en bas pour ancrer la composition (magazine)
+    add_bg_rect(slide, 0, Inches(5.4), SLIDE_W, Inches(2.1), theme["bg_primary"])
+
+    # Kicker + nom géant + accroche (bloc éditorial gauche)
+    add_text(slide, subtitle.upper(), Inches(0.65), Inches(1.15), Inches(9), Inches(0.5),
+             font_size=15, bold=True, color=theme["accent"], font=fb)
+    add_text(slide, request.company.name.upper(), Inches(0.6), Inches(1.75), Inches(9.2), Inches(1.9),
+             font_size=52, bold=True, color=theme["text_light"], font=ft)
+    add_bg_rect(slide, Inches(0.65), Inches(3.75), Inches(2.0), Inches(0.06), theme["accent"])
+    add_text(slide, _cover_tag(TR, scores), Inches(0.65), Inches(4.0), Inches(8.5), Inches(0.7),
+             font_size=21, italic=True, color=theme["subtitle"], font=fb)
+
+    # Bandeau bas : méta à gauche, score mis en scène à droite
+    add_text(slide, f"{TR['exercise']} {request.company.reporting_year}   |   {request.company.sector}   |   {request.company.country}",
+             Inches(0.65), Inches(6.55), Inches(8), Inches(0.5),
+             font_size=13, color=theme["subtitle"], font=fb)
+    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
+             font_size=82, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
+    add_text(slide, "/100", Inches(8.55), Inches(6.75), Inches(2.4), Inches(0.4),
+             font_size=14, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=fb)
+    add_shape(slide, ROUNDED_RECT, Inches(11.2), Inches(5.55), Inches(1.55), Inches(0.95), fill=theme["accent"])
+    add_text(slide, scores.rating, Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
+             font_size=32, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
 def cover_organic(slide, theme, style, request, scores, subtitle, TR):
