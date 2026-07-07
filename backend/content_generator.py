@@ -930,6 +930,7 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
         pillar, hfr, hen, dfr, den = _REC_META[k]
         tfr, ten = _REC_TITLES[k]
         out.append({
+            "key": k,
             "title": ten if en else tfr,
             "detail": den if en else dfr,
             "pillar": pillar,
@@ -1158,3 +1159,28 @@ def maturity_text(request: ESGRequest, scores: ESGScores) -> dict:
     else:
         nxt = "Highest maturity level reached." if en else "Niveau de maturité maximal atteint."
     return {"stage": m["stage"], "key": m["key"], "next_hint": nxt}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# FEUILLE DE ROUTE 12 MOIS (plan de marche actionnable)
+# ══════════════════════════════════════════════════════════════════════════
+
+_ROADMAP_PHASE = {
+    "audit": (0, True), "committee": (0, True), "parity": (1, True),
+    "scope3": (1, False), "frameworks": (1, False),
+    "training": (2, False), "renewable": (2, False), "recycling": (2, False),
+}
+
+
+def roadmap_12m(request: ESGRequest, scores: ESGScores) -> list:
+    """3 phases sur 12 mois, chaque action avec pilier + flag quick win."""
+    en = getattr(request, "language", "fr") == "en"
+    phase_labels = (["0-3 months", "3-6 months", "6-12 months"] if en
+                    else ["0-3 mois", "3-6 mois", "6-12 mois"])
+    phase_sub = (["Quick wins & foundations", "Structuring", "Deployment"] if en
+                 else ["Quick wins & fondations", "Structuration", "Deploiement"])
+    phases = [{"label": phase_labels[i], "sub": phase_sub[i], "actions": []} for i in range(3)]
+    for rec in enriched_recommendations(request, scores):
+        p, qw = _ROADMAP_PHASE.get(rec["key"], (2, False))
+        phases[p]["actions"].append({"title": rec["title"], "pillar": rec["pillar"], "quick_win": qw})
+    return phases

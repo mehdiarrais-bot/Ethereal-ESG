@@ -870,6 +870,41 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             add_text(slide, rec["horizon"], Inches(10.75), y + Inches(0.35), chip_w, Inches(0.35),
                      font_size=11, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=fb)
 
+    # ── SLIDE 7b: Feuille de route 12 mois (timeline) ───────────────────
+    from content_generator import roadmap_12m
+    _rm = roadmap_12m(request, scores)
+    if any(ph["actions"] for ph in _rm):
+        _dk = style["dark_slides"]
+        slide = content_slide(prs, blank_layout, theme, style,
+                              t["roadmap_title"], header_color, kicker=t["roadmap_kicker"])
+        col_w, gap = Inches(4.05), Inches(0.28)
+        x0 = Inches(0.35)
+        for pi, ph in enumerate(_rm):
+            cx = x0 + pi * (col_w + gap)
+            # En-tête de phase
+            add_shape(slide, ROUNDED_RECT, cx, Inches(1.5), col_w, Inches(0.9),
+                      fill=theme["bg_primary"] if not _dk else theme["card_bg"])
+            add_text(slide, ph["label"], cx + Inches(0.25), Inches(1.6), col_w - Inches(0.5), Inches(0.45),
+                     font_size=19, bold=True, color=theme["accent"], font=ft)
+            add_text(slide, ph["sub"], cx + Inches(0.25), Inches(2.05), col_w - Inches(0.5), Inches(0.35),
+                     font_size=11, color=theme["subtitle"] if not _dk else theme["muted"], font=fb)
+            # Actions
+            for ai, act in enumerate(ph["actions"][:4]):
+                ay = Inches(2.6) + ai * Inches(1.02)
+                pcol = theme[act["pillar"]]
+                add_shape(slide, ROUNDED_RECT, cx, ay, col_w, Inches(0.9),
+                          fill=theme["card_bg"], line_color=pcol, line_width_pt=1.0)
+                add_shape(slide, RECT, cx, ay + Inches(0.12), Inches(0.07), Inches(0.66), fill=pcol)
+                add_text(slide, act["title"], cx + Inches(0.28), ay + Inches(0.12), col_w - Inches(0.45), Inches(0.6),
+                         font_size=12, bold=True, color=theme["text_dark"], font=fb)
+                if act["quick_win"]:
+                    qw_w = Inches(1.15)
+                    add_shape(slide, ROUNDED_RECT, cx + col_w - qw_w - Inches(0.12), ay + Inches(0.58),
+                              qw_w, Inches(0.26), fill=theme["accent"])
+                    add_text(slide, t["quick_win"], cx + col_w - qw_w - Inches(0.12), ay + Inches(0.6),
+                             qw_w, Inches(0.22), font_size=8.5, bold=True,
+                             color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=fb)
+
     # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style,
                           _sh["odd"], header_color, kicker=t["odd_title"])
