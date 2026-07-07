@@ -4,6 +4,12 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
+from visual_kit import pillar_hero, icon_png, ring_png
+
+
+def _hexstr(rgb) -> str:
+    """RGBColor -> '#RRGGBB' pour visual_kit."""
+    return "#" + str(rgb)
 
 # Color palettes per theme
 THEMES = {
@@ -371,6 +377,77 @@ COVERS = {"classic": cover_classic, "organic": cover_organic,
           "luxe": cover_luxe, "minimal": cover_minimal}
 
 
+def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
+                       title, subtitle, score, kpis):
+    """Slide de pilier en infographie : héros illustré à gauche + chips KPI.
+
+    kpis : liste de (icon_name, value_str, label). 6 max affichés.
+    """
+    ft, fb = style["font_title"], style["font_body"]
+    color = theme[pillar_key]
+    dark = style["dark_slides"]
+    white = RGBColor(0xFF, 0xFF, 0xFF)
+
+    slide = prs.slides.add_slide(blank_layout)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"] if dark else theme["bg_secondary"])
+
+    # ── Héros illustré (flanc gauche) ──────────────────────────────
+    HERO_W = Inches(4.5)
+    pal = {"top": _hexstr(theme["bg_primary"]), "bottom": _hexstr(color),
+           "accent": _hexstr(theme["accent"]), "light": _hexstr(theme["card_bg"])}
+    try:
+        hero = pillar_hero(pillar_key, pal, 470, 780)
+        add_image_from_bytes(slide, hero, 0, 0, HERO_W, SLIDE_H)
+    except Exception:
+        add_bg_rect(slide, 0, 0, HERO_W, SLIDE_H, color)
+
+    add_text(slide, title, Inches(0.35), Inches(0.45), Inches(3.9), Inches(1.3),
+             font_size=27, bold=True, color=white, font=ft)
+    add_text(slide, subtitle, Inches(0.37), Inches(1.55), Inches(3.8), Inches(0.6),
+             font_size=13, color=white, font=fb)
+
+    # Anneau de score en bas du héros
+    try:
+        ring = ring_png(score, 320, _hexstr(theme["accent"]))
+        add_image_from_bytes(slide, ring, Inches(1.4), Inches(4.75), Inches(1.75), Inches(1.75))
+    except Exception:
+        pass
+    add_text(slide, f"{score:.0f}", Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
+             font_size=38, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, "SCORE / 100", Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
+             font_size=11, bold=True, color=white, align=PP_ALIGN.CENTER, font=fb)
+
+    # ── En-tête droite ─────────────────────────────────────────────
+    RX = Inches(4.95)
+    add_text(slide, "Indicateurs clés", RX, Inches(0.45), Inches(8), Inches(0.6),
+             font_size=22, bold=True, color=theme["text_dark"], font=ft)
+    add_bg_rect(slide, RX, Inches(1.15), Inches(2.0), Inches(0.05), color)
+
+    # ── Chips KPI (2 colonnes × 3 lignes) ──────────────────────────
+    chip_w, chip_h = Inches(3.95), Inches(1.52)
+    gap_x, gap_y = Inches(0.28), Inches(0.3)
+    top0 = Inches(1.45)
+    border = RGBColor(0x3A, 0x40, 0x4A) if dark else RGBColor(0xE2, 0xE8, 0xF0)
+    circ = Inches(0.92)
+    for i, (icon_name, value, label) in enumerate(kpis[:6]):
+        col, row = i % 2, i // 2
+        x = RX + col * (chip_w + gap_x)
+        y = top0 + row * (chip_h + gap_y)
+        add_shape(slide, ROUNDED_RECT, x, y, chip_w, chip_h, fill=theme["card_bg"],
+                  line_color=border, line_width_pt=0.75)
+        add_shape(slide, OVAL, x + Inches(0.22), y + Inches(0.3), circ, circ, fill=color)
+        try:
+            add_image_from_bytes(slide, icon_png(icon_name, 130, "#FFFFFF"),
+                                 x + Inches(0.42), y + Inches(0.5), Inches(0.52), Inches(0.52))
+        except Exception:
+            pass
+        add_text(slide, value, x + Inches(1.35), y + Inches(0.26), chip_w - Inches(1.45), Inches(0.7),
+                 font_size=21, bold=True, color=color, font=ft)
+        add_text(slide, label, x + Inches(1.35), y + Inches(0.92), chip_w - Inches(1.45), Inches(0.5),
+                 font_size=10.5, color=theme["muted"], font=fb)
+    return slide
+
+
 def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                   chart_images: dict, logo_bytes: bytes = None) -> bytes:
     prs = Presentation()
@@ -465,97 +542,76 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_image_from_bytes(slide, chart_images["bars"],
                              Inches(5.6), Inches(4.8), height=Inches(2.5))
 
-    # ── SLIDE 3: Environnement ───────────────────────────────────────────
-    slide = content_slide(prs, blank_layout, theme, style, "🌍  Pilier Environnemental", theme["env"])
-
+    # ── SLIDE 3: Environnement (infographie) ─────────────────────────────
     env = request.environmental
     env_kpis = []
     if env.co2_emissions_tonnes is not None:
-        env_kpis.append(("Émissions CO₂ totales", f"{env.co2_emissions_tonnes:,.0f} t CO₂e"))
-    if env.scope1_emissions is not None:
-        env_kpis.append(("Scope 1", f"{env.scope1_emissions:,.0f} t CO₂e"))
-    if env.scope2_emissions is not None:
-        env_kpis.append(("Scope 2", f"{env.scope2_emissions:,.0f} t CO₂e"))
-    if env.scope3_emissions is not None:
-        env_kpis.append(("Scope 3", f"{env.scope3_emissions:,.0f} t CO₂e"))
+        env_kpis.append(("cloud", f"{env.co2_emissions_tonnes:,.0f} t", "Émissions CO2 totales"))
     if env.renewable_energy_percent is not None:
-        env_kpis.append(("Énergie renouvelable", f"{env.renewable_energy_percent:.1f}%"))
+        env_kpis.append(("recycle", f"{env.renewable_energy_percent:.0f}%", "Énergie renouvelable"))
     if env.energy_consumption_mwh is not None:
-        env_kpis.append(("Consommation énergie", f"{env.energy_consumption_mwh:,.0f} MWh"))
+        env_kpis.append(("bolt", f"{env.energy_consumption_mwh:,.0f}", "Consommation (MWh)"))
     if env.water_consumption_m3 is not None:
-        env_kpis.append(("Consommation eau", f"{env.water_consumption_m3:,.0f} m³"))
-    if env.waste_generated_tonnes is not None:
-        env_kpis.append(("Déchets générés", f"{env.waste_generated_tonnes:,.1f} t"))
+        env_kpis.append(("drop", f"{env.water_consumption_m3:,.0f}", "Eau prélevée (m3)"))
     if env.waste_recycled_percent is not None:
-        env_kpis.append(("Taux de recyclage", f"{env.waste_recycled_percent:.1f}%"))
+        env_kpis.append(("leaf", f"{env.waste_recycled_percent:.0f}%", "Taux de recyclage"))
+    if env.biodiversity_initiatives is not None:
+        env_kpis.append(("tree", f"{env.biodiversity_initiatives}", "Initiatives biodiversité"))
+    if env.scope3_emissions is not None:
+        env_kpis.append(("cloud", f"{env.scope3_emissions:,.0f} t", "Scope 3 (chaîne de valeur)"))
+    if env.waste_generated_tonnes is not None:
+        env_kpis.append(("recycle", f"{env.waste_generated_tonnes:,.0f} t", "Déchets générés"))
+    pillar_infographic(prs, blank_layout, theme, style, "env",
+                       "Pilier Environnemental", "Climat • Énergie • Ressources",
+                       scores.environmental_score, env_kpis)
 
-    has_pie = "emissions_pie" in chart_images
-    kpi_grid(slide, env_kpis, theme, style, theme["env"], ncols=2 if has_pie else 3)
-    add_text(slide, f"Score E — {scores.environmental_score:.0f}/100",
-             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
-             font_size=16, bold=True, color=theme["env"], align=PP_ALIGN.RIGHT, font=ft)
-
-    if has_pie:
-        add_image_from_bytes(slide, chart_images["emissions_pie"],
-                             Inches(9.0), Inches(1.4), width=Inches(4.1))
-
-    # ── SLIDE 4: Social ──────────────────────────────────────────────────
-    slide = content_slide(prs, blank_layout, theme, style, "👥  Pilier Social", theme["social"])
-
+    # ── SLIDE 4: Social (infographie) ────────────────────────────────────
     soc = request.social
     soc_kpis = []
     if soc.total_employees is not None:
-        soc_kpis.append(("Effectif total", f"{soc.total_employees:,}"))
+        soc_kpis.append(("people", f"{soc.total_employees:,}", "Effectif total"))
     if soc.female_employees_percent is not None:
-        soc_kpis.append(("Femmes dans l'effectif", f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent is not None:
-        soc_kpis.append(("Turnover", f"{soc.employee_turnover_percent:.1f}%"))
+        soc_kpis.append(("people", f"{soc.female_employees_percent:.0f}%", "Femmes dans l'effectif"))
     if soc.training_hours_per_employee is not None:
-        soc_kpis.append(("Formation/employé/an", f"{soc.training_hours_per_employee:.0f} h"))
-    if soc.work_accidents is not None:
-        soc_kpis.append(("Accidents de travail", f"{soc.work_accidents}"))
+        soc_kpis.append(("cap", f"{soc.training_hours_per_employee:.0f} h", "Formation / an"))
     if soc.accident_frequency_rate is not None:
-        soc_kpis.append(("Taux de fréquence", f"{soc.accident_frequency_rate:.2f}"))
-    if soc.community_investment_eur is not None:
-        soc_kpis.append(("Investissement communauté", f"{soc.community_investment_eur:,.0f} €"))
+        soc_kpis.append(("shield", f"{soc.accident_frequency_rate:.1f}", "Taux fréquence accidents"))
     if soc.customer_satisfaction_score is not None:
-        soc_kpis.append(("Satisfaction client", f"{soc.customer_satisfaction_score:.1f}/10"))
+        soc_kpis.append(("heart", f"{soc.customer_satisfaction_score:.1f}/10", "Satisfaction client"))
+    if soc.employee_turnover_percent is not None:
+        soc_kpis.append(("chart", f"{soc.employee_turnover_percent:.0f}%", "Turnover"))
     if soc.disabled_employees_percent is not None:
-        soc_kpis.append(("Salariés handicapés", f"{soc.disabled_employees_percent:.1f}%"))
+        soc_kpis.append(("heart", f"{soc.disabled_employees_percent:.1f}%", "Salariés en situation de handicap"))
+    if soc.community_investment_eur is not None:
+        soc_kpis.append(("heart", f"{soc.community_investment_eur:,.0f} €", "Investissement communauté"))
+    pillar_infographic(prs, blank_layout, theme, style, "social",
+                       "Pilier Social", "Capital humain • Diversité • Sécurité",
+                       scores.social_score, soc_kpis)
 
-    kpi_grid(slide, soc_kpis, theme, style, theme["social"])
-    add_text(slide, f"Score S — {scores.social_score:.0f}/100",
-             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
-             font_size=16, bold=True, color=theme["social"], align=PP_ALIGN.RIGHT, font=ft)
-
-    # ── SLIDE 5: Gouvernance ─────────────────────────────────────────────
-    slide = content_slide(prs, blank_layout, theme, style, "⚖️  Pilier Gouvernance", theme["gov"])
-
+    # ── SLIDE 5: Gouvernance (infographie) ───────────────────────────────
     gov = request.governance
     gov_kpis = []
     if gov.board_members is not None:
-        gov_kpis.append(("Membres du CA", f"{gov.board_members}"))
+        gov_kpis.append(("columns", f"{gov.board_members}", "Membres du Conseil"))
     if gov.female_board_percent is not None:
-        gov_kpis.append(("Femmes au CA", f"{gov.female_board_percent:.1f}%"))
+        gov_kpis.append(("people", f"{gov.female_board_percent:.0f}%", "Femmes au CA"))
     if gov.independent_board_percent is not None:
-        gov_kpis.append(("Administrateurs indépendants", f"{gov.independent_board_percent:.1f}%"))
-    if gov.ethics_violations is not None:
-        gov_kpis.append(("Violations éthiques", f"{gov.ethics_violations}"))
-    if gov.corruption_cases is not None:
-        gov_kpis.append(("Cas de corruption", f"{gov.corruption_cases}"))
-    if gov.data_breaches is not None:
-        gov_kpis.append(("Violations de données", f"{gov.data_breaches}"))
-    if gov.csr_budget_eur is not None:
-        gov_kpis.append(("Budget RSE", f"{gov.csr_budget_eur:,.0f} €"))
+        gov_kpis.append(("badge", f"{gov.independent_board_percent:.0f}%", "Administrateurs indépendants"))
     if gov.esg_audit_conducted is not None:
-        gov_kpis.append(("Audit ESG conduit", "Oui ✓" if gov.esg_audit_conducted else "Non ✗"))
+        gov_kpis.append(("badge", "Oui" if gov.esg_audit_conducted else "Non", "Audit ESG indépendant"))
+    if gov.data_breaches is not None:
+        gov_kpis.append(("lock", f"{gov.data_breaches}", "Violations de données"))
+    if gov.ethics_violations is not None:
+        gov_kpis.append(("scale", f"{gov.ethics_violations}", "Manquements éthiques"))
+    if gov.csr_budget_eur is not None:
+        gov_kpis.append(("chart", f"{gov.csr_budget_eur:,.0f} €", "Budget RSE"))
     if gov.sustainability_committee is not None:
-        gov_kpis.append(("Comité durabilité", "Oui ✓" if gov.sustainability_committee else "Non ✗"))
-
-    kpi_grid(slide, gov_kpis, theme, style, theme["gov"])
-    add_text(slide, f"Score G — {scores.governance_score:.0f}/100",
-             Inches(9.3), Inches(6.9), Inches(3.7), Inches(0.5),
-             font_size=16, bold=True, color=theme["gov"], align=PP_ALIGN.RIGHT, font=ft)
+        gov_kpis.append(("columns", "Oui" if gov.sustainability_committee else "Non", "Comité de durabilité"))
+    if gov.corruption_cases is not None:
+        gov_kpis.append(("scale", f"{gov.corruption_cases}", "Cas de corruption"))
+    pillar_infographic(prs, blank_layout, theme, style, "gov",
+                       "Pilier Gouvernance", "Éthique • Conseil • Contrôle",
+                       scores.governance_score, gov_kpis)
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
