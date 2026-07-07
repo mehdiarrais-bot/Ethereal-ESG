@@ -78,6 +78,32 @@ export default function App() {
     setError(null)
   }
 
+  const importFile = async (file) => {
+    setError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/api/import', { method: 'POST', body: fd })
+      if (!res.ok) {
+        let msg = `Erreur ${res.status}`
+        try { const j = await res.json(); msg = j.detail || msg } catch {}
+        throw new Error(msg)
+      }
+      const { sections, matched, unmatched } = await res.json()
+      setForm(f => {
+        const merged = { ...f }
+        for (const [sec, vals] of Object.entries(sections)) {
+          merged[sec] = { ...(f[sec] || {}), ...vals }
+        }
+        return merged
+      })
+      return { matched: matched.length, unmatched }
+    } catch (e) {
+      setError(`Import : ${e.message}`)
+      return null
+    }
+  }
+
   const startProgress = () => {
     setDownloadProgress(5)
     const start = Date.now()
@@ -144,7 +170,7 @@ export default function App() {
   const stepProps = { form, updateSection, setForm }
 
   const stepComponents = [
-    <StepCompany {...stepProps} />,
+    <StepCompany {...stepProps} onImport={importFile} />,
     <StepEnvironmental {...stepProps} />,
     <StepSocial {...stepProps} />,
     <StepGovernance {...stepProps} />,

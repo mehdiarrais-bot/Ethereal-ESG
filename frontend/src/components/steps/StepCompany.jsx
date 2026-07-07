@@ -1,4 +1,73 @@
+import { useState } from 'react'
 import { FormField, NumberInput, SelectInput, SectionTitle } from '../FormField'
+
+function ImportPanel({ onImport }) {
+  const [status, setStatus] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !onImport) return
+    setBusy(true); setStatus(null)
+    const r = await onImport(file)
+    setBusy(false)
+    if (r) {
+      setStatus({
+        ok: true,
+        msg: `✅ ${r.matched} champ(s) importé(s)`
+          + (r.unmatched?.length ? ` — ${r.unmatched.length} ignoré(s) : ${r.unmatched.slice(0, 3).join(', ')}${r.unmatched.length > 3 ? '…' : ''}` : ''),
+      })
+    }
+  }
+
+  return (
+    <div className="import-panel">
+      <div className="import-head">
+        <span className="import-title">📥 Importer depuis un fichier</span>
+        <span className="import-sub">CSV ou Excel — remplit le formulaire automatiquement</span>
+      </div>
+      <div className="import-actions">
+        <a className="import-tpl" href="/api/import/template" download>⬇ Télécharger le modèle</a>
+        <label className={`import-btn ${busy ? 'busy' : ''}`}>
+          <input type="file" accept=".csv,.xlsx,.xlsm,text/csv" onChange={handleFile} disabled={busy} />
+          {busy ? '⏳ Import…' : '📂 Choisir un fichier CSV / Excel'}
+        </label>
+      </div>
+      {status && <div className={`import-status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</div>}
+      <style>{`
+        .import-panel {
+          border: 1px solid var(--glass-border-lit); border-radius: var(--radius);
+          background: rgba(34,211,238,0.06); padding: 18px 20px; margin-bottom: 22px;
+          backdrop-filter: blur(8px);
+        }
+        .import-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; }
+        .import-title { font-weight: 700; color: var(--neon); font-size: 15px; }
+        .import-sub { font-size: 12px; color: var(--muted); }
+        .import-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .import-tpl {
+          font-size: 13px; color: var(--text-dim); text-decoration: none;
+          padding: 10px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-pill);
+          transition: background var(--fast), border-color var(--fast);
+        }
+        .import-tpl:hover { background: rgba(124,92,246,0.14); border-color: var(--glass-border-lit); }
+        .import-btn {
+          display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+          font-size: 13px; font-weight: 600; color: #04121a;
+          background: linear-gradient(135deg, var(--neon), var(--neon-blue));
+          padding: 10px 20px; border-radius: var(--radius-pill);
+          box-shadow: 0 0 16px rgba(34,211,238,0.35); transition: transform var(--fast) var(--ease);
+        }
+        .import-btn:hover { transform: translateY(-1px); }
+        .import-btn.busy { opacity: 0.7; cursor: wait; }
+        .import-btn input { display: none; }
+        .import-status { margin-top: 12px; font-size: 13px; padding: 8px 14px; border-radius: 10px; }
+        .import-status.ok { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+        .import-status.err { background: rgba(244,63,94,0.12); color: #fda4af; border: 1px solid rgba(244,63,94,0.3); }
+      `}</style>
+    </div>
+  )
+}
 
 const SECTORS = [
   'Agroalimentaire', 'Automobile', 'BTP & Construction', 'Chimie', 'Commerce de détail',
@@ -15,7 +84,7 @@ const COUNTRIES = [
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025]
 const TARGET_YEARS = [2027, 2028, 2030, 2035, 2040, 2050]
 
-export default function StepCompany({ form, updateSection }) {
+export default function StepCompany({ form, updateSection, onImport }) {
   const { company } = form
   const set = (field) => (val) => updateSection('company', { [field]: val })
 
@@ -39,6 +108,9 @@ export default function StepCompany({ form, updateSection }) {
   return (
     <div className="card">
       <div className="card-title">🏢 Informations sur l'Entreprise</div>
+
+      <ImportPanel onImport={onImport} />
+
       <div className="form-section">
         <SectionTitle icon="📋">Identité</SectionTitle>
         <div className="form-grid">

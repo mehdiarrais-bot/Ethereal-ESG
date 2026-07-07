@@ -1,9 +1,9 @@
 import os
 import io
 import re
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -17,6 +17,7 @@ from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
 from docx_generator import generate_word_report
 from content_generator import generate_esg_content
+import import_data
 
 SAFE_NAME_RE = re.compile(r'[^\w\-]')
 
@@ -142,6 +143,38 @@ def calculate(request: ESGRequest):
     """Calculate ESG scores without generating documents."""
     scores = calculate_esg_scores(request)
     return scores
+
+
+MAX_IMPORT_BYTES = 2_000_000  # 2 Mo
+
+
+@app.get("/api/import/template")
+def import_template():
+    """Renvoie un modèle CSV clé/valeur à remplir."""
+    return PlainTextResponse(
+        "﻿" + import_data.template_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="modele_esg.csv"'},
+    )
+
+
+@app.post("/api/import")
+async def import_file(file: UploadFile = File(...)):
+    """Parse un CSV/Excel et renvoie les sections de formulaire pré-remplies."""
+    data = await file.read()
+    if len(data) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 2 Mo)")
+    try:
+        pairs = import_data.parse_upload(file.filename, data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Fichier illisible : vérifiez le format (CSV ou XLSX)")
+    result = import_data.build_form(pairs)
+    if not result["matched"]:
+        raise HTTPException(status_code=422,
+                            detail="Aucun champ reconnu. Utilisez le modèle CSV téléchargeable.")
+    return result
 
 
 def build_extras(request: ESGRequest) -> tuple:
