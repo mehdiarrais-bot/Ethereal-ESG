@@ -652,7 +652,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     story.append(Paragraph(TR["sub_materiality"], styles["h2"]))
     story.append(Paragraph(esc(content.get("materiality", "")), styles["body"]))
-    _img("materiality", 11, 9.2, TR["cap_materiality"])
+    _img("materiality", 16.5, 9.5, TR["cap_materiality"])
 
     story.append(Spacer(1, 0.3 * cm))
     story.append(Paragraph(TR["sub_targets"], styles["h2"]))
@@ -685,10 +685,34 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         story.append(Paragraph(f"–  {esc(w)}", styles["bullet"]))
 
     if request.include_recommendations:
+        from content_generator import enriched_recommendations
         story.append(Spacer(1, 0.4 * cm))
         section_header(story, TR["pdf_s7"], pal["accent"], pal, styles, ts)
-        for i, rec in enumerate(scores.recommendations, 1):
-            story.append(Paragraph(f"<b>{i}.</b>  {esc(rec)}", styles["bullet"]))
+        pcol = {"env": pal["env"], "social": pal["social"], "gov": pal["gov"]}
+        rows = []
+        for i, rec in enumerate(enriched_recommendations(request, scores), 1):
+            c = pcol.get(rec["pillar"], pal["secondary"])
+            hexc = "#" + c.hexval()[2:]
+            num = Paragraph(f'<font color="{hexc}"><b>{i}</b></font>', ParagraphStyle(
+                "rn", fontSize=17, fontName=ts["font_bold"], alignment=TA_CENTER))
+            body = [
+                Paragraph(f'<b>{esc(rec["title"])}</b>  <font color="{hexc}" size="7">[{esc(rec["horizon"])}]</font>',
+                          ParagraphStyle("rt", fontSize=10.5, fontName=ts["font_bold"],
+                                         textColor=pal["primary"], spaceAfter=2, leading=13)),
+                Paragraph(esc(rec["detail"]), ParagraphStyle(
+                    "rd", fontSize=9, fontName=ts["font"], textColor=pal["text"], leading=12)),
+            ]
+            rows.append([num, body])
+        rec_table = Table(rows, colWidths=[1.2 * cm, 15.3 * cm])
+        rec_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E0E0E0")),
+            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('LEFTPADDING', (1, 0), (1, -1), 6),
+        ]))
+        story.append(rec_table)
 
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))

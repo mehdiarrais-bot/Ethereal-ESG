@@ -619,11 +619,12 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if "materiality" in chart_images:
         slide = content_slide(prs, blank_layout, theme, style,
                               t["materiality_title"], header_color)
-        add_image_from_bytes(slide, chart_images["materiality"],
-                             Inches(0.4), Inches(1.3), height=Inches(5.7))
         add_text(slide, t["materiality_desc"],
-                 Inches(7.7), Inches(2.0), Inches(5.3), Inches(4), font_size=14,
-                 color=theme["text_dark"], font=fb)
+                 Inches(0.6), Inches(1.25), Inches(12.1), Inches(0.7), font_size=13,
+                 color=theme["muted"], font=fb)
+        # Graphique large auto-contenu (numéros + légende), centré
+        add_image_from_bytes(slide, chart_images["materiality"],
+                             Inches(1.35), Inches(2.15), height=Inches(4.95))
 
     # ── SLIDE 5c: Objectifs & trajectoire ───────────────────────────────
     if "targets" in chart_images or "carbon_trajectory" in chart_images:
@@ -673,22 +674,38 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             add_text(slide, f"• {item}", px + Inches(0.2), Inches(1.95) + i * Inches(0.85),
                      pw - Inches(0.4), Inches(0.8), font_size=12, color=theme["text_dark"], font=fb)
 
-    # ── SLIDE 7: Recommandations ─────────────────────────────────────────
+    # ── SLIDE 7: Recommandations (cartes enrichies pleine largeur) ───────
     if request.include_recommendations:
+        from content_generator import enriched_recommendations
+        recs = enriched_recommendations(request, scores)[:5]
         slide = content_slide(prs, blank_layout, theme, style, t["recommendations"], header_color)
+        add_text(slide, t["rec_intro"], Inches(0.6), Inches(1.2), Inches(12.1), Inches(0.5),
+                 font_size=13, color=theme["muted"], font=fb)
 
-        rec_colors = [theme["env"], theme["social"], theme["gov"], theme["accent"],
-                      theme["env"], theme["social"]]
-        for i, rec in enumerate(scores.recommendations[:6]):
-            row = Inches(1.2) + (i % 3) * Inches(2.0)
-            col = Inches(0.3) + (i // 3) * Inches(6.5)
-            num_color = rec_colors[i]
-            kpi_card(slide, col, row, Inches(6.1), Inches(1.8), theme, style, num_color)
-            add_text(slide, str(i + 1), col + Inches(0.1), row + Inches(0.5),
-                     Inches(0.5), Inches(0.8), font_size=22, bold=True,
-                     color=num_color, align=PP_ALIGN.CENTER, font=ft)
-            add_text(slide, rec, col + Inches(0.7), row + Inches(0.25),
-                     Inches(5.2), Inches(1.3), font_size=11, color=theme["text_dark"], font=fb)
+        n = len(recs)
+        top0 = Inches(1.95)
+        row_h = min(Inches(1.02), (Inches(5.15) - (n - 1) * Inches(0.14)) / max(1, n))
+        panel_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
+        for i, rec in enumerate(recs):
+            pcolor = theme[rec["pillar"]]
+            y = top0 + i * (row_h + Inches(0.14))
+            # carte
+            add_shape(slide, panel_shape, Inches(0.6), y, Inches(12.1), row_h,
+                      fill=theme["card_bg"], line_color=pcolor, line_width_pt=1.25)
+            # pastille numéro colorée
+            add_shape(slide, OVAL, Inches(0.85), y + Inches(0.24), Inches(0.55), Inches(0.55), fill=pcolor)
+            add_text(slide, str(i + 1), Inches(0.85), y + Inches(0.30), Inches(0.55), Inches(0.45),
+                     font_size=18, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=ft)
+            # titre + détail
+            add_text(slide, rec["title"], Inches(1.65), y + Inches(0.12), Inches(8.7), Inches(0.45),
+                     font_size=15, bold=True, color=theme["text_dark"], font=ft)
+            add_text(slide, rec["detail"], Inches(1.65), y + Inches(0.55), Inches(9.2), Inches(0.5),
+                     font_size=11, color=theme["muted"], font=fb)
+            # chip horizon
+            chip_w = Inches(1.7)
+            add_shape(slide, ROUNDED_RECT, Inches(10.75), y + Inches(0.28), chip_w, Inches(0.46), fill=pcolor)
+            add_text(slide, rec["horizon"], Inches(10.75), y + Inches(0.35), chip_w, Inches(0.35),
+                     font_size=11, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=fb)
 
     # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
     slide = content_slide(prs, blank_layout, theme, style,

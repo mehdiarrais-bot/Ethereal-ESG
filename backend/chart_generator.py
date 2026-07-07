@@ -228,39 +228,69 @@ def _pillar_hex(colors, pillar):
 
 
 def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
-    """Matrice de double matérialité (impact vs. matérialité financière) — CSRD/ESRS."""
+    """Matrice de double matérialité — points numérotés + légende latérale.
+
+    Chaque enjeu porte un numéro dans sa bulle et est repris dans une légende
+    groupée par pilier : plus aucun chevauchement de labels, lisible pour un
+    comité de direction.
+    """
     colors = get_colors(theme, light_bg)
     LB = L(lang)
     bg = colors["bg"]
+    grid = colors["secondary"]
 
-    fig, ax = plt.subplots(figsize=(7.2, 6), facecolor=bg)
-    ax.set_facecolor(bg)
+    fig = plt.figure(figsize=(10.4, 6), facecolor=bg)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.55, 1], wspace=0.06)
+    ax = fig.add_subplot(gs[0]); ax.set_facecolor(bg)
+    lax = fig.add_subplot(gs[1]); lax.set_facecolor(bg); lax.axis("off")
 
-    # Quadrant de fond (zone "prioritaire" en haut à droite)
-    ax.axhspan(5, 10, xmin=0.5, xmax=1.0, color=colors["accent"], alpha=0.08, zorder=0)
-    ax.axhline(5, color=colors["secondary"], alpha=0.35, linewidth=1, linestyle='--')
-    ax.axvline(5, color=colors["secondary"], alpha=0.35, linewidth=1, linestyle='--')
+    # Zone prioritaire (haut-droite) + médianes
+    ax.axhspan(5, 10, xmin=0.5, xmax=1.0, color=colors["accent"], alpha=0.10, zorder=0)
+    ax.axhline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
+    ax.axvline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
+    ax.text(5.2, 9.5, LB["mat_priority"], ha="left", fontsize=9,
+            color=colors["accent"], fontweight="bold")
 
-    for t in topics:
+    pillar_order = ["env", "social", "gov"]
+    for i, t in enumerate(topics, 1):
         c = _pillar_hex(colors, t["pillar"])
-        ax.scatter(t["financial"], t["impact"], s=260, color=c, alpha=0.82,
-                   edgecolors=bg, linewidths=1.5, zorder=3)
-        ax.annotate(t["label"], (t["financial"], t["impact"]),
-                    xytext=(0, 11), textcoords="offset points",
-                    ha="center", fontsize=7.5, color=colors["text"], fontweight="bold")
+        ax.scatter(t["financial"], t["impact"], s=560, color=c, alpha=0.9,
+                   edgecolors=bg, linewidths=2, zorder=3)
+        ax.text(t["financial"], t["impact"], str(i), ha="center", va="center",
+                fontsize=10, fontweight="bold", color="white", zorder=4)
 
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 10)
-    ax.set_xlabel(LB["mat_x"], color=colors["text"], fontsize=10, fontweight="bold")
-    ax.set_ylabel(LB["mat_y"], color=colors["text"], fontsize=10, fontweight="bold")
-    ax.tick_params(colors=colors["secondary"], labelsize=8)
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10)
+    ax.set_xticks([0, 2, 4, 6, 8, 10]); ax.set_yticks([0, 2, 4, 6, 8, 10])
+    ax.set_xlabel(LB["mat_x"], color=colors["text"], fontsize=11, fontweight="bold")
+    ax.set_ylabel(LB["mat_y"], color=colors["text"], fontsize=11, fontweight="bold")
+    ax.tick_params(colors=grid, labelsize=8)
     for spine in ax.spines.values():
-        spine.set_color(colors["secondary"])
-        spine.set_alpha(0.4)
-    ax.text(7.5, 9.4, LB["mat_priority"], ha="center", fontsize=8.5,
-            color=colors["accent"], fontweight="bold", alpha=0.9)
+        spine.set_color(grid); spine.set_alpha(0.4)
 
-    plt.tight_layout()
+    # ── Légende groupée par pilier ─────────────────────────────────
+    pillar_names = {"env": (LB["chart_env"], colors["env"]),
+                    "social": (LB["chart_soc"], colors["social"]),
+                    "gov": (LB["chart_gov"], colors["gov"])}
+    y = 0.97
+    lax.set_xlim(0, 1); lax.set_ylim(0, 1)
+    for pil in pillar_order:
+        pil_topics = [(i, t) for i, t in enumerate(topics, 1) if t["pillar"] == pil]
+        if not pil_topics:
+            continue
+        pname, pcol = pillar_names[pil]
+        lax.add_patch(plt.Rectangle((0.0, y - 0.028), 0.045, 0.045, color=pcol, transform=lax.transAxes, clip_on=False))
+        lax.text(0.07, y, pname.upper(), fontsize=10.5, fontweight="bold",
+                 color=colors["text"], va="center", transform=lax.transAxes)
+        y -= 0.075
+        for i, t in pil_topics:
+            lax.scatter(0.03, y, s=250, color=pcol, transform=lax.transAxes, clip_on=False, zorder=3)
+            lax.text(0.03, y, str(i), ha="center", va="center", fontsize=8.5,
+                     fontweight="bold", color="white", transform=lax.transAxes, zorder=4)
+            lax.text(0.09, y, t["label"], fontsize=9.5, color=colors["text"],
+                     va="center", transform=lax.transAxes)
+            y -= 0.066
+        y -= 0.025
+
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
     plt.close()

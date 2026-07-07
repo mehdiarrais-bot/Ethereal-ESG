@@ -865,3 +865,74 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         "targets": targets_txt, "taxonomy": taxonomy, "climate_risk": climate_risk,
         "conclusion": conclusion,
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# RECOMMANDATIONS ENRICHIES (titre + bénéfice + pilier + horizon)
+# ══════════════════════════════════════════════════════════════════════════
+
+_REC_META = {
+    # clé : (pillar, horizon_fr, horizon_en, detail_fr, detail_en)
+    "renewable": ("env", "2027", "2027",
+        "Réduit les émissions Scope 2 et l'exposition aux prix de l'énergie ; contribue directement à la trajectoire SBTi.",
+        "Cuts Scope 2 emissions and energy-price exposure; directly supports the SBTi pathway."),
+    "scope3": ("env", "Court terme", "Short term",
+        "Comble le principal angle mort du bilan carbone ; exigé par l'ESRS E1 de la CSRD pour les émissions de la chaîne de valeur.",
+        "Closes the main carbon blind spot; required under CSRD's ESRS E1 for value-chain emissions."),
+    "parity": ("social", "2026", "2026",
+        "Renforce la diversité et la conformité (loi Rixain, transparence salariale UE) ; améliore l'attractivité employeur.",
+        "Strengthens diversity and compliance (EU pay transparency); improves employer attractiveness."),
+    "training": ("social", "Continu", "Ongoing",
+        "Développe les compétences et la fidélisation ; réduit le turnover et sécurise la transformation.",
+        "Builds skills and retention; lowers turnover and de-risks transformation."),
+    "audit": ("gov", "Annuel", "Annual",
+        "Apporte l'assurance d'un tiers désormais requise par la CSRD ; renforce la confiance des investisseurs.",
+        "Provides third-party assurance now required by CSRD; strengthens investor confidence."),
+    "committee": ("gov", "Court terme", "Short term",
+        "Ancre la supervision ESG au plus haut niveau de gouvernance et fiabilise le pilotage des objectifs.",
+        "Embeds ESG oversight at the highest governance level and secures target steering."),
+    "recycling": ("env", "2027", "2027",
+        "Fait progresser l'économie circulaire (ESRS E5) et réduit les coûts de traitement des déchets.",
+        "Advances the circular economy (ESRS E5) and cuts waste-disposal costs."),
+    "frameworks": ("gov", "Continu", "Ongoing",
+        "Renforce l'alignement sur les cadres de référence (ODD, TCFD) et la comparabilité du reporting.",
+        "Strengthens alignment with reference frameworks (SDGs, TCFD) and reporting comparability."),
+}
+
+_REC_TITLES = {
+    "renewable": ("Augmenter la part d'énergie renouvelable à 50%", "Raise the renewable-energy share to 50%"),
+    "scope3": ("Mesurer et reporter les émissions Scope 3", "Measure and report Scope 3 emissions"),
+    "parity": ("Définir des objectifs chiffrés de parité femme-homme", "Set quantified gender-balance targets"),
+    "training": ("Porter la formation à 20h/employé/an minimum", "Raise training to at least 20h/employee/year"),
+    "audit": ("Commander un audit ESG indépendant annuel", "Commission an annual independent ESG audit"),
+    "committee": ("Créer un comité de durabilité au conseil", "Create a Board-level sustainability committee"),
+    "recycling": ("Viser 60% de taux de recyclage des déchets", "Target a 60% waste-recycling rate"),
+    "frameworks": ("Aligner la stratégie ESG sur les ODD & la TCFD", "Align the ESG strategy with the SDGs & TCFD"),
+}
+
+
+def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
+    """Recommandations avec titre, bénéfice, pilier et horizon (FR/EN)."""
+    en = getattr(request, "language", "fr") == "en"
+    env, soc, gov = request.environmental, request.social, request.governance
+    keys = []
+    if env.renewable_energy_percent is None or env.renewable_energy_percent < 50: keys.append("renewable")
+    if env.scope3_emissions is None: keys.append("scope3")
+    if soc.female_employees_percent is None or soc.female_employees_percent < 40: keys.append("parity")
+    if soc.training_hours_per_employee is None or soc.training_hours_per_employee < 20: keys.append("training")
+    if not gov.esg_audit_conducted: keys.append("audit")
+    if not gov.sustainability_committee: keys.append("committee")
+    if env.waste_recycled_percent is None or env.waste_recycled_percent < 60: keys.append("recycling")
+    keys.append("frameworks")
+
+    out = []
+    for k in keys[:6]:
+        pillar, hfr, hen, dfr, den = _REC_META[k]
+        tfr, ten = _REC_TITLES[k]
+        out.append({
+            "title": ten if en else tfr,
+            "detail": den if en else dfr,
+            "pillar": pillar,
+            "horizon": hen if en else hfr,
+        })
+    return out
