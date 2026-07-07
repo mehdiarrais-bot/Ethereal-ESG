@@ -699,14 +699,21 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
+        dark = style["dark_slides"]
         slide = content_slide(prs, blank_layout, theme, style,
                               _sh["materiality"], header_color, kicker=t["materiality_title"])
-        add_text(slide, t["materiality_desc"],
-                 Inches(0.6), Inches(1.25), Inches(12.1), Inches(0.7), font_size=13,
-                 color=theme["muted"], font=fb)
-        # Graphique large auto-contenu (numéros + légende), centré
+        # Graphique (numéros + légende) à gauche
         add_image_from_bytes(slide, chart_images["materiality"],
-                             Inches(1.35), Inches(2.15), height=Inches(4.95))
+                             Inches(0.35), Inches(1.75), height=Inches(4.9))
+        # Carte « lecture métier » à droite
+        cx, cw = Inches(9.35), Inches(3.65)
+        add_shape(slide, ROUNDED_RECT, cx, Inches(2.0), cw, Inches(4.4),
+                  fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
+        add_shape(slide, RECT, cx, Inches(2.0), Inches(0.09), Inches(4.4), fill=theme["accent"])
+        add_text(slide, t["key_takeaway"], cx + Inches(0.3), Inches(2.2), cw - Inches(0.5), Inches(0.4),
+                 font_size=12, bold=True, color=theme["accent"] if not dark else theme["text_dark"], font=fb)
+        add_text(slide, t["materiality_desc"], cx + Inches(0.3), Inches(2.7), cw - Inches(0.55), Inches(3.5),
+                 font_size=13.5, color=theme["text_dark"], font=fb)
 
     # ── SLIDE 5c: Objectifs & trajectoire (hero : chiffre clé + viz) ────
     if "targets" in chart_images or "carbon_trajectory" in chart_images:
@@ -848,10 +855,19 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     frameworks = ["GRI Standards", "TCFD", "CSRD / DPEF", "SFDR", "ISO 14001 / 26000"]
     sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
-    add_bg_rect(slide, Inches(0.3), Inches(5.1), Inches(12.7), Inches(0.03), sep_color)
+    add_bg_rect(slide, Inches(0.3), Inches(5.0), Inches(12.73), Inches(0.03), sep_color)
     add_text(slide, t["frameworks_line"] + "  |  ".join(frameworks),
-             Inches(0.3), Inches(5.3), Inches(12.7), Inches(0.6),
+             Inches(0.3), Inches(5.15), Inches(12.7), Inches(0.5),
              font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=fb)
+    # Encart « Impact business »
+    _dark = style["dark_slides"]
+    add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(5.85), Inches(12.73), Inches(1.25),
+              fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
+    add_shape(slide, RECT, Inches(0.3), Inches(5.85), Inches(0.09), Inches(1.25), fill=theme["accent"])
+    add_text(slide, t["key_takeaway"], Inches(0.6), Inches(6.02), Inches(12), Inches(0.35),
+             font_size=12, bold=True, color=theme["accent"] if not _dark else theme["text_dark"], font=fb)
+    add_text(slide, t["odd_insight"], Inches(0.6), Inches(6.4), Inches(12.1), Inches(0.65),
+             font_size=13.5, color=theme["text_dark"], font=fb)
 
     # ── SLIDE 9: Conclusion — clôture éditoriale + engagements ──────────
     from content_generator import enriched_recommendations

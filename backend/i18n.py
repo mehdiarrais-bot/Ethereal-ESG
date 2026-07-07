@@ -67,6 +67,7 @@ LABELS = {
         "cover_tag_high": "Une démarche ESG de premier plan", "cover_tag_good": "Une performance ESG solide et engagée", "cover_tag_mid": "Une trajectoire ESG en construction", "cover_tag_low": "Une transformation ESG engagée",
         "odd_title": "Alignement — ODD & Cadres de Référence",
         "frameworks_line": "Cadres reportés : ",
+        "odd_insight": "L'alignement sur les ODD et les cadres GRI, TCFD et CSRD garantit la comparabilité du reporting et répond aux attentes des investisseurs et des régulateurs.",
         "conclusion_title": "Conclusion & Engagements",
         "esg_score_line": "Score ESG : {s}/100  —  Note : {r}",
         # PDF-only
@@ -189,6 +190,7 @@ LABELS = {
         "cover_tag_high": "A leading ESG performance", "cover_tag_good": "A solid, committed ESG performance", "cover_tag_mid": "An ESG trajectory in the making", "cover_tag_low": "An ESG transformation under way",
         "odd_title": "Alignment — SDGs & Reporting Frameworks",
         "frameworks_line": "Frameworks reported: ",
+        "odd_insight": "Alignment with the SDGs and the GRI, TCFD and CSRD frameworks ensures reporting comparability and meets investor and regulator expectations.",
         "conclusion_title": "Conclusion & Commitments",
         "esg_score_line": "ESG Score: {s}/100  —  Rating: {r}",
         # PDF-only
