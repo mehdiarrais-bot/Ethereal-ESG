@@ -155,6 +155,10 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
                 color=colors["text"], fontweight='bold', fontsize=11)
 
     ax.set_xlim(0, 110)
+    ax.set_ylim(-0.6, len(categories) - 0.4)
+    # Zones de performance (storytelling : faible / excellence)
+    ax.axvspan(0, 50, color="#E74C3C", alpha=0.05, zorder=0)
+    ax.axvspan(75, 110, color=colors["env"], alpha=0.07, zorder=0)
     ax.set_xlabel(LB['chart_score_axis'], color=colors["text"], fontsize=10)
     ax.tick_params(colors=colors["text"])
     ax.spines[['top', 'right', 'left']].set_visible(False)
@@ -164,8 +168,14 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
         label.set_color(colors["text"])
         label.set_fontsize(11)
 
-    ax.axvline(x=50, color=colors["secondary"], linestyle='--', alpha=0.4, linewidth=1)
-    ax.axvline(x=75, color=colors["accent"], linestyle='--', alpha=0.4, linewidth=1)
+    # Seuils annotés (preuve sociale : moyenne / excellence)
+    ytop = len(categories) - 0.35
+    ax.axvline(x=50, color=colors["secondary"], linestyle='--', alpha=0.55, linewidth=1)
+    ax.text(50, ytop, LB["chart_avg"], color=colors["secondary"], fontsize=8,
+            ha="center", va="bottom", fontweight="bold")
+    ax.axvline(x=75, color=colors["env"], linestyle='--', alpha=0.6, linewidth=1)
+    ax.text(75, ytop, LB["chart_leaders"], color=colors["env"], fontsize=8,
+            ha="center", va="bottom", fontweight="bold")
 
     plt.tight_layout()
     buf = io.BytesIO()

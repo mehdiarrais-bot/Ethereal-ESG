@@ -1024,3 +1024,32 @@ def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
     return (f"{name} affiche {qual} ({scores.total_esg_score:.0f}/100, {scores.rating}), "
             f"porté par {lab[best[0]]} ({best[1]:.0f}/100) ; "
             f"{lab[worst[0]]} ({worst[1]:.0f}/100) concentre le potentiel de progression.")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# HEADLINES « INFORMATION SCENT » — le titre porte déjà la conclusion
+# ══════════════════════════════════════════════════════════════════════════
+
+def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
+    """Sous-titre-conclusion par pilier (rang + niveau), FR/EN."""
+    en = getattr(request, "language", "fr") == "en"
+    pil = [("env", scores.environmental_score), ("social", scores.social_score),
+           ("gov", scores.governance_score)]
+    best = max(pil, key=lambda x: x[1])[0]
+    worst = min(pil, key=lambda x: x[1])[0]
+    same = len({p[1] for p in pil}) == 1
+
+    def phrase(key, sc):
+        if not same and key == best:
+            return "The cornerstone of the ESG profile" if en else "Le point fort du profil ESG"
+        if not same and key == worst:
+            return "The main lever for ESG progress" if en else "Le principal levier de progression ESG"
+        if sc >= 75:
+            return "A leading performance" if en else "Une performance de premier plan"
+        if sc >= 60:
+            return "A solid performance" if en else "Une performance solide"
+        if sc >= 45:
+            return "A trajectory to consolidate" if en else "Une trajectoire à consolider"
+        return "A priority area for action" if en else "Un chantier prioritaire"
+
+    return {k: phrase(k, sc) for k, sc in pil}

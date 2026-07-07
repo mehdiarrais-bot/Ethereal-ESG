@@ -425,8 +425,8 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
 
     add_text(slide, title, Inches(0.35), Inches(0.45), Inches(3.9), Inches(1.3),
              font_size=27, bold=True, color=white, font=ft)
-    add_text(slide, subtitle, Inches(0.37), Inches(1.55), Inches(3.8), Inches(0.6),
-             font_size=13, color=white, font=fb)
+    add_text(slide, subtitle, Inches(0.37), Inches(1.5), Inches(3.85), Inches(1.0),
+             font_size=15, bold=True, color=theme["accent"], font=fb)
 
     # Anneau de score en bas du héros
     try:
@@ -500,6 +500,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import pillar_insights, score_verdict
     _insights = pillar_insights(request, scores)
     _verdict = score_verdict(request, scores)
+    from content_generator import pillar_headline
+    _headlines = pillar_headline(request, scores)
     blank_layout = prs.slide_layouts[6]
 
     # ── SLIDE 1: Cover ──────────────────────────────────────────────────
@@ -628,7 +630,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if env.waste_generated_tonnes is not None:
         env_kpis.append(("recycle", f"{env.waste_generated_tonnes:,.0f} t", t["kpi"]["waste"]))
     pillar_infographic(prs, blank_layout, theme, style, "env",
-                       t["pillar_env"], t["pillar_env_sub"],
+                       t["pillar_env"], _headlines["env"],
                        scores.environmental_score, env_kpis, t, _insights["env"])
 
     # ── SLIDE 4: Social (infographie) ────────────────────────────────────
@@ -651,7 +653,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if soc.community_investment_eur is not None:
         soc_kpis.append(("heart", f"{soc.community_investment_eur:,.0f} €", t["kpi"]["community"]))
     pillar_infographic(prs, blank_layout, theme, style, "social",
-                       t["pillar_soc"], t["pillar_soc_sub"],
+                       t["pillar_soc"], _headlines["social"],
                        scores.social_score, soc_kpis, t, _insights["social"])
 
     # ── SLIDE 5: Gouvernance (infographie) ───────────────────────────────
@@ -676,7 +678,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if gov.corruption_cases is not None:
         gov_kpis.append(("scale", f"{gov.corruption_cases}", t["kpi"]["corruption"]))
     pillar_infographic(prs, blank_layout, theme, style, "gov",
-                       t["pillar_gov"], t["pillar_gov_sub"],
+                       t["pillar_gov"], _headlines["gov"],
                        scores.governance_score, gov_kpis, t, _insights["gov"])
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
