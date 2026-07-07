@@ -199,6 +199,70 @@ PDF_STYLES = {
 }
 
 
+def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
+    """Couverture pleine page dessinée au canvas (éditoriale, full-bleed)."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    from reportlab.lib.utils import ImageReader
+    fb, fi, f = ts["font_bold"], ts["font_italic"], ts["font"]
+    band = ("high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60
+            else "mid" if scores.total_esg_score >= 45 else "low")
+    tagline = pdf_txt(TR["cover_tag_" + band])
+    name = pdf_txt(request.company.name.upper())
+    meta = pdf_txt(f"{TR['exercise']} {request.company.reporting_year}   |   "
+                   f"{request.company.sector}   |   {request.company.country}")
+    kicker = pdf_txt(type_label.upper())
+    light = colors.HexColor("#C6CFDE")
+
+    def draw(canvas, doc):
+        w, h = A4
+        canvas.saveState()
+        canvas.setFillColor(pal["primary"]); canvas.rect(0, 0, w, h, fill=1, stroke=0)
+        canvas.setFillColor(pal["accent"]); canvas.rect(0, 0, 0.22 * cm, h, fill=1, stroke=0)
+        M = 2.4 * cm
+        canvas.setFillColor(pal["accent"]); canvas.setFont(fb, 13)
+        canvas.drawString(M, h - 3.2 * cm, kicker)
+        # Nom ajusté à la largeur
+        size, maxw = 42, w - M - 2 * cm
+        while size > 20 and stringWidth(name, fb, size) > maxw:
+            size -= 1
+        canvas.setFillColor(colors.white); canvas.setFont(fb, size)
+        canvas.drawString(M, h - 5.5 * cm, name)
+        canvas.setFillColor(pal["accent"]); canvas.rect(M, h - 6.4 * cm, 3 * cm, 4, fill=1, stroke=0)
+        canvas.setFillColor(light); canvas.setFont(fi, 15)
+        canvas.drawString(M, h - 7.35 * cm, tagline)
+        # Score mis en scène (bas gauche)
+        sc = f"{scores.total_esg_score:.0f}"
+        canvas.setFillColor(pal["accent"]); canvas.setFont(fb, 76)
+        canvas.drawString(M, 4.2 * cm, sc)
+        canvas.setFont(f, 16); canvas.setFillColor(light)
+        canvas.drawString(M + stringWidth(sc, fb, 76) + 6, 4.45 * cm, "/100")
+        canvas.setFont(f, 10.5)
+        canvas.drawString(M, 3.15 * cm, meta)
+        if request.company.presenter_name:
+            pl = f"{TR['presented_by']} {request.company.presenter_name}"
+            if request.company.presenter_title:
+                pl += f" - {request.company.presenter_title}"
+            canvas.setFont(fi, 10.5); canvas.drawString(M, 2.5 * cm, pdf_txt(pl))
+        # Badge note (bas droite)
+        bw, bh = 3.2 * cm, 1.5 * cm
+        bx, by = w - 2 * cm - bw, 3.55 * cm
+        canvas.setFillColor(pal["accent"]); canvas.roundRect(bx, by, bw, bh, 8, fill=1, stroke=0)
+        canvas.setFillColor(pal["primary"]); canvas.setFont(fb, 36)
+        rt = pdf_txt(scores.rating)
+        canvas.drawString(bx + (bw - stringWidth(rt, fb, 36)) / 2, by + bh / 2 - 13, rt)
+        # Logo (haut droite)
+        if logo_bytes:
+            try:
+                ir = ImageReader(io.BytesIO(logo_bytes))
+                iw, ih = ir.getSize(); ratio = iw / max(1, ih)
+                lh = 1.7 * cm; lw = min(5 * cm, lh * ratio)
+                canvas.drawImage(ir, w - 2 * cm - lw, h - 2.2 * cm - lh, lw, lh, mask='auto')
+            except Exception:
+                pass
+        canvas.restoreState()
+    return draw
+
+
 def page_decorator(pal, ts, company_name: str, minimal: bool = False, footer_label: str = "Rapport ESG"):
     """En-tête et pied de page dessinés sur chaque page."""
     font = ts["font"]
@@ -400,103 +464,14 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     type_label = type_labels.get(request.report_type.value, TR["rep_default"])
     meta_line = esc(f"{TR['exercise']} {request.company.reporting_year}  •  {TR['sector']} : {request.company.sector}  •  {request.company.country}")
 
-    if ts["cover"] == "luxe":
-        # Dark Premium: full dark block, centered serif, gold accents
-        cover_cells = [
-            [Paragraph(type_label.upper(), ParagraphStyle(
-                "ck", fontSize=11, fontName=ts["font"], textColor=pal["accent"],
-                alignment=TA_CENTER, spaceAfter=14))],
-            [Paragraph(esc(request.company.name.upper()), ParagraphStyle(
-                "ct", fontSize=32, fontName=ts["font_bold"], textColor=colors.white,
-                alignment=TA_CENTER, leading=38, spaceAfter=10))],
-            [Paragraph(meta_line, ParagraphStyle(
-                "cm", fontSize=10, fontName=ts["font_italic"],
-                textColor=colors.HexColor("#8B949E"), alignment=TA_CENTER))],
-            [Paragraph(f"—  {scores.rating}  —", ParagraphStyle(
-                "cr", fontSize=26, fontName=ts["font_bold"], textColor=pal["accent"],
-                alignment=TA_CENTER, spaceBefore=16))],
-        ]
-        cover_t = Table(cover_cells, colWidths=[17 * cm])
-        cover_t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
-            ('BOX', (0, 0), (-1, -1), 1, pal["accent"]),
-            ('TOPPADDING', (0, 0), (-1, 0), 36),
-            ('BOTTOMPADDING', (0, -1), (-1, -1), 36),
-            ('LEFTPADDING', (0, 0), (-1, -1), 20),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 20),
-        ]))
-        story.append(Spacer(1, 2 * cm))
-        story.append(cover_t)
-        story.append(Spacer(1, 0.8 * cm))
-    elif ts["cover"] == "banner":
-        # Green Nature: big colored banner + light band
-        banner = Table([[Paragraph(esc(request.company.name), ParagraphStyle(
-            "ct", fontSize=30, fontName=ts["font_bold"], textColor=colors.white,
-            leading=36))]], colWidths=[17 * cm])
-        banner.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
-            ('TOPPADDING', (0, 0), (-1, -1), 28),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 28),
-            ('LEFTPADDING', (0, 0), (-1, -1), 18),
-        ]))
-        sub = Table([[Paragraph(esc(type_label) + " — " + meta_line, ParagraphStyle(
-            "cs", fontSize=10, fontName=ts["font"], textColor=pal["primary"]))]],
-            colWidths=[17 * cm])
-        sub.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 18),
-        ]))
-        story.append(Spacer(1, 1.5 * cm))
-        story.append(banner)
-        story.append(sub)
-        story.append(Spacer(1, 0.8 * cm))
-    elif ts["cover"] == "minimal":
-        # Minimal: whitespace, small kicker, huge title, thin rule
-        story.append(Spacer(1, 3 * cm))
-        story.append(Paragraph(type_label.upper(), ParagraphStyle(
-            "ck", fontSize=10, fontName=ts["font_bold"],
-            textColor=colors.HexColor("#9E9E9E"), spaceAfter=10)))
-        story.append(Paragraph(esc(request.company.name), styles["title"]))
-        story.append(Spacer(1, 0.2 * cm))
-        story.append(HRFlowable(width="100%", thickness=0.7, color=colors.HexColor("#BDBDBD")))
-        story.append(Spacer(1, 0.3 * cm))
-        story.append(Paragraph(meta_line, styles["body"]))
-        story.append(Spacer(1, 1 * cm))
-    else:
-        # Corporate: classic left-aligned with thick accent rule
-        story.append(Spacer(1, 2 * cm))
-        story.append(Paragraph(esc(request.company.name.upper()), styles["title"]))
-        story.append(HRFlowable(width="100%", thickness=4, color=pal["accent"]))
-        story.append(Spacer(1, 0.3 * cm))
-        story.append(Paragraph(type_label, styles["h1"]))
-        story.append(Paragraph(meta_line, styles["body"]))
-        story.append(Spacer(1, 0.5 * cm))
+    # Couverture pleine page (dessinée au canvas via onFirstPage) → contenu page 2
+    story.append(PageBreak())
+    add_heading_ez = None  # (placeholder, no-op)
 
-    # Logo entreprise
-    if logo_bytes:
-        try:
-            logo_img = Image(io.BytesIO(logo_bytes))
-            ratio = logo_img.imageWidth / max(1, logo_img.imageHeight)
-            logo_img.drawHeight = 2 * cm
-            logo_img.drawWidth = min(8 * cm, 2 * cm * ratio)
-            logo_img.hAlign = 'CENTER' if ts["cover"] == "luxe" else 'LEFT'
-            story.insert(1, logo_img)
-            story.insert(2, Spacer(1, 0.4 * cm))
-        except Exception:
-            pass
-
-    # Présentateur
-    if request.company.presenter_name:
-        pres_line = f"{TR['presented_by']} {request.company.presenter_name}"
-        if request.company.presenter_title:
-            pres_line += f" — {request.company.presenter_title}"
-        story.append(Paragraph(esc(pres_line), ParagraphStyle(
-            "pres", fontSize=11, fontName=ts["font_italic"],
-            textColor=pal["secondary"],
-            alignment=TA_CENTER if ts["cover"] == "luxe" else TA_LEFT)))
-        story.append(Spacer(1, 0.4 * cm))
+    # ── Page 2 : « ESG en un coup d'œil » ─────────────────────────────────
+    story.append(Paragraph(esc(type_label), styles["h1"]))
+    story.append(HRFlowable(width="100%", thickness=2, color=pal["accent"]))
+    story.append(Spacer(1, 0.35 * cm))
 
     # Illustration de couverture (générée localement)
     if "cover_art" in chart_images:
@@ -795,6 +770,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     decor = page_decorator(pal, ts, request.company.name,
                            minimal=(ts["header"] == "minimal"),
                            footer_label=TR["rep_default"])
-    doc.build(story, onFirstPage=decor, onLaterPages=decor)
+    cover_draw = pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes)
+    doc.build(story, onFirstPage=cover_draw, onLaterPages=decor)
     buf.seek(0)
     return buf.read()
