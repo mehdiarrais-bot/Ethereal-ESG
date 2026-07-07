@@ -747,28 +747,31 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_image_from_bytes(slide, chart_images["taxonomy"],
                              Inches(6.3), Inches(2.5), width=Inches(6.7))
 
-    # ── SLIDE 6: Forces & Faiblesses ────────────────────────────────────
+    # ── SLIDE 6: Analyse Stratégique — Solide vs. À progresser ──────────
     slide = content_slide(prs, blank_layout, theme, style, t["strategic"], header_color)
-
+    dark = style["dark_slides"]
     red = RGBColor(0xE7, 0x4C, 0x3C)
-    panel_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
+    panel_shape = ROUNDED_RECT if style["card"] != "flat" else RECT
     for (px, pw, ptitle, pcolor, items) in [
-        (Inches(0.3), Inches(6.0), t["strengths_check"], theme["env"], scores.strengths),
-        (Inches(6.9), Inches(6.1), t["weaknesses_warn"], red, scores.weaknesses),
+        (Inches(0.3), Inches(6.2), t["strengths"], theme["env"], scores.strengths),
+        (Inches(6.83), Inches(6.2), t["weaknesses"], red, scores.weaknesses),
     ]:
-        if style["card"] == "outline":
-            add_shape(slide, RECT, px, Inches(1.2), pw, Inches(5.8), fill=theme["card_bg"],
-                      line_color=RGBColor(0xE0, 0xE0, 0xE0), line_width_pt=1.0)
-            add_text(slide, "  " + ptitle, px, Inches(1.3), pw, Inches(0.5),
-                     font_size=14, bold=True, color=pcolor, font=ft)
-        else:
-            add_shape(slide, panel_shape, px, Inches(1.2), pw, Inches(5.8), fill=theme["card_bg"])
-            add_shape(slide, panel_shape, px, Inches(1.2), pw, Inches(0.55), fill=pcolor)
-            add_text(slide, "  " + ptitle, px, Inches(1.2), pw, Inches(0.55),
-                     font_size=14, bold=True, color=theme["text_light"], font=ft)
-        for i, item in enumerate(items):
-            add_text(slide, f"• {item}", px + Inches(0.2), Inches(1.95) + i * Inches(0.85),
-                     pw - Inches(0.4), Inches(0.8), font_size=12, color=theme["text_dark"], font=fb)
+        # Panneau
+        add_shape(slide, panel_shape, px, Inches(1.25), pw, Inches(5.75), fill=theme["card_bg"],
+                  line_color=pcolor, line_width_pt=1.0)
+        # En-tête chiffré : gros compte + libellé
+        add_text(slide, f"{len(items)}", px + Inches(0.3), Inches(1.45), Inches(1.3), Inches(1.0),
+                 font_size=46, bold=True, color=pcolor, font=ft)
+        add_text(slide, ptitle.upper(), px + Inches(1.45), Inches(1.72), pw - Inches(1.6), Inches(0.7),
+                 font_size=15, bold=True, color=theme["text_dark"], font=fb)
+        add_bg_rect(slide, px + Inches(0.3), Inches(2.65), pw - Inches(0.6), Inches(0.02),
+                    pcolor if not dark else theme["muted"])
+        # Items : marqueur coloré + texte
+        for i, item in enumerate(items[:5]):
+            iy = Inches(2.95) + i * Inches(0.78)
+            add_shape(slide, OVAL, px + Inches(0.32), iy + Inches(0.08), Inches(0.16), Inches(0.16), fill=pcolor)
+            add_text(slide, item, px + Inches(0.68), iy, pw - Inches(0.95), Inches(0.72),
+                     font_size=12.5, color=theme["text_dark"], font=fb)
 
     # ── SLIDE 7: Recommandations (cartes enrichies pleine largeur) ───────
     if request.include_recommendations:
