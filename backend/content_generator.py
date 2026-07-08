@@ -1032,15 +1032,80 @@ def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
 # ══════════════════════════════════════════════════════════════════════════
 
 def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
-    """Sous-titre-conclusion par pilier (rang + niveau), FR/EN."""
+    """Sous-titre-conclusion par pilier, ancré sur une donnée concrète. FR/EN."""
     en = getattr(request, "language", "fr") == "en"
+    env, soc, gov = request.environmental, request.social, request.governance
     pil = [("env", scores.environmental_score), ("social", scores.social_score),
            ("gov", scores.governance_score)]
     best = max(pil, key=lambda x: x[1])[0]
     worst = min(pil, key=lambda x: x[1])[0]
     same = len({p[1] for p in pil}) == 1
 
+    def num(v):  # entier sans décimale
+        return f"{v:.0f}"
+
+    def env_hook(sc):
+        r = env.renewable_energy_percent
+        w = env.waste_recycled_percent
+        full = env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None
+        if r is not None and r >= 50:
+            return (f"Renewable energy ({num(r)}%) drives environmental performance" if en
+                    else f"L'énergie renouvelable ({num(r)} %) tire la performance environnementale")
+        if full:
+            return ("A full carbon footprint underpins the climate trajectory" if en
+                    else "Un bilan carbone complet, socle de la trajectoire climat")
+        if w is not None and w >= 60:
+            return (f"Circular economy ({num(w)}% waste recycled) anchors the pillar" if en
+                    else f"L'économie circulaire ({num(w)} % de déchets recyclés) porte le pilier")
+        if env.scope3_emissions is None:
+            return ("Measuring Scope 3 is the environmental priority" if en
+                    else "Mesurer le Scope 3, priorité du pilier environnemental")
+        if r is not None and r < 40:
+            return (f"Energy mix ({num(r)}% renewable) is the lever to activate" if en
+                    else f"Le mix énergétique ({num(r)} % renouvelable), levier à activer")
+        return None
+
+    def soc_hook(sc):
+        g = soc.female_employees_percent
+        tr = soc.training_hours_per_employee
+        af = soc.accident_frequency_rate
+        if g is not None and g >= 45:
+            return (f"Near gender parity ({num(g)}% women) anchors the social pillar" if en
+                    else f"Une quasi-parité femmes-hommes ({num(g)} %) ancre le pilier social")
+        if tr is not None and tr >= 25:
+            return (f"Training effort ({num(tr)}h/employee) sets the social pillar apart" if en
+                    else f"L'effort de formation ({num(tr)} h/salarié) distingue le social")
+        if af is not None and af > 5:
+            return (f"Workplace safety (rate {af:.1f}) is the priority to address" if en
+                    else f"La sécurité au travail (TF {af:.1f}), priorité à traiter")
+        if g is not None and g < 40:
+            return (f"Gender balance ({num(g)}% women) is the lever to activate" if en
+                    else f"La parité femmes-hommes ({num(g)} %), levier à activer")
+        return None
+
+    def gov_hook(sc):
+        bi = gov.independent_board_percent
+        if gov.esg_audit_conducted and gov.sustainability_committee:
+            return ("ESG audit and sustainability committee structure governance" if en
+                    else "Audit ESG et comité de durabilité structurent la gouvernance")
+        if bi is not None and bi >= 50:
+            return (f"An independent board ({num(bi)}%) strengthens governance" if en
+                    else f"Un conseil indépendant ({num(bi)} %) renforce la gouvernance")
+        if not gov.esg_audit_conducted:
+            return ("Independent ESG assurance is the governance priority" if en
+                    else "L'assurance ESG indépendante, priorité de la gouvernance")
+        if not gov.sustainability_committee:
+            return ("A board-level sustainability committee is the missing link" if en
+                    else "Un comité de durabilité au conseil, le maillon manquant")
+        return None
+
+    hooks = {"env": env_hook, "social": soc_hook, "gov": gov_hook}
+
     def phrase(key, sc):
+        h = hooks[key](sc)
+        if h:
+            return h
+        # Repli générique (rang + niveau) si aucune donnée saillante
         if not same and key == best:
             return "The cornerstone of the ESG profile" if en else "Le point fort du profil ESG"
         if not same and key == worst:
