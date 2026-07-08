@@ -184,6 +184,19 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
     TR = L(request.language)
 
+    from content_generator import pillar_headline, section_headlines
+    _hl = pillar_headline(request, scores)
+    _shl = section_headlines(request, scores)
+
+    def add_conclusion(text, color_hex):
+        """Sous-titre en gras = la conclusion de la section (information scent)."""
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        run.bold = True
+        run.font.size = Pt(12.5)
+        run.font.color.rgb = hex_to_rgb(color_hex)
+        p.paragraph_format.space_after = Pt(6)
+
     doc = Document()
     normal = doc.styles['Normal']
     normal.font.name = style["font"]
@@ -317,6 +330,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── 2. Environnement ──────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s2"], 1, colors["env"], style=style)
     add_hr(doc, colors["env"])
+    add_conclusion(_hl["env"], colors["env"])
     add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"])
 
     env_text = content.get("environmental", "Analyse des données environnementales.")
@@ -337,6 +351,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── 3. Social ──────────────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s3"], 1, colors["social"], style=style)
     add_hr(doc, colors["social"])
+    add_conclusion(_hl["social"], colors["social"])
     add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"])
 
     soc_text = content.get("social", "Analyse des données sociales.")
@@ -355,6 +370,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── 4. Gouvernance ────────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s4"], 1, colors["gov"], style=style)
     add_hr(doc, colors["gov"])
+    add_conclusion(_hl["gov"], colors["gov"])
     add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"])
 
     gov_text = content.get("governance", "Analyse des données de gouvernance.")
@@ -415,6 +431,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── 6. Analyse Stratégique ────────────────────────────────────────────
     add_heading(doc, TR["pdf_s6"], 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
+    add_conclusion(_shl["strategic"], colors["accent"])
 
     add_heading(doc, TR["strengths"], 2, colors["env"], style=style)
     add_bullet_list(doc, scores.strengths, "✅", colors["env"])
