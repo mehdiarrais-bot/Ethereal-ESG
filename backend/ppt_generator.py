@@ -1086,6 +1086,15 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
              Inches(0.65), Inches(7.0), Inches(11), Inches(0.4),
              font_size=9, italic=True, color=sub_color, font=fb)
 
+    # ── Foliotage discret (toutes les slides sauf la couverture) ─────────
+    _n_slides = len(prs.slides._sldIdLst)
+    for _idx, _sl in enumerate(prs.slides):
+        if _idx == 0:
+            continue
+        add_text(_sl, f"{request.company.name}   |   {_idx + 1} / {_n_slides}",
+                 Inches(9.6), Inches(7.15), Inches(3.5), Inches(0.3),
+                 font_size=8, color=theme["muted"], align=PP_ALIGN.RIGHT, font=fb)
+
     buf = io.BytesIO()
     prs.save(buf)
     buf.seek(0)
