@@ -1184,3 +1184,78 @@ def roadmap_12m(request: ESGRequest, scores: ESGScores) -> list:
         p, qw = _ROADMAP_PHASE.get(rec["key"], (2, False))
         phases[p]["actions"].append({"title": rec["title"], "pillar": rec["pillar"], "quick_win": qw})
     return phases
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# RISQUES & OPPORTUNITÉS MAJEURS (dérivés du profil, pas génériques)
+# ══════════════════════════════════════════════════════════════════════════
+
+def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
+    """Risques et opportunités ESG spécifiques à l'entreprise (FR/EN)."""
+    en = getattr(request, "language", "fr") == "en"
+    env, soc, gov = request.environmental, request.social, request.governance
+    tx = request.taxonomy
+    rev = request.company.revenue_eur
+    from esg_advanced import sector_benchmark
+    bm = sector_benchmark(request, scores)
+
+    def T(fr, tag_fr, en_, tag_en):
+        return {"text": en_ if en else fr, "tag": tag_en if en else tag_fr}
+
+    risks = []
+    if env.scope3_emissions is None:
+        risks.append(T("Scope 3 non mesuré : non-conformité CSRD/ESRS E1 à venir", "Réglementaire",
+                       "Scope 3 not measured: upcoming CSRD/ESRS E1 non-compliance", "Regulatory"))
+    if not gov.esg_audit_conducted:
+        risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
+                       "Unaudited reporting: limited credibility with investors", "Assurance"))
+    ci = (env.co2_emissions_tonnes / rev * 1e6) if (env.co2_emissions_tonnes and rev) else None
+    if ci is not None and ci > 100:
+        risks.append(T("Intensité carbone élevée : marge exposée à la tarification du carbone", "Transition",
+                       "High carbon intensity: margin exposed to carbon pricing", "Transition"))
+    elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
+        risks.append(T("Dépendance énergie fossile : exposition à la hausse des prix", "Transition",
+                       "Fossil-energy dependence: exposure to rising prices", "Transition"))
+    if soc.female_employees_percent is not None and soc.female_employees_percent < 40:
+        risks.append(T("Parité sous la cible : risque réglementaire et d'attractivité", "Réglementaire",
+                       "Gender balance below target: regulatory & attractiveness risk", "Regulatory"))
+    if gov.data_breaches is not None and gov.data_breaches > 0:
+        risks.append(T("Incident cyber déclaré : risque réputationnel et RGPD", "Réputation",
+                       "Reported cyber incident: reputational & GDPR risk", "Reputation"))
+    if soc.accident_frequency_rate is not None and soc.accident_frequency_rate > 5:
+        risks.append(T("Sinistralité au-dessus des standards : risque humain et social", "Opérationnel",
+                       "Accident rate above standards: human & social risk", "Operational"))
+    if gov.ethics_violations is not None and gov.ethics_violations > 0:
+        risks.append(T("Manquements éthiques enregistrés : risque juridique", "Éthique",
+                       "Recorded ethics breaches: legal risk", "Ethics"))
+    if len(risks) < 3:
+        risks.append(T("Exigences CSRD croissantes : effort de reporting à anticiper", "Réglementaire",
+                       "Rising CSRD requirements: reporting effort to anticipate", "Regulatory"))
+
+    opps = []
+    if scores.governance_score >= 70 or (gov.esg_audit_conducted and gov.sustainability_committee):
+        opps.append(T("Gouvernance solide : accès facilité aux financements ESG (green bonds, prêts indexés)", "Financement",
+                      "Strong governance: easier access to ESG financing (green bonds, linked loans)", "Financing"))
+    if tx and any(v is not None for v in (tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)):
+        opps.append(T("Activités alignées Taxonomie : éligibilité aux financements verts", "Financement",
+                      "Taxonomy-aligned activities: eligible for green financing", "Financing"))
+    if env.renewable_energy_percent is not None and env.renewable_energy_percent >= 40:
+        opps.append(T("Mix renouvelable engagé : réduction des coûts énergétiques à terme", "Coûts",
+                      "Renewable mix under way: lower energy costs over time", "Costs"))
+    if soc.training_hours_per_employee and soc.training_hours_per_employee >= 20 or scores.social_score >= 65:
+        opps.append(T("Politique sociale : marque employeur et rétention des talents renforcées", "Talents",
+                      "Social policy: stronger employer brand and talent retention", "Talent"))
+    if env.waste_recycled_percent is not None and env.waste_recycled_percent >= 60:
+        opps.append(T("Économie circulaire : baisse des coûts matières et déchets", "Coûts",
+                      "Circular economy: lower materials and waste costs", "Costs"))
+    if bm["deltas"]["global"] >= 2:
+        opps.append(T("Surperformance sectorielle : différenciation commerciale et appels d'offres", "Marché",
+                      "Sector outperformance: commercial differentiation and tenders", "Market"))
+    if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
+        opps.append(T("Bilan carbone complet : avance sur la conformité CSRD", "Conformité",
+                      "Full carbon footprint: ahead on CSRD compliance", "Compliance"))
+    if len(opps) < 3:
+        opps.append(T("Structuration ESG précoce : anticipation des exigences réglementaires", "Marché",
+                      "Early ESG structuring: anticipating regulatory requirements", "Market"))
+
+    return {"risks": risks[:4], "opportunities": opps[:4]}

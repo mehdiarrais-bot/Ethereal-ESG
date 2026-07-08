@@ -837,6 +837,41 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             add_text(slide, item, px + Inches(0.68), iy, pw - Inches(0.95), Inches(0.72),
                      font_size=12.5, color=theme["text_dark"], font=fb)
 
+    # ── SLIDE 6b: Risques & Opportunités majeurs (2 colonnes) ────────────
+    from content_generator import risks_opportunities
+    _ro = risks_opportunities(request, scores)
+    if _ro["risks"] or _ro["opportunities"]:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              t["ro_title"], header_color, kicker=t["ro_kicker"])
+        _dk = style["dark_slides"]
+        red = RGBColor(0xE7, 0x4C, 0x3C)
+        panel_shape = ROUNDED_RECT if style["card"] != "flat" else RECT
+        for (px, pw, phead, pcolor, sign, items) in [
+            (Inches(0.3), Inches(6.2), t["risks_head"], red, "!", _ro["risks"]),
+            (Inches(6.83), Inches(6.2), t["opps_head"], theme["env"], "+", _ro["opportunities"]),
+        ]:
+            add_shape(slide, panel_shape, px, Inches(1.25), pw, Inches(5.75), fill=theme["card_bg"],
+                      line_color=pcolor, line_width_pt=1.0)
+            # bandeau d'en-tête
+            add_shape(slide, OVAL, px + Inches(0.3), Inches(1.5), Inches(0.62), Inches(0.62), fill=pcolor)
+            add_text(slide, sign, px + Inches(0.3), Inches(1.54), Inches(0.62), Inches(0.55),
+                     font_size=26, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=ft)
+            add_text(slide, phead.upper(), px + Inches(1.05), Inches(1.62), pw - Inches(1.2), Inches(0.6),
+                     font_size=16, bold=True, color=theme["text_dark"], font=fb)
+            add_bg_rect(slide, px + Inches(0.3), Inches(2.4), pw - Inches(0.6), Inches(0.02),
+                        pcolor if not _dk else theme["muted"])
+            for i, item in enumerate(items[:4]):
+                iy = Inches(2.7) + i * Inches(1.05)
+                # tag catégorie
+                tag = item["tag"]
+                tag_w = Inches(0.28) + Inches(0.11) * len(tag)
+                add_shape(slide, ROUNDED_RECT, px + Inches(0.3), iy, tag_w, Inches(0.3), fill=pcolor)
+                add_text(slide, tag, px + Inches(0.3), iy + Inches(0.02), tag_w, Inches(0.26),
+                         font_size=9.5, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+                         align=PP_ALIGN.CENTER, font=fb)
+                add_text(slide, item["text"], px + Inches(0.3), iy + Inches(0.38), pw - Inches(0.6), Inches(0.6),
+                         font_size=12.5, color=theme["text_dark"], font=fb)
+
     # ── SLIDE 7: Recommandations (cartes enrichies pleine largeur) ───────
     if request.include_recommendations:
         from content_generator import enriched_recommendations
