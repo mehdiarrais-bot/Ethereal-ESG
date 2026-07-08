@@ -714,6 +714,48 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         ]))
         story.append(rec_table)
 
+    # ── Feuille de route 12 mois (3 phases) ───────────────────────────────
+    from content_generator import roadmap_12m
+    _rm = roadmap_12m(request, scores)
+    if any(ph["actions"] for ph in _rm):
+        _pcol = {"env": pal["env"], "social": pal["social"], "gov": pal["gov"]}
+        story.append(Spacer(1, 0.5 * cm))
+        section_header(story, TR["roadmap_title"], pal["accent"], pal, styles, ts)
+        _phead = ParagraphStyle("ph", fontSize=10.5, fontName=ts["font_bold"],
+                                textColor=colors.white, alignment=TA_CENTER)
+        _psub = ParagraphStyle("ps", fontSize=7.5, fontName=ts["font"],
+                               textColor=colors.HexColor("#E8E8E8"), alignment=TA_CENTER)
+        head_cells, body_cells = [], []
+        for ph in _rm:
+            head_cells.append([Paragraph(esc(ph["label"]), _phead),
+                               Paragraph(esc(ph["sub"]), _psub)])
+            acts = []
+            for act in ph["actions"][:4]:
+                hexc = "#" + _pcol.get(act["pillar"], pal["secondary"]).hexval()[2:]
+                qw = f' <font color="#{pal["accent"].hexval()[2:]}" size="6"><b>[{esc(TR["quick_win"])}]</b></font>' if act["quick_win"] else ""
+                acts.append(Paragraph(f'<font color="{hexc}">▪</font> {esc(act["title"])}{qw}',
+                            ParagraphStyle("ra", fontSize=8.5, fontName=ts["font"],
+                                           textColor=pal["text"], leading=11, spaceAfter=5)))
+            body_cells.append(acts)
+        cw = [5.5 * cm, 5.5 * cm, 5.5 * cm]
+        htbl = Table([head_cells], colWidths=cw)
+        htbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 7), ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+            ('INNERGRID', (0, 0), (-1, -1), 1, colors.white),
+        ]))
+        btbl = Table([body_cells], colWidths=cw)
+        btbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 10), ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('INNERGRID', (0, 0), (-1, -1), 1, colors.white),
+        ]))
+        story.append(htbl)
+        story.append(btbl)
+
     # ── Diagnostic stratégique : benchmark sectoriel + maturité + R&O ─────
     from content_generator import benchmark_verdict, maturity_text, risks_opportunities
     _bv = benchmark_verdict(request, scores)
