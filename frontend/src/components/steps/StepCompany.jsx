@@ -190,6 +190,19 @@ export default function StepCompany({ form, updateSection, onImport }) {
             />
           </FormField>
 
+          <FormField
+            label="Initiatives internes"
+            hint="Projets/actions réels, séparés par des virgules — cités dans les textes du rapport"
+          >
+            <input
+              type="text"
+              value={company.key_initiatives || ''}
+              onChange={e => set('key_initiatives')(e.target.value)}
+              placeholder="Ex: programme Cap Climat 2027, panneaux solaires site de Lyon"
+              maxLength={600}
+            />
+          </FormField>
+
           <FormField label="Logo de l'entreprise" hint="PNG ou JPEG, max 1,4 Mo — intégré aux couvertures">
             {company.logo_base64 ? (
               <div className="logo-preview">

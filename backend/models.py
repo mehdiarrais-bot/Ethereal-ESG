@@ -160,6 +160,9 @@ class CompanyInfo(BaseModel):
     presenter_name: Optional[str] = Field(None, max_length=100)
     presenter_title: Optional[str] = Field(None, max_length=100)
     logo_base64: Optional[str] = Field(None, max_length=2_100_000)
+    # Initiatives/projets internes (séparés par ; ou ,), tissés dans les textes
+    # pour ancrer le rapport dans la réalité de l'entreprise.
+    key_initiatives: Optional[str] = Field(None, max_length=600)
 
     @field_validator('name', 'sector', 'country', mode='before')
     @classmethod
@@ -172,6 +175,13 @@ class CompanyInfo(BaseModel):
         if v is None or v == '':
             return None
         return sanitize_text(str(v), 100)
+
+    @field_validator('key_initiatives', mode='before')
+    @classmethod
+    def sanitize_initiatives(cls, v):
+        if v is None or v == '':
+            return None
+        return sanitize_text(str(v), 600)
 
     @field_validator('logo_base64', mode='after')
     @classmethod

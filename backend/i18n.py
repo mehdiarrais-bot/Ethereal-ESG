@@ -24,7 +24,7 @@ LABELS = {
         "note": "Note", "score_of_100": "/100", "presented_by": "Présenté par",
         "confidential": "Document confidentiel", "page": "page",
         "exercise": "Exercice", "sector": "Secteur",
-        "gen_auto": "Document généré automatiquement par la Plateforme ESG",
+        "gen_auto": "Reporting extra-financier établi selon la méthodologie interne — diffusion restreinte",
         # ── Presentation subtitles ──────────────────────────────
         "pres_executive_summary": "Rapport ESG — Synthèse Exécutive",
         "pres_investor_deck": "ESG Investor Deck",
@@ -163,7 +163,7 @@ LABELS = {
         "note": "Rating", "score_of_100": "/100", "presented_by": "Presented by",
         "confidential": "Confidential document", "page": "page",
         "exercise": "Fiscal year", "sector": "Sector",
-        "gen_auto": "Document generated automatically by the ESG Platform",
+        "gen_auto": "Sustainability reporting prepared under the internal methodology — restricted distribution",
         # ── Presentation subtitles ──────────────────────────────
         "pres_executive_summary": "ESG Report — Executive Summary",
         "pres_investor_deck": "ESG Investor Deck",

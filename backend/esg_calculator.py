@@ -232,9 +232,11 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         weaknesses.append(f"Volume de formation insuffisant ({social.training_hours_per_employee:.0f} h/an, objectif 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
-        weaknesses.append(f"{gov.ethics_violations} incident(s) éthique(s) enregistré(s)")
+        weaknesses.append("Un incident éthique enregistré" if gov.ethics_violations == 1
+                          else f"{gov.ethics_violations} incidents éthiques enregistrés")
     if gov.data_breaches is not None and gov.data_breaches > 0:
-        weaknesses.append(f"{gov.data_breaches} violation(s) de données — cybersécurité à renforcer")
+        weaknesses.append("Une violation de données — cybersécurité à renforcer" if gov.data_breaches == 1
+                          else f"{gov.data_breaches} violations de données — cybersécurité à renforcer")
     if not gov.esg_audit_conducted:
         weaknesses.append("Absence d'audit ESG indépendant")
     if not gov.sustainability_committee:
@@ -307,9 +309,11 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         r.append(f"Insufficient training volume ({social.training_hours_per_employee:.0f} h/year, target 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
-        r.append(f"{gov.ethics_violations} ethics incident(s) recorded")
+        r.append("One ethics incident recorded" if gov.ethics_violations == 1
+                 else f"{gov.ethics_violations} ethics incidents recorded")
     if gov.data_breaches is not None and gov.data_breaches > 0:
-        r.append(f"{gov.data_breaches} data breach(es) — cybersecurity to strengthen")
+        r.append("One data breach — cybersecurity to strengthen" if gov.data_breaches == 1
+                 else f"{gov.data_breaches} data breaches — cybersecurity to strengthen")
     if not gov.esg_audit_conducted: r.append("No independent ESG audit")
     if not gov.sustainability_committee: r.append("No sustainability committee at Board level")
     if gov_score < 50: r.append("Governance structure to strengthen significantly")

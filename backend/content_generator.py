@@ -17,6 +17,29 @@ def _fmt(v, suffix="", decimals=0):
     if v is None: return "—"
     return f"{v:,.{decimals}f}{suffix}"
 
+# ── Accords grammaticaux (aucun « (s) » ne doit apparaître dans les livrables)
+_NUM_FR = ["zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept",
+           "huit", "neuf", "dix", "onze", "douze"]
+_NUM_FR_M = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept",
+             "huit", "neuf", "dix", "onze", "douze"]
+_NUM_EN = ["zero", "one", "two", "three", "four", "five", "six", "seven",
+           "eight", "nine", "ten", "eleven", "twelve"]
+
+def _nb(n, en=False, fem=False):
+    """Nombre en lettres jusqu'à douze, chiffres au-delà."""
+    n = int(n)
+    lst = _NUM_EN if en else (_NUM_FR if fem else _NUM_FR_M)
+    return lst[n] if 0 <= n < len(lst) else str(n)
+
+def _agree(n, sing, plur, en=False, fem=False):
+    """« un point fort consolidé » / « deux points forts consolidés »."""
+    return f"{_nb(n, en, fem)} {sing if int(n) == 1 else plur}"
+
+def _pts(v):
+    """« 1 pt » / « 13 pts » (valeur déjà arrondie à l'entier)."""
+    n = abs(int(round(v)))
+    return f"{n} pt" if n == 1 else f"{n} pts"
+
 SECTOR_CTX = {
     "Énergie": ("le secteur énergétique, exposé aux enjeux de transition bas-carbone", "la décarbonation de ses actifs"),
     "Finance": ("le secteur financier, vecteur du financement durable", "l'intégration ESG dans ses critères d'investissement"),
@@ -455,9 +478,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     def bench_sentence(delta, en):
         if en:
             pos = "above" if delta >= 0 else "below"
-            return f" The pillar stands {abs(delta):.0f} pt(s) {pos} the internal sector reference"
+            return f" The pillar stands {_pts(delta)} {pos} the internal sector reference"
         pos = "au-dessus de" if delta >= 0 else "en retrait de"
-        return f" Le pilier se situe {abs(delta):.0f} pt(s) {pos} la référence sectorielle interne"
+        return f" Le pilier se situe {_pts(delta)} {pos} la référence sectorielle interne"
 
     esrs_close = {
         "environmental": (" et couvre les principales exigences des normes ESRS E1 (climat) et E5 (économie circulaire).",
@@ -480,7 +503,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     stage_en = {"initiated": "initiated", "structuring": "structuring", "structured": "structured",
                 "advanced": "advanced", "exemplary": "exemplary"}
     if en:
-        pos = f"{abs(gd):.0f} pt(s) {'above' if gd >= 0 else 'below'} the sector reference"
+        pos = f"{_pts(gd)} {'above' if gd >= 0 else 'below'} the sector reference"
         content["executive_summary"] += (
             f" Overall, the profile stands {pos}, with an ESG maturity assessed as "
             f"{stage_en.get(mat.get('key', 'structured'), 'structured')} ({mat['stage']}/5). "
@@ -490,7 +513,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                f"assurance and investor dialogue.")
         )
     else:
-        pos = f"{abs(gd):.0f} pt(s) {'au-dessus' if gd >= 0 else 'en retrait'} de la référence sectorielle"
+        pos = f"{_pts(gd)} {'au-dessus' if gd >= 0 else 'en retrait'} de la référence sectorielle"
         content["executive_summary"] += (
             f" Au global, le profil se situe {pos}, avec une maturité ESG évaluée comme "
             f"{stage_fr.get(mat.get('key', 'structured'), 'structurée')} ({mat['stage']}/5). "
@@ -500,6 +523,25 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                f"La couverture du reporting est complète sur les points de données structurants de la "
                f"CSRD, un atout pour la vérification et le dialogue investisseurs.")
         )
+
+    # ── 4bis. Initiatives internes : ancrage dans la réalité de l'entreprise ─
+    ki_raw = getattr(request.company, "key_initiatives", None)
+    if ki_raw:
+        import re as _re
+        items = [x.strip() for x in _re.split(r"[;,]", ki_raw) if x.strip()][:5]
+        if items:
+            if len(items) == 1:
+                listed = items[0]
+            elif en:
+                listed = ", ".join(items[:-1]) + " and " + items[-1]
+            else:
+                listed = ", ".join(items[:-1]) + " et " + items[-1]
+            if en:
+                content["executive_summary"] += (
+                    f" This approach builds on initiatives already under way, including {listed}.")
+            else:
+                content["executive_summary"] += (
+                    f" Cette démarche s'appuie sur des initiatives déjà engagées, notamment {listed}.")
 
     # ── 5. Note méthodologique (périmètre, référentiels, limites) ────────
     year = request.company.reporting_year
@@ -515,7 +557,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"Protocol (Scopes 1, 2 and 3); social indicators follow ESRS S1 definitions; governance "
             f"indicators are documented from corporate records. Pillar scores (0-100) aggregate each "
             f"indicator against regulatory thresholds and recognised sector standards; the overall score "
-            f"is the weighted average of the three pillars. The sector comparison uses an internal "
+            f"is the weighted average of the three pillars, and the letter rating (internal AAA-CCC "
+            f"scale) is indicative — it does not constitute a rating-agency assessment. The sector "
+            f"comparison uses an internal "
             f"reference base for the SME/mid-cap market and involves no external data transfer — the "
             f"entire report is produced locally. Limitations: some indicators rely on declarative data "
             f"and estimates; they are refined as measurement systems mature.{gap_txt}"
@@ -528,7 +572,8 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"de la norme ESRS S1 ; les indicateurs de gouvernance sont documentés à partir des registres "
             f"de l'entreprise. Les scores par pilier (0-100) agrègent chaque indicateur au regard des "
             f"seuils réglementaires et des standards sectoriels reconnus ; le score global est la moyenne "
-            f"pondérée des trois piliers. La comparaison sectorielle s'appuie sur une base de référence "
+            f"pondérée des trois piliers, et la notation lettrée (échelle interne AAA-CCC) est indicative — "
+            f"elle ne constitue pas une notation d'agence. La comparaison sectorielle s'appuie sur une base de référence "
             f"interne du marché PME/ETI et n'implique aucun transfert de données externe — l'ensemble du "
             f"rapport est produit localement. Limites : certains indicateurs reposent sur des données "
             f"déclaratives et des estimations ; ils sont affinés à mesure que les dispositifs de mesure "
@@ -569,7 +614,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
     pillar_ph = _pick(s, 2, EXEC_PILLAR_PHRASES).format(
         bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
-    sector_note = f" Dans {sector_long}, la priorité stratégique porte sur {sector_priority}."
+    # Contexte sectoriel déjà dans l'ouverture, priorité déjà dans la section
+    # environnement : pas de répétition dans la synthèse.
+    sector_note = ""
     executive_summary = f"{opening} {score_ph} {pillar_ph}{sector_note}"
 
     # ── Environnement ──────────────────────────────────────────────────────
@@ -603,7 +650,8 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         wl = "excellent" if env.waste_recycled_percent >= 70 else ("satisfaisant" if env.waste_recycled_percent >= 40 else "à améliorer")
         env_items.append(f"recyclage {env.waste_recycled_percent:.0f}% ({wl})")
     if env.biodiversity_initiatives:
-        env_items.append(f"{env.biodiversity_initiatives} initiative(s) biodiversité")
+        env_items.append(_agree(env.biodiversity_initiatives,
+                                "initiative biodiversité", "initiatives biodiversité", fem=True))
 
     if env_items:
         env_detail = _pick(s, 5, ENV_LIAISONS) + " ; ".join(env_items) + "."
@@ -628,7 +676,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if soc.female_employees_percent is not None:
         gap = 40 - soc.female_employees_percent
         if gap <= 0: fem_n = "objectif légal 40% atteint"
-        elif gap <= 5: fem_n = f"à {gap:.0f} pt(s) de l'objectif 40%"
+        elif gap <= 5: fem_n = f"à {_pts(gap)} de l'objectif 40%"
         else: fem_n = f"écart {gap:.0f} pts vs. objectif 40%"
         soc_items.append(f"{soc.female_employees_percent:.0f}% de femmes ({fem_n})")
     if soc.training_hours_per_employee is not None:
@@ -663,7 +711,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.board_members:
         gov_items.append(f"CA de {gov.board_members} membres")
     if gov.female_board_percent is not None:
-        rixain = "conforme loi Rixain (≥40%)" if gov.female_board_percent >= 40 else f"{40 - gov.female_board_percent:.0f} pt(s) sous l'objectif Rixain 40%"
+        rixain = "conforme loi Rixain (≥40%)" if gov.female_board_percent >= 40 else f"{_pts(40 - gov.female_board_percent)} sous l'objectif Rixain 40%"
         gov_items.append(f"{gov.female_board_percent:.0f}% de femmes au CA ({rixain})")
     if gov.independent_board_percent is not None:
         afep = "conforme AFEP-MEDEF (≥50%)" if gov.independent_board_percent >= 50 else "sous le seuil AFEP-MEDEF 50%"
@@ -671,9 +719,11 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.csr_budget_eur:
         gov_items.append(f"budget RSE {gov.csr_budget_eur:,.0f} €")
     if gov.ethics_violations is not None:
-        gov_items.append(f"{gov.ethics_violations} manquement(s) éthique")
+        gov_items.append("aucun manquement éthique enregistré" if gov.ethics_violations == 0
+                         else _agree(gov.ethics_violations, "manquement éthique", "manquements éthiques"))
     if gov.data_breaches is not None and gov.data_breaches > 0:
-        gov_items.append(f"{gov.data_breaches} incident(s) cybersécurité déclaré(s)")
+        gov_items.append(_agree(gov.data_breaches, "incident cybersécurité déclaré",
+                                "incidents cybersécurité déclarés"))
     if gov.corruption_cases is not None and gov.corruption_cases == 0:
         gov_items.append("zéro cas de corruption enregistré")
 
@@ -702,8 +752,8 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     trajectory = trajectory.replace("{n}", name)
     ref = _pick(s, 5, CONCLUSION_REFS)
 
-    s_txt = f"{n_s} point(s) fort(s) consolidé(s)" if n_s else "des points forts émergents"
-    w_txt = f"{n_w} axe(s) d'amélioration prioritaire(s)" if n_w else "des axes de progrès identifiés"
+    s_txt = _agree(n_s, "point fort consolidé", "points forts consolidés") if n_s else "des points forts émergents"
+    w_txt = _agree(n_w, "axe d'amélioration prioritaire", "axes d'amélioration prioritaires") if n_w else "des axes de progrès identifiés"
 
     conclusion = (
         f"Fort d'un score ESG de {scores.total_esg_score:.1f}/100 ({scores.rating}), "
@@ -1010,7 +1060,9 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     opening = _pick(s, 0, EXEC_OPENINGS_EN).format(n=name, y=year, ctx=sector_long)
     score_ph = _pick(s, 1, EXEC_SCORE_EN).format(n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
     pillar_ph = _pick(s, 2, EXEC_PILLAR_EN).format(bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
-    sector_note = f" Within {sector_long}, the strategic priority focuses on {sector_priority}."
+    # Sector context already in the opening and the priority in the environment
+    # section: no repetition in the summary.
+    sector_note = ""
     executive_summary = f"{opening} {score_ph} {pillar_ph}{sector_note}"
 
     # Environment
@@ -1035,7 +1087,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         wl = "excellent" if env.waste_recycled_percent >= 70 else "satisfactory" if env.waste_recycled_percent >= 40 else "to improve"
         items.append(f"{env.waste_recycled_percent:.0f}% recycling ({wl})")
     if env.biodiversity_initiatives:
-        items.append(f"{env.biodiversity_initiatives} biodiversity initiative(s)")
+        items.append(_agree(env.biodiversity_initiatives,
+                            "biodiversity initiative", "biodiversity initiatives", en=True))
     env_detail = (_pick(s, 5, ENV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The environmental scope is being structured."
     environmental = f"{env_intro} {env_detail} {_pick(s, 6, ENV_OUTLOOK_EN).format(p=sector_priority)}"
 
@@ -1047,7 +1100,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         items.append(f"{soc.total_employees:,} employees ({company.country})")
     if soc.female_employees_percent is not None:
         gap = 40 - soc.female_employees_percent
-        fn = "legal 40% target met" if gap <= 0 else f"{gap:.0f} pt(s) from the 40% target" if gap <= 5 else f"{gap:.0f} pts below the 40% target"
+        fn = "legal 40% target met" if gap <= 0 else f"{_pts(gap)} from the 40% target" if gap <= 5 else f"{gap:.0f} pts below the 40% target"
         items.append(f"{soc.female_employees_percent:.0f}% women ({fn})")
     if soc.training_hours_per_employee is not None:
         lvl = "excellent" if soc.training_hours_per_employee >= 40 else "satisfactory" if soc.training_hours_per_employee >= 20 else "to strengthen"
@@ -1070,7 +1123,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.board_members:
         items.append(f"{gov.board_members}-member Board")
     if gov.female_board_percent is not None:
-        rx = "compliant with the 40% quota" if gov.female_board_percent >= 40 else f"{40 - gov.female_board_percent:.0f} pt(s) below the 40% quota"
+        rx = "compliant with the 40% quota" if gov.female_board_percent >= 40 else f"{_pts(40 - gov.female_board_percent)} below the 40% quota"
         items.append(f"{gov.female_board_percent:.0f}% women on the Board ({rx})")
     if gov.independent_board_percent is not None:
         ind = "≥50% independence met" if gov.independent_board_percent >= 50 else "below the 50% independence threshold"
@@ -1078,9 +1131,11 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.csr_budget_eur:
         items.append(f"CSR budget €{gov.csr_budget_eur:,.0f}")
     if gov.ethics_violations is not None:
-        items.append(f"{gov.ethics_violations} ethics breach(es)")
+        items.append("no ethics breach recorded" if gov.ethics_violations == 0
+                     else _agree(gov.ethics_violations, "ethics breach", "ethics breaches", en=True))
     if gov.data_breaches is not None and gov.data_breaches > 0:
-        items.append(f"{gov.data_breaches} cybersecurity incident(s) reported")
+        items.append(_agree(gov.data_breaches, "cybersecurity incident reported",
+                            "cybersecurity incidents reported", en=True))
     if gov.corruption_cases is not None and gov.corruption_cases == 0:
         items.append("zero corruption cases recorded")
     gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The governance structure is being documented."
@@ -1147,8 +1202,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     trajectory, bridge, forward = _pick(s, 4, traj_list)
     trajectory = trajectory.replace("{n}", name)
     ref = _pick(s, 5, CONCLUSION_REFS_EN)
-    s_txt = f"{len(scores.strengths)} consolidated strength(s)" if scores.strengths else "emerging strengths"
-    w_txt = f"{len(scores.weaknesses)} priority area(s) for improvement" if scores.weaknesses else "identified areas for progress"
+    s_txt = _agree(len(scores.strengths), "consolidated strength", "consolidated strengths", en=True) if scores.strengths else "emerging strengths"
+    w_txt = _agree(len(scores.weaknesses), "priority area for improvement", "priority areas for improvement", en=True) if scores.weaknesses else "identified areas for progress"
     conclusion = (
         f"With an ESG score of {scores.total_esg_score:.1f}/100 ({scores.rating}), {name} {trajectory}. "
         f"The analysis highlights {s_txt} and {w_txt}. {bridge} {name} {forward}, drawing on the "
@@ -1267,25 +1322,42 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
     if en:
         if qw:
             ids = [i for i, _ in qw[:3]]
-            names = ("action " if len(ids) == 1 else "actions ") + _join_nums(ids, "and")
-            txt = (f"{len(qw)} action(s) combine high impact with limited effort — {names} — and can be "
-                   f"launched immediately with existing resources.")
+            if len(qw) == 1:
+                txt = (f"One action combines high impact with limited effort — action {ids[0]} — and can "
+                       f"be launched immediately with existing resources.")
+            else:
+                txt = (f"{_nb(len(qw), en=True).capitalize()} actions combine high impact with limited "
+                       f"effort — actions {_join_nums(ids, 'and')} — and can be launched immediately "
+                       f"with existing resources.")
         else:
             txt = "No immediate quick win stands out: sequencing should follow the 12-month roadmap."
         if strat:
-            txt += (f" The {len(strat)} structural project(s) (top right) deserve a dedicated budget "
-                    f"and owner, as they carry most of the score upside.")
+            if len(strat) == 1:
+                txt += (" The structural project in the top-right quadrant deserves a dedicated budget "
+                        "and owner, as it carries most of the score upside.")
+            else:
+                txt += (f" The {_nb(len(strat), en=True)} structural projects (top right) deserve a "
+                        f"dedicated budget and owner, as they carry most of the score upside.")
         return txt
     if qw:
         ids = [i for i, _ in qw[:3]]
-        names = ("l'action " if len(ids) == 1 else "les actions ") + _join_nums(ids, "et")
-        txt = (f"{len(qw)} action(s) combinent fort impact et effort limité — {names} — et peuvent être "
-               f"lancées immédiatement à moyens constants.")
+        if len(qw) == 1:
+            txt = (f"Une action combine fort impact et effort limité — l'action {ids[0]} — et peut être "
+                   f"lancée immédiatement à moyens constants.")
+        else:
+            txt = (f"{_nb(len(qw), fem=True).capitalize()} actions combinent fort impact et effort limité "
+                   f"— les actions {_join_nums(ids, 'et')} — et peuvent être lancées immédiatement à "
+                   f"moyens constants.")
     else:
         txt = "Aucun quick win immédiat ne se détache : le séquencement suit la feuille de route 12 mois."
     if strat:
-        txt += (f" Le(s) {len(strat)} chantier(s) structurant(s) (quadrant haut-droit) justifient un budget "
-                f"et un responsable dédiés : ils portent l'essentiel du potentiel de progression du score.")
+        if len(strat) == 1:
+            txt += (" Le chantier structurant du quadrant haut-droit justifie un budget et un responsable "
+                    "dédiés : il porte l'essentiel du potentiel de progression du score.")
+        else:
+            txt += (f" Les {_nb(len(strat))} chantiers structurants (quadrant haut-droit) justifient un "
+                    f"budget et un responsable dédiés : ils portent l'essentiel du potentiel de "
+                    f"progression du score.")
     return txt
 
 
