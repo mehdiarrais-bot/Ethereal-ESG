@@ -714,6 +714,91 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         ]))
         story.append(rec_table)
 
+    # ── Diagnostic stratégique : benchmark sectoriel + maturité + R&O ─────
+    from content_generator import benchmark_verdict, maturity_text, risks_opportunities
+    _bv = benchmark_verdict(request, scores)
+    _bm = _bv["bm"]
+    _mt = maturity_text(request, scores)
+    _ro = risks_opportunities(request, scores)
+    _red = colors.HexColor("#E74C3C")
+
+    story.append(PageBreak())
+    section_header(story, TR["pdf_diag"], pal["primary"], pal, styles, ts)
+
+    # Verdict benchmark (titre = conclusion) + lecture métier
+    story.append(Paragraph(esc(_bv["title"]), styles["h2"]))
+    story.append(Paragraph(TR["pdf_bench_sub"], styles["caption"]))
+    story.append(Spacer(1, 0.2 * cm))
+
+    # Tableau Vous vs Secteur (par pilier)
+    _hstyle = ParagraphStyle("bh", fontSize=9, fontName=ts["font_bold"], textColor=colors.white, alignment=TA_CENTER)
+    _cstyle = ParagraphStyle("bc", fontSize=9.5, fontName=ts["font"], textColor=pal["text"], alignment=TA_CENTER)
+    _lstyle = ParagraphStyle("bl", fontSize=9.5, fontName=ts["font_bold"], textColor=pal["primary"])
+    comp = {"env": scores.environmental_score, "social": scores.social_score,
+            "gov": scores.governance_score, "global": scores.total_esg_score}
+    pil_lbl = [("env", TR["pillar_env"]), ("social", TR["pillar_soc"]),
+               ("gov", TR["pillar_gov"]), ("global", TR.get("score_global_short", "Global"))]
+    bench_rows = [[Paragraph(TR["bench_metric_col"], _hstyle), Paragraph(TR["bench_you"], _hstyle),
+                   Paragraph(TR["bench_sector"], _hstyle), Paragraph(TR["bench_delta_col"], _hstyle)]]
+    for key, lbl in pil_lbl:
+        d = _bm["deltas"][key]
+        dcol = "#2E7D32" if d >= 0 else "#E74C3C"
+        sign = "+" if d >= 0 else ""
+        bench_rows.append([
+            Paragraph(esc(lbl), _lstyle),
+            Paragraph(f"{comp[key]:.0f}", _cstyle),
+            Paragraph(f"{_bm['avg'][key]:.0f}", _cstyle),
+            Paragraph(f'<font color="{dcol}"><b>{sign}{d:.0f}</b></font>', _cstyle),
+        ])
+    bt = Table(bench_rows, colWidths=[7 * cm, 3.2 * cm, 3.2 * cm, 3.1 * cm])
+    bt.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), pal["primary"]),
+        ('BACKGROUND', (0, 1), (-1, -1), pal["light_bg"]),
+        ('BACKGROUND', (0, -1), (-1, -1), pal["accent"]),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.white),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('LEFTPADDING', (0, 0), (0, -1), 10),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
+    ]))
+    story.append(bt)
+    story.append(Spacer(1, 0.3 * cm))
+    insight_callout(story, _bv["insight"], pal["accent"], pal, ts)
+
+    # Maturité ESG
+    _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
+    story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : <b>{esc(_mat_lbl)}</b> '
+                           f'({_mt["stage"]}/5)', styles["h2"]))
+    story.append(Paragraph(esc(_mt["next_hint"]), styles["body"]))
+    story.append(Spacer(1, 0.4 * cm))
+
+    # Risques & Opportunités majeurs (2 colonnes)
+    def _ro_cell(head, items, col):
+        hexc = "#" + col.hexval()[2:]
+        flow = [Paragraph(f'<font color="{hexc}"><b>{esc(head).upper()}</b></font>',
+                          ParagraphStyle("roh", fontSize=11, fontName=ts["font_bold"], spaceAfter=6))]
+        for it in items:
+            flow.append(Paragraph(
+                f'<font color="{hexc}"><b>{esc(it["tag"])}</b></font> — {esc(it["text"])}',
+                ParagraphStyle("roi", fontSize=9, fontName=ts["font"], textColor=pal["text"],
+                               leading=12, spaceAfter=6)))
+        return flow
+    ro_table = Table([[_ro_cell(TR["risks_head"], _ro["risks"], _red),
+                       _ro_cell(TR["opps_head"], _ro["opportunities"], pal["env"])]],
+                     colWidths=[8.25 * cm, 8.25 * cm])
+    ro_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+        ('LINEBEFORE', (0, 0), (0, -1), 3, _red),
+        ('LINEBEFORE', (1, 0), (1, -1), 3, pal["env"]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+    ]))
+    story.append(ro_table)
+
     # ── Alignement référentiels ───────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
     section_header(story, TR["pdf_s8"], pal["secondary"], pal, styles, ts)
