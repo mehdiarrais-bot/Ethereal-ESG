@@ -1196,6 +1196,18 @@ _REC_META = {
         "Strengthens alignment with reference frameworks (SDGs, TCFD) and reporting comparability."),
 }
 
+# Cotation de priorisation : (effort de mise en œuvre 1-10, impact ESG/valeur 1-10)
+_REC_PRIORITY = {
+    "renewable": (7, 8),   # investissement / PPA, mais gain carbone + coûts majeur
+    "scope3": (6, 9),      # collecte lourde chaîne de valeur, critique CSRD
+    "parity": (4, 6),
+    "training": (3, 5),
+    "audit": (3, 8),       # quick win crédibilité / conformité
+    "committee": (2, 7),   # quick win gouvernance
+    "recycling": (5, 5),
+    "frameworks": (4, 6),
+}
+
 _REC_TITLES = {
     "renewable": ("Augmenter la part d'énergie renouvelable à 50%", "Raise the renewable-energy share to 50%"),
     "scope3": ("Mesurer et reporter les émissions Scope 3", "Measure and report Scope 3 emissions"),
@@ -1226,14 +1238,55 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
     for k in keys[:6]:
         pillar, hfr, hen, dfr, den = _REC_META[k]
         tfr, ten = _REC_TITLES[k]
+        effort, impact = _REC_PRIORITY.get(k, (5, 5))
         out.append({
             "key": k,
             "title": ten if en else tfr,
             "detail": den if en else dfr,
             "pillar": pillar,
             "horizon": hen if en else hfr,
+            "effort": effort,
+            "impact": impact,
         })
     return out
+
+
+def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
+    """Lecture métier de la matrice effort/impact (quick wins nommés). FR/EN."""
+    en = getattr(request, "language", "fr") == "en"
+    recs = enriched_recommendations(request, scores)
+    qw = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] < 5 and r["impact"] >= 6]
+    strat = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] >= 5 and r["impact"] >= 7]
+
+    def _join_nums(nums, conj):
+        nums = [str(n) for n in nums]
+        if len(nums) == 1:
+            return nums[0]
+        return ", ".join(nums[:-1]) + f" {conj} " + nums[-1]
+
+    if en:
+        if qw:
+            ids = [i for i, _ in qw[:3]]
+            names = ("action " if len(ids) == 1 else "actions ") + _join_nums(ids, "and")
+            txt = (f"{len(qw)} action(s) combine high impact with limited effort — {names} — and can be "
+                   f"launched immediately with existing resources.")
+        else:
+            txt = "No immediate quick win stands out: sequencing should follow the 12-month roadmap."
+        if strat:
+            txt += (f" The {len(strat)} structural project(s) (top right) deserve a dedicated budget "
+                    f"and owner, as they carry most of the score upside.")
+        return txt
+    if qw:
+        ids = [i for i, _ in qw[:3]]
+        names = ("l'action " if len(ids) == 1 else "les actions ") + _join_nums(ids, "et")
+        txt = (f"{len(qw)} action(s) combinent fort impact et effort limité — {names} — et peuvent être "
+               f"lancées immédiatement à moyens constants.")
+    else:
+        txt = "Aucun quick win immédiat ne se détache : le séquencement suit la feuille de route 12 mois."
+    if strat:
+        txt += (f" Le(s) {len(strat)} chantier(s) structurant(s) (quadrant haut-droit) justifient un budget "
+                f"et un responsable dédiés : ils portent l'essentiel du potentiel de progression du score.")
+    return txt
 
 
 # ══════════════════════════════════════════════════════════════════════════

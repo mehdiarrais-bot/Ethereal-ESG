@@ -222,6 +222,14 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
         out["benchmark"] = benchmark_chart(comp, bm["avg"], theme, light_bg=light_bg, lang=lang)
     except Exception as e:
         print(f"Benchmark chart error: {e}")
+    try:
+        from content_generator import enriched_recommendations
+        from chart_generator import priority_matrix_chart
+        recs = enriched_recommendations(request, scores)
+        if recs:
+            out["priority"] = priority_matrix_chart(recs, theme, light_bg=light_bg, lang=lang)
+    except Exception as e:
+        print(f"Priority chart error: {e}")
     return out
 
 

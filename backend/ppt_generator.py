@@ -945,6 +945,25 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     # ── DIVIDER: Acte 2 — Plan d'action ─────────────────────────────────
     section_divider(prs, blank_layout, theme, style, "02", t["div2_title"], t["div2_sub"])
 
+    # ── SLIDE 6c: Matrice de priorisation effort/impact ─────────────────
+    if "priority" in chart_images:
+        from content_generator import priority_reading
+        _pr = priority_reading(request, scores)
+        _dk = style["dark_slides"]
+        slide = content_slide(prs, blank_layout, theme, style,
+                              t["prio_title"], header_color, kicker=t["prio_kicker"])
+        add_image_from_bytes(slide, chart_images["priority"],
+                             Inches(0.35), Inches(1.6), width=Inches(9.2))
+        # Carte lecture métier à droite
+        cx, cw = Inches(9.75), Inches(3.25)
+        add_shape(slide, ROUNDED_RECT, cx, Inches(1.75), cw, Inches(4.6),
+                  fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
+        add_shape(slide, RECT, cx, Inches(1.75), Inches(0.09), Inches(4.6), fill=theme["accent"])
+        add_text(slide, t["key_takeaway"], cx + Inches(0.28), Inches(1.95), cw - Inches(0.5), Inches(0.35),
+                 font_size=12, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=fb)
+        add_text(slide, _pr, cx + Inches(0.28), Inches(2.4), cw - Inches(0.5), Inches(3.8),
+                 font_size=13, color=theme["text_dark"], font=fb)
+
     # ── SLIDE 7: Recommandations (cartes enrichies pleine largeur) ───────
     if request.include_recommendations:
         from content_generator import enriched_recommendations

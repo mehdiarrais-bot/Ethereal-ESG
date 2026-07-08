@@ -308,6 +308,73 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
     return buf.read()
 
 
+def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+    """Matrice de priorisation effort/impact des recommandations (2×2 conseil).
+
+    Chaque action porte le numéro qu'elle a dans la liste des recommandations,
+    colorée par pilier ; quadrants nommés (quick wins en évidence).
+    """
+    colors = get_colors(theme, light_bg)
+    LB = L(lang)
+    bg = colors["bg"]
+    grid = colors["secondary"]
+
+    fig = plt.figure(figsize=(10.4, 6), facecolor=bg)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.55, 1], wspace=0.06)
+    ax = fig.add_subplot(gs[0]); ax.set_facecolor(bg)
+    lax = fig.add_subplot(gs[1]); lax.set_facecolor(bg); lax.axis("off")
+
+    # Quadrant quick wins (haut-gauche : fort impact, faible effort)
+    ax.axhspan(5, 10, xmin=0.0, xmax=0.5, color=colors["accent"], alpha=0.10, zorder=0)
+    ax.axhline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
+    ax.axvline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
+    qstyle = dict(fontsize=8.5, fontweight="bold", ha="left", zorder=1)
+    ax.text(0.3, 9.55, LB["quad_qw"], color=colors["accent"], **qstyle)
+    ax.text(5.3, 9.55, LB["quad_strat"], color=colors["text"], alpha=0.75, **qstyle)
+    ax.text(0.3, 0.45, LB["quad_fill"], color=colors["text"], alpha=0.55, **qstyle)
+    ax.text(5.3, 0.45, LB["quad_avoid"], color=colors["text"], alpha=0.55, **qstyle)
+
+    # Décalage anti-chevauchement pour les points superposés
+    seen = {}
+    for i, r in enumerate(recs, 1):
+        key = (r["effort"], r["impact"])
+        dx = seen.get(key, 0)
+        seen[key] = dx + 1
+        c = _pillar_hex(colors, r["pillar"])
+        x = r["effort"] + dx * 0.75
+        ax.scatter(x, r["impact"], s=560, color=c, alpha=0.9,
+                   edgecolors=bg, linewidths=2, zorder=3)
+        ax.text(x, r["impact"], str(i), ha="center", va="center",
+                fontsize=10, fontweight="bold", color="white", zorder=4)
+
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10)
+    ax.set_xticks([0, 2, 4, 6, 8, 10]); ax.set_yticks([0, 2, 4, 6, 8, 10])
+    ax.set_xlabel(LB["prio_x"], color=colors["text"], fontsize=11, fontweight="bold")
+    ax.set_ylabel(LB["prio_y"], color=colors["text"], fontsize=11, fontweight="bold")
+    ax.tick_params(colors=grid, labelsize=8)
+    for spine in ax.spines.values():
+        spine.set_color(grid); spine.set_alpha(0.4)
+
+    # Légende latérale : numéro + intitulé de chaque action
+    lax.set_xlim(0, 1); lax.set_ylim(0, 1)
+    y = 0.95
+    for i, r in enumerate(recs, 1):
+        c = _pillar_hex(colors, r["pillar"])
+        lax.scatter(0.035, y, s=250, color=c, transform=lax.transAxes, clip_on=False, zorder=3)
+        lax.text(0.035, y, str(i), ha="center", va="center", fontsize=8.5,
+                 fontweight="bold", color="white", transform=lax.transAxes, zorder=4)
+        label = r["title"] if len(r["title"]) <= 46 else r["title"][:44] + "…"
+        lax.text(0.10, y, label, fontsize=9, color=colors["text"],
+                 va="center", transform=lax.transAxes)
+        y -= 0.115
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
 def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
     """Objectifs par pilier : actuel vs. cible (barres groupées)."""
     colors = get_colors(theme, light_bg)

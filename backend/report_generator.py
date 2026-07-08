@@ -439,11 +439,18 @@ def kpi_table(kpi_list, pal, ts):
     value_style = ParagraphStyle("kv", fontSize=16, leading=19, fontName=ts["font_bold"],
                                  textColor=value_color, alignment=TA_CENTER)
 
+    _status_hex = {"good": "#2E7D32", "warn": "#D97706", "bad": "#E74C3C"}
     data, row = [], []
-    for label, value in kpi_list:
+    for item in kpi_list:
+        label, value = item[0], item[1]
+        status = item[2] if len(item) > 2 else None
+        val_markup = esc(value)
+        if status in _status_hex:
+            # pastille de statut (• = 0x95 WinAnsi) devant la valeur
+            val_markup = f'<font color="{_status_hex[status]}" size="11">•</font> {val_markup}'
         row.append([Paragraph(esc(label).upper(), label_style),
                     Spacer(1, 3),
-                    Paragraph(esc(value), value_style)])
+                    Paragraph(val_markup, value_style)])
         if len(row) == 3:
             data.append(row)
             row = []
@@ -619,15 +626,32 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(esc(env_text), styles["body"]))
 
     env = request.environmental
+    def _st(v, good, warn, higher_better=True):
+        """Statut d'un KPI : seuils good/warn (sens configurable)."""
+        if v is None:
+            return None
+        ok = (v >= good) if higher_better else (v <= good)
+        mid = (v >= warn) if higher_better else (v <= warn)
+        return "good" if ok else ("warn" if mid else "bad")
+
     env_kpis = []
-    if env.co2_emissions_tonnes is not None: env_kpis.append((TR["kpit"]["co2"], f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent is not None: env_kpis.append((TR["kpit"]["renewable"], f"{env.renewable_energy_percent:.1f}%"))
+    if env.co2_emissions_tonnes is not None:
+        _ci = (env.co2_emissions_tonnes / request.company.revenue_eur * 1e6
+               if request.company.revenue_eur else None)
+        env_kpis.append((TR["kpit"]["co2"], f"{env.co2_emissions_tonnes:,.0f}",
+                         _st(_ci, 30, 100, higher_better=False)))
+    if env.renewable_energy_percent is not None:
+        env_kpis.append((TR["kpit"]["renewable"], f"{env.renewable_energy_percent:.1f}%",
+                         _st(env.renewable_energy_percent, 50, 30)))
     if env.energy_consumption_mwh is not None: env_kpis.append((TR["kpit"]["energy"], f"{env.energy_consumption_mwh:,.0f}"))
     if env.water_consumption_m3 is not None: env_kpis.append((TR["kpit"]["water"], f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent is not None: env_kpis.append((TR["kpit"]["recycling"], f"{env.waste_recycled_percent:.1f}%"))
+    if env.waste_recycled_percent is not None:
+        env_kpis.append((TR["kpit"]["recycling"], f"{env.waste_recycled_percent:.1f}%",
+                         _st(env.waste_recycled_percent, 60, 40)))
     if env.scope1_emissions is not None: env_kpis.append((TR["kpit"]["s1"], f"{env.scope1_emissions:,.0f}"))
     if env.scope2_emissions is not None: env_kpis.append((TR["kpit"]["s2"], f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions is not None: env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}"))
+    if env.scope3_emissions is not None:
+        env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}", "good"))
 
     if env_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -657,11 +681,21 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     soc = request.social
     soc_kpis = []
     if soc.total_employees is not None: soc_kpis.append((TR["kpit"]["employees"], f"{soc.total_employees:,}"))
-    if soc.female_employees_percent is not None: soc_kpis.append((TR["kpit"]["women"], f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent is not None: soc_kpis.append((TR["kpit"]["turnover"], f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee is not None: soc_kpis.append((TR["kpit"]["training"], f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate is not None: soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score is not None: soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
+    if soc.female_employees_percent is not None:
+        soc_kpis.append((TR["kpit"]["women"], f"{soc.female_employees_percent:.1f}%",
+                         _st(soc.female_employees_percent, 40, 35)))
+    if soc.employee_turnover_percent is not None:
+        soc_kpis.append((TR["kpit"]["turnover"], f"{soc.employee_turnover_percent:.1f}%",
+                         _st(soc.employee_turnover_percent, 10, 20, higher_better=False)))
+    if soc.training_hours_per_employee is not None:
+        soc_kpis.append((TR["kpit"]["training"], f"{soc.training_hours_per_employee:.0f}",
+                         _st(soc.training_hours_per_employee, 20, 10)))
+    if soc.accident_frequency_rate is not None:
+        soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}",
+                         _st(soc.accident_frequency_rate, 2, 5, higher_better=False)))
+    if soc.customer_satisfaction_score is not None:
+        soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}",
+                         _st(soc.customer_satisfaction_score, 8, 6)))
 
     if soc_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -684,11 +718,19 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     gov = request.governance
     gov_kpis = []
     if gov.board_members is not None: gov_kpis.append((TR["kpit"]["board"], str(gov.board_members)))
-    if gov.female_board_percent is not None: gov_kpis.append((TR["kpit"]["women_board"], f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent is not None: gov_kpis.append((TR["kpit"]["independent"], f"{gov.independent_board_percent:.1f}%"))
+    if gov.female_board_percent is not None:
+        gov_kpis.append((TR["kpit"]["women_board"], f"{gov.female_board_percent:.1f}%",
+                         _st(gov.female_board_percent, 40, 30)))
+    if gov.independent_board_percent is not None:
+        gov_kpis.append((TR["kpit"]["independent"], f"{gov.independent_board_percent:.1f}%",
+                         _st(gov.independent_board_percent, 50, 33)))
     if gov.csr_budget_eur is not None: gov_kpis.append((TR["kpit"]["csr"], f"{gov.csr_budget_eur:,.0f}"))
-    gov_kpis.append((TR["kpit"]["audit"], TR["kpit"]["yes"] if gov.esg_audit_conducted else (TR["kpit"]["no"] if gov.esg_audit_conducted is not None else TR["kpit"]["na"])))
-    gov_kpis.append((TR["kpit"]["committee"], TR["kpit"]["yes"] if gov.sustainability_committee else (TR["kpit"]["no"] if gov.sustainability_committee is not None else TR["kpit"]["na"])))
+    gov_kpis.append((TR["kpit"]["audit"],
+                     TR["kpit"]["yes"] if gov.esg_audit_conducted else (TR["kpit"]["no"] if gov.esg_audit_conducted is not None else TR["kpit"]["na"]),
+                     "good" if gov.esg_audit_conducted else ("bad" if gov.esg_audit_conducted is not None else None)))
+    gov_kpis.append((TR["kpit"]["committee"],
+                     TR["kpit"]["yes"] if gov.sustainability_committee else (TR["kpit"]["no"] if gov.sustainability_committee is not None else TR["kpit"]["na"]),
+                     "good" if gov.sustainability_committee else ("bad" if gov.sustainability_committee is not None else None)))
 
     if gov_kpis:
         story.append(Spacer(1, 0.3 * cm))
@@ -849,6 +891,18 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                     "rd", fontSize=9, fontName=ts["font"], textColor=pal["text"], leading=12)),
             ]
             rows.append([num, body])
+        # Matrice de priorisation effort/impact (les numéros renvoient au tableau)
+        if "priority" in chart_images:
+            try:
+                from content_generator import priority_reading
+                pimg = Image(io.BytesIO(chart_images["priority"]), width=16.5 * cm, height=9.5 * cm)
+                pimg.hAlign = 'CENTER'
+                story.append(pimg)
+                story.append(Paragraph(TR["cap_prio"], styles["caption"]))
+                story.append(Spacer(1, 0.25 * cm))
+                insight_callout(story, priority_reading(request, scores), pal["accent"], pal, ts)
+            except Exception as e:
+                print(f"Priority image error: {e}")
         rec_table = Table(rows, colWidths=[1.2 * cm, 15.3 * cm])
         rec_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
