@@ -433,6 +433,76 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             p.add_run(rec).font.size = Pt(10)
             p.paragraph_format.space_after = Pt(4)
 
+    # ── Diagnostic stratégique : benchmark + maturité + R&O + roadmap ─────
+    from content_generator import benchmark_verdict, maturity_text, risks_opportunities, roadmap_12m
+    _bv = benchmark_verdict(request, scores)
+    _bm = _bv["bm"]
+    _mt = maturity_text(request, scores)
+    _ro = risks_opportunities(request, scores)
+
+    add_heading(doc, TR["pdf_diag"], 1, colors["primary"], style=style)
+    add_hr(doc, colors["accent"])
+    p = doc.add_paragraph()
+    r_ = p.add_run(_bv["title"]); r_.bold = True; r_.font.size = Pt(12)
+    r_.font.color.rgb = hex_to_rgb(colors["secondary"])
+    cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
+    cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
+
+    comp = {"env": scores.environmental_score, "social": scores.social_score,
+            "gov": scores.governance_score, "global": scores.total_esg_score}
+    rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_sector"], TR["bench_delta_col"])]
+    for key, lbl in [("env", TR["pillar_env"]), ("social", TR["pillar_soc"]),
+                     ("gov", TR["pillar_gov"]), ("global", TR.get("score_global_short", "Global"))]:
+        d = _bm["deltas"][key]
+        rows.append((lbl, f"{comp[key]:.0f}", f"{_bm['avg'][key]:.0f}",
+                     ("+" if d >= 0 else "") + f"{d:.0f}"))
+    tbl = doc.add_table(rows=len(rows), cols=4)
+    tbl.style = "Table Grid"
+    for ci, val in enumerate(rows[0]):
+        c = tbl.rows[0].cells[ci]; c.paragraphs[0].add_run(val).bold = True
+        shade_cell(c, colors["primary"])
+        c.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        c.paragraphs[0].runs[0].font.size = Pt(9)
+    for ri in range(1, len(rows)):
+        for ci, val in enumerate(rows[ri]):
+            c = tbl.rows[ri].cells[ci]; run = c.paragraphs[0].add_run(val)
+            run.font.size = Pt(9.5)
+            if ci == 0:
+                run.bold = True
+            if ci == 3:
+                run.bold = True
+                run.font.color.rgb = hex_to_rgb("2E7D32" if not val.startswith("-") else "E74C3C")
+
+    ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
+    ins.add_run(_bv["insight"]).font.size = Pt(10)
+    shade_paragraph(ins, colors.get("light", "F0F2F5"))
+
+    _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
+    mp = doc.add_paragraph(); mp.paragraph_format.space_before = Pt(8)
+    mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {_mat_lbl} ({_mt["stage"]}/5)')
+    mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
+    doc.add_paragraph(_mt["next_hint"])
+
+    add_heading(doc, TR["risks_head"], 2, "E74C3C", style=style)
+    add_bullet_list(doc, [f'{i["tag"]} — {i["text"]}' for i in _ro["risks"]], "▪", "E74C3C")
+    add_heading(doc, TR["opps_head"], 2, colors["env"], style=style)
+    add_bullet_list(doc, [f'{i["tag"]} — {i["text"]}' for i in _ro["opportunities"]], "▪", colors["env"])
+
+    _rm = roadmap_12m(request, scores)
+    if any(ph["actions"] for ph in _rm):
+        add_heading(doc, TR["roadmap_title"], 2, colors["accent"], style=style)
+        for ph in _rm:
+            pp = doc.add_paragraph()
+            hr = pp.add_run(f'{ph["label"]} — {ph["sub"]}')
+            hr.bold = True; hr.font.color.rgb = hex_to_rgb(colors["primary"]); hr.font.size = Pt(10.5)
+            for act in ph["actions"][:4]:
+                ap = doc.add_paragraph(style="List Bullet")
+                ar = ap.add_run(act["title"]); ar.font.size = Pt(10)
+                if act["quick_win"]:
+                    qw = ap.add_run(f'  [{TR["quick_win"]}]')
+                    qw.bold = True; qw.font.size = Pt(8)
+                    qw.font.color.rgb = hex_to_rgb(colors["accent"])
+
     # ── 7. Référentiels ───────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s8"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
