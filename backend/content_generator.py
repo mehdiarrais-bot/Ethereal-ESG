@@ -1121,6 +1121,55 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
     return {k: phrase(k, sc) for k, sc in pil}
 
 
+def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
+    """Chiffre-choc unique (ancrage visuel / focal point). FR/EN.
+    Retourne {value, unit, label, statement}."""
+    en = getattr(request, "language", "fr") == "en"
+    env, tx = request.environmental, request.taxonomy
+    from esg_advanced import sector_benchmark
+    bm = sector_benchmark(request, scores)
+    gd = bm["deltas"]["global"]
+
+    # 1) Scope 3 dominant dans l'empreinte carbone
+    scopes = [env.scope1_emissions, env.scope2_emissions, env.scope3_emissions]
+    if all(v is not None for v in scopes) and sum(scopes) > 0 and env.scope3_emissions >= 0.5 * sum(scopes):
+        share = env.scope3_emissions / sum(scopes) * 100
+        return {"value": f"{share:.0f}", "unit": "%",
+                "label": "des émissions relèvent du Scope 3" if not en else "of emissions come from Scope 3",
+                "statement": ("La chaîne de valeur, principal terrain d'action climat." if not en
+                              else "The value chain is the main climate battleground.")}
+
+    # 2) Avance sectorielle nette
+    if gd >= 4:
+        return {"value": f"+{gd:.0f}", "unit": "pts",
+                "label": "au-dessus de la moyenne de votre secteur" if not en else "above your sector average",
+                "statement": ("Un positionnement ESG différenciant, à valoriser commercialement." if not en
+                              else "A differentiating ESG position — worth leveraging commercially.")}
+
+    # 3) Alignement Taxonomie fort
+    tax_vals = [v for v in ((tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)
+                            if tx else ()) if v is not None]
+    if tax_vals and max(tax_vals) >= 30:
+        return {"value": f"{max(tax_vals):.0f}", "unit": "%",
+                "label": "d'activités alignées à la Taxonomie UE" if not en else "of activities EU Taxonomy-aligned",
+                "statement": ("Une éligibilité concrète aux financements verts." if not en
+                              else "Concrete eligibility for green financing.")}
+
+    # 4) Repli : mix renouvelable
+    if env.renewable_energy_percent is not None:
+        r = env.renewable_energy_percent
+        return {"value": f"{r:.0f}", "unit": "%",
+                "label": "d'énergie renouvelable dans le mix" if not en else "renewable energy in the mix",
+                "statement": ("Un levier direct sur les coûts et l'empreinte carbone." if not en
+                              else "A direct lever on costs and carbon footprint.")}
+
+    # 5) Repli ultime : score global
+    return {"value": f"{scores.total_esg_score:.0f}", "unit": "/100",
+            "label": "score ESG global" if not en else "overall ESG score",
+            "statement": ("Une base mesurée pour piloter la trajectoire durable." if not en
+                          else "A measured baseline to steer the sustainability trajectory.")}
+
+
 # ══════════════════════════════════════════════════════════════════════════
 # TITRES-CONCLUSION DE SECTION (une slide = une idée forte)
 # ══════════════════════════════════════════════════════════════════════════

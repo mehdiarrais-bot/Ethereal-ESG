@@ -687,6 +687,25 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_text(slide, t["bench_note"], Inches(0.4), Inches(6.95), Inches(7.5), Inches(0.35),
                  font_size=9, italic=True, color=theme["muted"], font=fb)
 
+    # ── SLIDE 2c: Chiffre-choc (ancrage visuel / focal point) ───────────
+    from content_generator import hero_stat
+    _hs = hero_stat(request, scores)
+    slide = prs.slides.add_slide(blank_layout)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    add_bg_rect(slide, 0, 0, SLIDE_W, Inches(0.12), theme["accent"])
+    # Chiffre géant centré + unité
+    add_text(slide, _hs["value"], Inches(0), Inches(1.7), SLIDE_W, Inches(2.9),
+             font_size=230, bold=True, color=theme["accent"], align=PP_ALIGN.CENTER, font=ft)
+    add_text(slide, _hs["unit"], Inches(0), Inches(4.55), SLIDE_W, Inches(0.7),
+             font_size=34, bold=True, color=theme["text_light"], align=PP_ALIGN.CENTER, font=fb)
+    # Libellé du chiffre
+    add_text(slide, _hs["label"], Inches(1.5), Inches(5.35), SLIDE_W - Inches(3), Inches(0.6),
+             font_size=20, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
+    # Trait + phrase éditoriale
+    add_bg_rect(slide, SLIDE_W / 2 - Inches(0.9), Inches(6.15), Inches(1.8), Inches(0.05), theme["accent"])
+    add_text(slide, _hs["statement"], Inches(1.8), Inches(6.4), SLIDE_W - Inches(3.6), Inches(0.8),
+             font_size=16, italic=True, color=theme["text_light"], align=PP_ALIGN.CENTER, font=fb)
+
     # ── SLIDE 3: Environnement (infographie) ─────────────────────────────
     env = request.environmental
     env_kpis = []
