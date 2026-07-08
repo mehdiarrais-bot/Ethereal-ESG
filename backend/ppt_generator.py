@@ -259,6 +259,25 @@ def content_slide(prs, blank_layout, theme, style, title, color: RGBColor, kicke
     return slide
 
 
+def section_divider(prs, blank_layout, theme, style, part_no: str, title: str, subtitle: str = None):
+    """Carton de transition pleine page (rythme éditorial « rapport annuel »)."""
+    ft, fb = style["font_title"], style["font_body"]
+    slide = prs.slides.add_slide(blank_layout)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+    add_bg_rect(slide, 0, 0, Inches(0.18), SLIDE_H, theme["accent"])
+    # Numéro de partie géant en filigrane
+    add_text(slide, part_no, Inches(0.55), Inches(1.15), Inches(6), Inches(3.2),
+             font_size=200, bold=True, color=theme["card_bg"], font=ft)
+    # Kicker + titre
+    add_text(slide, maybe_upper(title.upper(), style), Inches(0.7), Inches(4.55), Inches(11.9), Inches(1.6),
+             font_size=_fit_title(40, title), bold=True, color=theme["text_light"], font=ft)
+    add_bg_rect(slide, Inches(0.75), Inches(4.35), Inches(2.2), Inches(0.08), theme["accent"])
+    if subtitle:
+        add_text(slide, subtitle, Inches(0.75), Inches(6.05), Inches(11.5), Inches(0.9),
+                 font_size=16, italic=True, color=theme["subtitle"], font=fb)
+    return slide
+
+
 def kpi_card(slide, left, top, w, h, theme, style, color: RGBColor):
     """Draw a KPI card background in the theme's card style."""
     if style["card"] == "flat":
@@ -628,6 +647,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
 
+    # ── DIVIDER: Acte 1 — Diagnostic ────────────────────────────────────
+    section_divider(prs, blank_layout, theme, style, "01", t["div1_title"], t["div1_sub"])
+
     # ── SLIDE 2b: Benchmark sectoriel + maturité (diagnostic) ───────────
     if "benchmark" in chart_images:
         _dk = style["dark_slides"]
@@ -871,6 +893,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                          align=PP_ALIGN.CENTER, font=fb)
                 add_text(slide, item["text"], px + Inches(0.3), iy + Inches(0.38), pw - Inches(0.6), Inches(0.6),
                          font_size=12.5, color=theme["text_dark"], font=fb)
+
+    # ── DIVIDER: Acte 2 — Plan d'action ─────────────────────────────────
+    section_divider(prs, blank_layout, theme, style, "02", t["div2_title"], t["div2_sub"])
 
     # ── SLIDE 7: Recommandations (cartes enrichies pleine largeur) ───────
     if request.include_recommendations:
