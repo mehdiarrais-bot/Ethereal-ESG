@@ -236,7 +236,11 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
         canvas.drawString(M, 4.2 * cm, sc)
         canvas.setFont(f, 16); canvas.setFillColor(light)
         canvas.drawString(M + stringWidth(sc, fb, 76) + 6, 4.45 * cm, "/100")
-        canvas.setFont(f, 10.5)
+        # Libellé du chiffre-clé (lisibilité immédiate)
+        canvas.setFillColor(pal["accent"]); canvas.setFont(fb, 9)
+        _slbl = pdf_txt(TR.get("score_global_short", "Score Global").upper())
+        canvas.drawString(M + stringWidth(sc, fb, 76) + 6, 4.05 * cm, _slbl)
+        canvas.setFont(f, 10.5); canvas.setFillColor(light)
         canvas.drawString(M, 3.15 * cm, meta)
         if request.company.presenter_name:
             pl = f"{TR['presented_by']} {request.company.presenter_name}"
