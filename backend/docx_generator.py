@@ -536,6 +536,15 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     )
     doc.add_paragraph(conclusion)
 
+    # ── Note méthodologique ───────────────────────────────────────────────
+    if content.get("methodology"):
+        add_heading(doc, TR["pdf_methodo"], 2, colors["secondary"], style=style)
+        mp = doc.add_paragraph()
+        mr = mp.add_run(content["methodology"])
+        mr.font.size = Pt(8.5)
+        mr.font.color.rgb = hex_to_rgb("5A6572")
+        shade_paragraph(mp, colors.get("light", "F0F2F5"))
+
     doc.add_paragraph()
     footer_p = doc.add_paragraph(
         f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]

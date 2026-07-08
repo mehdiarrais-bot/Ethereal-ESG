@@ -560,6 +560,40 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     story.append(PageBreak())
 
+    # ── Sommaire structuré par actes (repère de lecture) ──────────────────
+    _toc_parts = [
+        ("01", TR["toc_part1"], [TR["pdf_s1"], TR["pdf_s2"], TR["pdf_s3"], TR["pdf_s4"], TR["pdf_s5"]]),
+        ("02", TR["toc_part2"], [TR["pdf_s6"], TR["pdf_diag"]]),
+        ("03", TR["toc_part3"], [TR["pdf_s7"], TR["roadmap_title"], TR["pdf_s8"], TR["pdf_concl"]]),
+    ]
+    _tnum = ParagraphStyle("tn", fontSize=26, fontName=ts["font_bold"],
+                           textColor=pal["accent"], leading=28)
+    _tact = ParagraphStyle("ta", fontSize=10.5, fontName=ts["font_bold"],
+                           textColor=pal["primary"], leading=13, spaceBefore=2, spaceAfter=6)
+    _titem = ParagraphStyle("ti", fontSize=8, fontName=ts["font"],
+                            textColor=pal["text"], leading=11.5)
+    toc_cells = []
+    for num, act, items in _toc_parts:
+        cell = [Paragraph(num, _tnum), Paragraph(esc(act).upper(), _tact)]
+        for it in items:
+            cell.append(Paragraph(f'<font color="#{pal["accent"].hexval()[2:]}">—</font>  {esc(it)}', _titem))
+        toc_cells.append(cell)
+    toc_tbl = Table([toc_cells], colWidths=[5.66 * cm] * 3)
+    toc_tbl.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+        ('LINEABOVE', (0, 0), (-1, 0), 2.5, pal["accent"]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('INNERGRID', (0, 0), (-1, -1), 1, colors.white),
+    ]))
+    story.append(Paragraph(TR["toc_title"].upper() if ts["uppercase"] else TR["toc_title"],
+                           styles["h2"]))
+    story.append(toc_tbl)
+    story.append(Spacer(1, 0.55 * cm))
+
     # ── Executive Summary ──────────────────────────────────────────────────
     section_header(story, TR["pdf_s1"], pal["secondary"], pal, styles, ts)
 
@@ -914,6 +948,25 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "totale dans son reporting extra-financier, conformément aux meilleures pratiques internationales."
     )
     story.append(Paragraph(esc(conclusion), styles["body"]))
+
+    # ── Note méthodologique (annexe : périmètre, référentiels, limites) ───
+    if content.get("methodology"):
+        story.append(Spacer(1, 0.6 * cm))
+        story.append(Paragraph(TR["pdf_methodo"], styles["h2"]))
+        meth = Table([[Paragraph(esc(content["methodology"]),
+                                 ParagraphStyle("mn", fontSize=8.5, fontName=ts["font"],
+                                                textColor=pal["text"], leading=12.5,
+                                                alignment=TA_JUSTIFY))]],
+                     colWidths=[16.5 * cm])
+        meth.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('LINEBEFORE', (0, 0), (0, -1), 2.5, pal["secondary"]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        story.append(meth)
 
     story.append(Spacer(1, 1 * cm))
     story.append(HRFlowable(width="100%", thickness=1, color=pal["secondary"]))

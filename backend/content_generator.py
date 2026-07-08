@@ -237,8 +237,305 @@ PERF_DESC = {
 def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
     """Dispatche vers le générateur FR ou EN selon request.language."""
     if getattr(request, "language", "fr") == "en":
-        return _generate_en(request, scores)
-    return _generate_fr(request, scores)
+        content = _generate_en(request, scores)
+    else:
+        content = _generate_fr(request, scores)
+    return deepen_content(request, scores, content)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# APPROFONDISSEMENT (niveau rapport CSRD : IRO, gap analysis, méthodologie)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Risques climatiques physiques & de transition par famille sectorielle.
+# (clé matching lower-case ; FR, EN)
+_CLIMATE_SECTOR = {
+    "industri": (
+        ("la vulnérabilité des sites de production aux vagues de chaleur et au stress hydrique (refroidissement des procédés), ainsi que la perturbation des chaînes d'approvisionnement en matières premières",
+         "le renchérissement du carbone (SEQE-UE, taxe carbone aux frontières CBAM) sur les intrants énergo-intensifs et l'exigence croissante d'écoconception de la part des donneurs d'ordre"),
+        ("the vulnerability of production sites to heatwaves and water stress (process cooling), and the disruption of raw-material supply chains",
+         "rising carbon costs (EU ETS, CBAM carbon border adjustment) on energy-intensive inputs and growing eco-design requirements from principals"),
+    ),
+    "agro": (
+        ("l'exposition directe des rendements et des approvisionnements agricoles à la sécheresse, au gel tardif et aux régimes de précipitations erratiques",
+         "l'évolution des attentes consommateurs vers des produits bas-carbone et la réglementation croissante sur la déforestation importée (règlement EUDR)"),
+        ("the direct exposure of yields and agricultural sourcing to drought, late frost and erratic rainfall patterns",
+         "shifting consumer expectations towards low-carbon products and growing regulation on imported deforestation (EUDR)"),
+    ),
+    "transport": (
+        ("l'exposition des infrastructures et des flux aux événements extrêmes (inondations, tempêtes) et la congestion liée aux dérèglements",
+         "la décarbonation imposée des flottes (normes CO₂, ZFE) et la volatilité des prix des carburants"),
+        ("the exposure of infrastructure and flows to extreme events (floods, storms) and disruption-related congestion",
+         "mandatory fleet decarbonisation (CO₂ standards, low-emission zones) and fuel-price volatility"),
+    ),
+    "logisti": (
+        ("l'exposition des infrastructures et des flux aux événements extrêmes (inondations, tempêtes) et la congestion liée aux dérèglements",
+         "la décarbonation imposée des flottes (normes CO₂, ZFE) et la volatilité des prix des carburants"),
+        ("the exposure of infrastructure and flows to extreme events (floods, storms) and disruption-related congestion",
+         "mandatory fleet decarbonisation (CO₂ standards, low-emission zones) and fuel-price volatility"),
+    ),
+    "btp": (
+        ("la sinistralité accrue des chantiers en période de canicule et l'exposition du parc construit aux aléas climatiques",
+         "le durcissement des normes de performance énergétique (RE2020, rénovation) et le renchérissement des matériaux carbonés (ciment, acier)"),
+        ("higher site incident rates during heatwaves and the exposure of the built stock to climate hazards",
+         "tightening energy-performance standards and the rising cost of carbon-intensive materials (cement, steel)"),
+    ),
+    "construction": (
+        ("la sinistralité accrue des chantiers en période de canicule et l'exposition du parc construit aux aléas climatiques",
+         "le durcissement des normes de performance énergétique (RE2020, rénovation) et le renchérissement des matériaux carbonés (ciment, acier)"),
+        ("higher site incident rates during heatwaves and the exposure of the built stock to climate hazards",
+         "tightening energy-performance standards and the rising cost of carbon-intensive materials (cement, steel)"),
+    ),
+    "numéri": (
+        ("la dépendance des datacenters au refroidissement en période de canicule et la fragilité des infrastructures réseau face aux événements extrêmes",
+         "la pression réglementaire et client sur l'efficacité énergétique du numérique et la sobriété des usages"),
+        ("datacentre cooling dependence during heatwaves and the fragility of network infrastructure in extreme events",
+         "regulatory and customer pressure on digital energy efficiency and usage sobriety"),
+    ),
+    "tech": (
+        ("la dépendance des datacenters au refroidissement en période de canicule et la fragilité des infrastructures réseau face aux événements extrêmes",
+         "la pression réglementaire et client sur l'efficacité énergétique du numérique et la sobriété des usages"),
+        ("datacentre cooling dependence during heatwaves and the fragility of network infrastructure in extreme events",
+         "regulatory and customer pressure on digital energy efficiency and usage sobriety"),
+    ),
+    "commerce": (
+        ("la vulnérabilité des chaînes d'approvisionnement mondiales aux aléas climatiques et l'impact des canicules sur les points de vente",
+         "l'exigence de transparence sur l'empreinte des produits (affichage environnemental) et le devoir de vigilance sur la chaîne amont"),
+        ("the vulnerability of global supply chains to climate hazards and the impact of heatwaves on retail sites",
+         "product-footprint transparency requirements (environmental labelling) and due-diligence duties on the upstream chain"),
+    ),
+    "énergie": (
+        ("l'exposition des actifs de production et des réseaux aux événements extrêmes et à la disponibilité de la ressource en eau",
+         "la recomposition rapide du mix énergétique, le risque d'actifs échoués et l'évolution des mécanismes de soutien"),
+        ("the exposure of generation assets and grids to extreme events and water availability",
+         "the rapid recomposition of the energy mix, stranded-asset risk and evolving support mechanisms"),
+    ),
+    "finance": (
+        ("l'exposition indirecte des portefeuilles aux actifs physiquement vulnérables",
+         "le risque de crédit et de marché lié aux actifs carbonés, et les obligations de reporting SFDR/Pilier 3 ESG"),
+        ("indirect portfolio exposure to physically vulnerable assets",
+         "credit and market risk on carbon-intensive assets, and SFDR/ESG Pillar 3 reporting duties"),
+    ),
+}
+
+def _climate_sector_risks(sector: str, en: bool):
+    s = (sector or "").lower()
+    for key, (fr_pair, en_pair) in _CLIMATE_SECTOR.items():
+        if key in s:
+            return en_pair if en else fr_pair
+    return (("l'exposition des actifs, des collaborateurs et de la chaîne d'approvisionnement aux événements climatiques extrêmes et chroniques",
+             "le renchérissement du carbone et de l'énergie, ainsi que l'évolution des attentes réglementaires et commerciales")
+            if not en else
+            ("the exposure of assets, employees and the supply chain to acute and chronic climate events",
+             "rising carbon and energy costs, together with evolving regulatory and commercial expectations"))
+
+
+def _esrs_gaps(request: ESGRequest, en: bool) -> list:
+    """Points de données ESRS structurants non renseignés (gap analysis)."""
+    env, soc, gov = request.environmental, request.social, request.governance
+    gaps = []
+    if env.scope3_emissions is None:
+        gaps.append(("les émissions de Scope 3 (ESRS E1-6), qui représentent en général la majorité de l'empreinte",
+                     "Scope 3 emissions (ESRS E1-6), which typically account for most of the footprint"))
+    if env.energy_consumption_mwh is None:
+        gaps.append(("la consommation énergétique totale et sa décomposition (ESRS E1-5)",
+                     "total energy consumption and its breakdown (ESRS E1-5)"))
+    if env.water_consumption_m3 is None:
+        gaps.append(("les prélèvements d'eau (ESRS E3)", "water withdrawals (ESRS E3)"))
+    if soc.employee_turnover_percent is None:
+        gaps.append(("le taux de rotation des effectifs (ESRS S1-6)", "employee turnover (ESRS S1-6)"))
+    if soc.accident_frequency_rate is None:
+        gaps.append(("les indicateurs de santé-sécurité (ESRS S1-14)", "health & safety indicators (ESRS S1-14)"))
+    if gov.board_members is None:
+        gaps.append(("la composition détaillée de l'organe d'administration (ESRS 2 GOV-1)",
+                     "the detailed composition of the administrative body (ESRS 2 GOV-1)"))
+    if not gov.esg_audit_conducted:
+        gaps.append(("la vérification par un tiers indépendant, requise par la CSRD (assurance limitée)",
+                     "independent third-party assurance, required by the CSRD (limited assurance)"))
+    return [g[1] if en else g[0] for g in gaps]
+
+
+def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dict:
+    """Élève les textes au niveau d'un rapport de durabilité CSRD :
+    matérialité citant les enjeux réels cotés, risques climat sectorisés par
+    horizon, analyse ESRS par pilier, note méthodologique, synthèse décisionnelle."""
+    en = getattr(request, "language", "fr") == "en"
+    name = request.company.name
+    env = request.environmental
+    from esg_advanced import materiality_topics, sector_benchmark, esg_maturity
+    bm = sector_benchmark(request, scores)
+    mat = esg_maturity(request, scores)
+    topics = sorted(materiality_topics(request, scores, "en" if en else "fr"),
+                    key=lambda t: t["impact"] + t["financial"], reverse=True)
+    top3 = topics[:3]
+
+    def t3(fmt_fr, fmt_en):
+        f = fmt_en if en else fmt_fr
+        return " ; ".join(f.format(l=tp["label"], i=tp["impact"], fi=tp["financial"]) for tp in top3)
+
+    # ── 1. Double matérialité : processus IRO + résultats réels ──────────
+    if en:
+        content["materiality"] = (
+            f"In accordance with the CSRD and ESRS 1/ESRS 2 (IRO-1, SBM-3), {name} conducted a double "
+            f"materiality assessment covering its own operations and its upstream and downstream value "
+            f"chain. The process followed four steps: (i) mapping of impacts, risks and opportunities "
+            f"(IROs) per ESRS topic, based on the reported indicators; (ii) rating of impact materiality "
+            f"(severity × scope × irremediability, plus likelihood for potential impacts) and financial "
+            f"materiality (magnitude × likelihood of effects on cash flows, cost of capital and access "
+            f"to financing) on a 0-10 scale; (iii) consolidation into the materiality matrix; "
+            f"(iv) internal validation by ESG governance. "
+            f"The assessment identifies the following as the most material topics for {name}: "
+            + t3("", "{l} (impact {i:.1f}/10, financial {fi:.1f}/10)") + ". "
+            f"These topics determine the ESRS disclosure requirements applicable to the report and "
+            f"concentrate the action plan resources; topics assessed as non-material are documented "
+            f"and re-examined at each annual review."
+        )
+    else:
+        content["materiality"] = (
+            f"Conformément à la CSRD et aux normes ESRS 1/ESRS 2 (IRO-1, SBM-3), {name} a conduit une "
+            f"analyse de double matérialité couvrant ses opérations propres ainsi que sa chaîne de "
+            f"valeur amont et aval. Le processus a suivi quatre étapes : (i) cartographie des impacts, "
+            f"risques et opportunités (IRO) par thématique ESRS, à partir des indicateurs déclarés ; "
+            f"(ii) cotation de la matérialité d'impact (sévérité × étendue × irrémédiabilité, pondérée "
+            f"par la probabilité pour les impacts potentiels) et de la matérialité financière "
+            f"(ampleur × probabilité des effets sur les flux de trésorerie, le coût du capital et "
+            f"l'accès au financement) sur une échelle de 0 à 10 ; (iii) consolidation dans la matrice "
+            f"de matérialité ; (iv) validation interne par la gouvernance ESG. "
+            f"L'analyse identifie comme enjeux les plus matériels pour {name} : "
+            + t3("{l} (impact {i:.1f}/10, financier {fi:.1f}/10)", "") + ". "
+            f"Ces enjeux déterminent les exigences de publication ESRS applicables au rapport et "
+            f"concentrent les moyens du plan d'action ; les enjeux jugés non matériels sont documentés "
+            f"et réexaminés à chaque revue annuelle."
+        )
+
+    # ── 2. Risques climatiques : sectorisés + horizons + résilience ──────
+    phys, trans = _climate_sector_risks(request.company.sector, en)
+    ci = (env.co2_emissions_tonnes / request.company.revenue_eur * 1e6
+          if (env.co2_emissions_tonnes and request.company.revenue_eur) else None)
+    if en:
+        exposure = ""
+        if ci is not None:
+            lvl = ("high" if ci > 100 else "moderate" if ci > 30 else "contained")
+            exposure = (f" With a carbon intensity of {ci:.0f} t CO₂e/€M revenue, the company's exposure "
+                        f"to a carbon price of €100/t is assessed as {lvl}.")
+        renew = (f" The renewable share of the energy mix ({env.renewable_energy_percent:.0f}%) partially "
+                 f"mitigates energy-transition risk." if env.renewable_energy_percent is not None else "")
+        content["climate_risk"] = (
+            f"In line with TCFD recommendations and ESRS E1 (E1-9), {name} analyses its climate risks "
+            f"over three horizons: short term (0-3 years, aligned with budget cycles), medium term "
+            f"(3-10 years) and long term (beyond 10 years). Physical risks primarily concern {phys}. "
+            f"Transition risks are driven by {trans}.{exposure}{renew} "
+            f"The associated opportunities — energy efficiency, low-carbon offerings, access to "
+            f"sustainability-linked financing — are assessed alongside the risks. The resilience of the "
+            f"business model is reviewed against two reference scenarios (below 2°C and above 3°C), and "
+            f"the findings feed the risk register and the strategic plan."
+        )
+    else:
+        exposure = ""
+        if ci is not None:
+            lvl = ("élevée" if ci > 100 else "modérée" if ci > 30 else "contenue")
+            exposure = (f" Avec une intensité carbone de {ci:.0f} t CO₂e/M€ de CA, l'exposition de "
+                        f"l'entreprise à un prix du carbone de 100 €/t est jugée {lvl}.")
+        renew = (f" La part renouvelable du mix énergétique ({env.renewable_energy_percent:.0f} %) atténue "
+                 f"partiellement le risque de transition énergétique." if env.renewable_energy_percent is not None else "")
+        content["climate_risk"] = (
+            f"En ligne avec les recommandations de la TCFD et la norme ESRS E1 (E1-9), {name} analyse "
+            f"ses risques climatiques sur trois horizons : court terme (0-3 ans, aligné sur les cycles "
+            f"budgétaires), moyen terme (3-10 ans) et long terme (au-delà de 10 ans). Les risques "
+            f"physiques concernent en premier lieu {phys}. Les risques de transition sont portés par "
+            f"{trans}.{exposure}{renew} "
+            f"Les opportunités associées — efficacité énergétique, offres bas-carbone, accès aux "
+            f"financements à impact — sont évaluées en miroir des risques. La résilience du modèle "
+            f"d'affaires est examinée au regard de deux scénarios de référence (inférieur à 2 °C et "
+            f"supérieur à 3 °C), et les conclusions alimentent la cartographie des risques et le plan "
+            f"stratégique."
+        )
+
+    # ── 3. Analyse ESRS + benchmark par pilier (phrase de clôture) ───────
+    def bench_sentence(delta, en):
+        if en:
+            pos = "above" if delta >= 0 else "below"
+            return f" The pillar stands {abs(delta):.0f} pt(s) {pos} the internal sector reference"
+        pos = "au-dessus de" if delta >= 0 else "en retrait de"
+        return f" Le pilier se situe {abs(delta):.0f} pt(s) {pos} la référence sectorielle interne"
+
+    esrs_close = {
+        "environmental": (" et couvre les principales exigences des normes ESRS E1 (climat) et E5 (économie circulaire).",
+                          " and covers the main requirements of ESRS E1 (climate) and E5 (circular economy)."),
+        "social": (" ; le reporting s'inscrit dans le périmètre de la norme ESRS S1 (effectifs propres).",
+                   "; reporting falls within the scope of ESRS S1 (own workforce)."),
+        "governance": (" ; le dispositif répond aux attendus des normes ESRS G1 (conduite des affaires) et ESRS 2 (gouvernance des enjeux de durabilité).",
+                       "; the framework addresses ESRS G1 (business conduct) and ESRS 2 (sustainability governance)."),
+    }
+    for key, dkey in (("environmental", "env"), ("social", "social"), ("governance", "gov")):
+        close_fr, close_en = esrs_close[key]
+        content[key] = (content[key] + bench_sentence(bm["deltas"][dkey], en)
+                        + (close_en if en else close_fr))
+
+    # ── 4. Synthèse exécutive : ajout du « so what » décisionnel ─────────
+    gaps = _esrs_gaps(request, en)
+    gd = bm["deltas"]["global"]
+    stage_fr = {"initiated": "initiée", "structuring": "en structuration", "structured": "structurée",
+                "advanced": "avancée", "exemplary": "exemplaire"}
+    stage_en = {"initiated": "initiated", "structuring": "structuring", "structured": "structured",
+                "advanced": "advanced", "exemplary": "exemplary"}
+    if en:
+        pos = f"{abs(gd):.0f} pt(s) {'above' if gd >= 0 else 'below'} the sector reference"
+        content["executive_summary"] += (
+            f" Overall, the profile stands {pos}, with an ESG maturity assessed as "
+            f"{stage_en.get(mat.get('key', 'structured'), 'structured')} ({mat['stage']}/5). "
+            + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
+               f"secure CSRD readiness and strengthen investor confidence." if gaps else
+               f"Reporting coverage is complete on the structural CSRD datapoints, an asset for "
+               f"assurance and investor dialogue.")
+        )
+    else:
+        pos = f"{abs(gd):.0f} pt(s) {'au-dessus' if gd >= 0 else 'en retrait'} de la référence sectorielle"
+        content["executive_summary"] += (
+            f" Au global, le profil se situe {pos}, avec une maturité ESG évaluée comme "
+            f"{stage_fr.get(mat.get('key', 'structured'), 'structurée')} ({mat['stage']}/5). "
+            + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
+               f"{gaps[0]} — constitue le levier le plus rapide pour sécuriser la conformité CSRD "
+               f"et renforcer la confiance des investisseurs." if gaps else
+               f"La couverture du reporting est complète sur les points de données structurants de la "
+               f"CSRD, un atout pour la vérification et le dialogue investisseurs.")
+        )
+
+    # ── 5. Note méthodologique (périmètre, référentiels, limites) ────────
+    year = request.company.reporting_year
+    gap_txt = ""
+    if gaps:
+        listed = " ; ".join(gaps[:3]) if not en else "; ".join(gaps[:3])
+        gap_txt = ((f" Les points de données suivants restent à consolider : {listed}.")
+                   if not en else (f" The following datapoints remain to be consolidated: {listed}."))
+    if en:
+        content["methodology"] = (
+            f"Reporting scope and methodology. The indicators cover the {year} financial year on an "
+            f"operational-control basis. Greenhouse-gas emissions are computed according to the GHG "
+            f"Protocol (Scopes 1, 2 and 3); social indicators follow ESRS S1 definitions; governance "
+            f"indicators are documented from corporate records. Pillar scores (0-100) aggregate each "
+            f"indicator against regulatory thresholds and recognised sector standards; the overall score "
+            f"is the weighted average of the three pillars. The sector comparison uses an internal "
+            f"reference base for the SME/mid-cap market and involves no external data transfer — the "
+            f"entire report is produced locally. Limitations: some indicators rely on declarative data "
+            f"and estimates; they are refined as measurement systems mature.{gap_txt}"
+        )
+    else:
+        content["methodology"] = (
+            f"Périmètre et méthodologie du reporting. Les indicateurs couvrent l'exercice {year} selon "
+            f"l'approche du contrôle opérationnel. Les émissions de gaz à effet de serre sont calculées "
+            f"selon le GHG Protocol (Scopes 1, 2 et 3) ; les indicateurs sociaux suivent les définitions "
+            f"de la norme ESRS S1 ; les indicateurs de gouvernance sont documentés à partir des registres "
+            f"de l'entreprise. Les scores par pilier (0-100) agrègent chaque indicateur au regard des "
+            f"seuils réglementaires et des standards sectoriels reconnus ; le score global est la moyenne "
+            f"pondérée des trois piliers. La comparaison sectorielle s'appuie sur une base de référence "
+            f"interne du marché PME/ETI et n'implique aucun transfert de données externe — l'ensemble du "
+            f"rapport est produit localement. Limites : certains indicateurs reposent sur des données "
+            f"déclaratives et des estimations ; ils sont affinés à mesure que les dispositifs de mesure "
+            f"gagnent en maturité.{gap_txt}"
+        )
+
+    return content
 
 
 def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:

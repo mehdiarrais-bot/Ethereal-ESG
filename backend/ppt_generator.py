@@ -591,6 +591,35 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                  Inches(0.7), Inches(5.9), Inches(11.9), Inches(0.5),
                  font_size=15, color=theme["muted"], font=fb)
 
+    # ── SLIDE 1ter: Sommaire (repère de lecture, 3 actes) ────────────────
+    _dk0 = style["dark_slides"]
+    slide = prs.slides.add_slide(blank_layout)
+    add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"] if _dk0 else theme["bg_secondary"])
+    add_bg_rect(slide, 0, 0, Inches(0.14), SLIDE_H, theme["accent"])
+    add_text(slide, t["toc_title"].upper(), Inches(0.65), Inches(0.55), Inches(8), Inches(0.8),
+             font_size=36, bold=True, color=theme["text_dark"], font=ft)
+    add_bg_rect(slide, Inches(0.7), Inches(1.45), Inches(1.8), Inches(0.06), theme["accent"])
+    _toc = [
+        ("01", t["toc_part1"], [t["exec_title"], t["pillar_env"], t["pillar_soc"], t["pillar_gov"]]),
+        ("02", t["toc_part2"], [t["benchmark_kicker"].title(), t["ro_kicker"].title(), t["strategic"]]),
+        ("03", t["toc_part3"], [t["recommendations"], t["roadmap_title"], t["odd_title"], t["conclusion_title"]]),
+    ]
+    _tw = Inches(3.95)
+    for i, (num, act, items) in enumerate(_toc):
+        cx = Inches(0.65) + i * (_tw + Inches(0.25))
+        add_shape(slide, ROUNDED_RECT if style["card"] != "flat" else RECT,
+                  cx, Inches(2.1), _tw, Inches(4.6), fill=theme["card_bg"])
+        add_text(slide, num, cx + Inches(0.35), Inches(2.35), Inches(2), Inches(0.9),
+                 font_size=44, bold=True, color=theme["accent"], font=ft)
+        add_text(slide, act.upper(), cx + Inches(0.35), Inches(3.35), _tw - Inches(0.6), Inches(0.45),
+                 font_size=15, bold=True, color=theme["text_dark"], font=fb)
+        add_bg_rect(slide, cx + Inches(0.35), Inches(3.85), _tw - Inches(0.7), Inches(0.02),
+                    theme["accent"] if not _dk0 else theme["muted"])
+        for j, it in enumerate(items[:4]):
+            add_text(slide, f"—  {it}", cx + Inches(0.35), Inches(4.05) + j * Inches(0.6),
+                     _tw - Inches(0.6), Inches(0.55), font_size=12,
+                     color=theme["text_dark"] if not _dk0 else theme["subtitle"], font=fb)
+
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
     dark = style["dark_slides"]
     white = RGBColor(0xFF, 0xFF, 0xFF)
