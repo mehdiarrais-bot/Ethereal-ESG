@@ -1294,6 +1294,8 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
         pillar, hfr, hen, dfr, den = _REC_META[k]
         tfr, ten = _REC_TITLES[k]
         effort, impact = _REC_PRIORITY.get(k, (5, 5))
+        own_fr, own_en = _REC_OWNERS.get(k, ("Direction RSE", "CSR"))
+        obj_fr, obj_en = _REC_OBJECTIVES.get(k, ("", ""))
         out.append({
             "key": k,
             "title": ten if en else tfr,
@@ -1302,6 +1304,8 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
             "horizon": hen if en else hfr,
             "effort": effort,
             "impact": impact,
+            "owner": own_en if en else own_fr,
+            "objective": obj_en if en else obj_fr,
         })
     return out
 
@@ -1735,38 +1739,45 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     from esg_advanced import sector_benchmark
     bm = sector_benchmark(request, scores)
 
-    def T(fr, tag_fr, en_, tag_en):
-        return {"text": en_ if en else fr, "tag": tag_en if en else tag_fr}
+    def T(fr, tag_fr, en_, tag_en, imp=None, lik=None):
+        """imp/lik : 'H' (élevé/probable) ou 'M' (modéré/possible) → priorité P1-P3."""
+        item = {"text": en_ if en else fr, "tag": tag_en if en else tag_fr}
+        if imp is not None:
+            item["impact"] = ("High" if en else "Élevé") if imp == "H" else ("Moderate" if en else "Modéré")
+            item["likelihood"] = ("Likely" if en else "Probable") if lik == "H" else ("Possible" if en else "Possible")
+            item["priority"] = "P1" if (imp == "H" and lik == "H") else ("P2" if "H" in (imp, lik) else "P3")
+        return item
 
     risks = []
     if env.scope3_emissions is None:
         risks.append(T("Scope 3 non mesuré : non-conformité CSRD/ESRS E1 à venir", "Réglementaire",
-                       "Scope 3 not measured: upcoming CSRD/ESRS E1 non-compliance", "Regulatory"))
+                       "Scope 3 not measured: upcoming CSRD/ESRS E1 non-compliance", "Regulatory", "H", "H"))
     if not gov.esg_audit_conducted:
         risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
-                       "Unaudited reporting: limited credibility with investors", "Assurance"))
+                       "Unaudited reporting: limited credibility with investors", "Assurance", "H", "H"))
     ci = (env.co2_emissions_tonnes / rev * 1e6) if (env.co2_emissions_tonnes and rev) else None
     if ci is not None and ci > 100:
         risks.append(T("Intensité carbone élevée : marge exposée à la tarification du carbone", "Transition",
-                       "High carbon intensity: margin exposed to carbon pricing", "Transition"))
+                       "High carbon intensity: margin exposed to carbon pricing", "Transition", "H", "M"))
     elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
         risks.append(T("Dépendance énergie fossile : exposition à la hausse des prix", "Transition",
-                       "Fossil-energy dependence: exposure to rising prices", "Transition"))
+                       "Fossil-energy dependence: exposure to rising prices", "Transition", "M", "H"))
     if soc.female_employees_percent is not None and soc.female_employees_percent < 40:
         risks.append(T("Parité sous la cible : risque réglementaire et d'attractivité", "Réglementaire",
-                       "Gender balance below target: regulatory & attractiveness risk", "Regulatory"))
+                       "Gender balance below target: regulatory & attractiveness risk", "Regulatory", "M", "H"))
     if gov.data_breaches is not None and gov.data_breaches > 0:
         risks.append(T("Incident cyber déclaré : risque réputationnel et RGPD", "Réputation",
-                       "Reported cyber incident: reputational & GDPR risk", "Reputation"))
+                       "Reported cyber incident: reputational & GDPR risk", "Reputation", "H", "M"))
     if soc.accident_frequency_rate is not None and soc.accident_frequency_rate > 5:
         risks.append(T("Sinistralité au-dessus des standards : risque humain et social", "Opérationnel",
-                       "Accident rate above standards: human & social risk", "Operational"))
+                       "Accident rate above standards: human & social risk", "Operational", "H", "H"))
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
         risks.append(T("Manquements éthiques enregistrés : risque juridique", "Éthique",
-                       "Recorded ethics breaches: legal risk", "Ethics"))
+                       "Recorded ethics breaches: legal risk", "Ethics", "M", "M"))
     if len(risks) < 3:
         risks.append(T("Exigences CSRD croissantes : effort de reporting à anticiper", "Réglementaire",
-                       "Rising CSRD requirements: reporting effort to anticipate", "Regulatory"))
+                       "Rising CSRD requirements: reporting effort to anticipate", "Regulatory", "M", "H"))
+    risks.sort(key=lambda r: r.get("priority", "P3"))
 
     opps = []
     if scores.governance_score >= 70 or (gov.esg_audit_conducted and gov.sustainability_committee):
@@ -1795,3 +1806,99 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
                       "Early ESG structuring: anticipating regulatory requirements", "Market"))
 
     return {"risks": risks[:4], "opportunities": opps[:4]}
+
+
+def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
+    """Analyse des écarts vs exigences CSRD/réglementaires (données déclarées).
+    Chaque ligne : {req, ref, status: 'ok'|'partial'|'no'|'na', note}. FR/EN."""
+    en = getattr(request, "language", "fr") == "en"
+    env, soc, gov = request.environmental, request.social, request.governance
+    tx = request.taxonomy
+    rows = []
+
+    def R(req_fr, req_en, ref, status, note_fr, note_en):
+        rows.append({"req": req_en if en else req_fr, "ref": ref, "status": status,
+                     "note": note_en if en else note_fr})
+
+    # Bilan GES Scopes 1 & 2
+    s12 = env.scope1_emissions is not None and env.scope2_emissions is not None
+    R("Bilan GES Scopes 1 & 2", "GHG inventory Scopes 1 & 2", "ESRS E1-6",
+      "ok" if s12 else ("partial" if env.co2_emissions_tonnes else "no"),
+      "Émissions mesurées et publiées" if s12 else
+      ("Total publié, décomposition par scope à établir" if env.co2_emissions_tonnes else "Bilan GES à réaliser"),
+      "Emissions measured and disclosed" if s12 else
+      ("Total disclosed, scope breakdown to be established" if env.co2_emissions_tonnes else "GHG inventory to be produced"))
+
+    # Scope 3
+    R("Émissions de la chaîne de valeur (Scope 3)", "Value-chain emissions (Scope 3)", "ESRS E1-6",
+      "ok" if env.scope3_emissions is not None else "no",
+      "Scope 3 mesuré et publié" if env.scope3_emissions is not None else "Scope 3 non mesuré — priorité CSRD",
+      "Scope 3 measured and disclosed" if env.scope3_emissions is not None else "Scope 3 not measured — CSRD priority")
+
+    # Vérification tierce
+    R("Vérification du reporting par un tiers", "Third-party assurance of reporting", "CSRD (assurance limitée)",
+      "ok" if gov.esg_audit_conducted else "no",
+      "Audit ESG indépendant réalisé" if gov.esg_audit_conducted else "Aucune assurance externe à date",
+      "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date")
+
+    # Gouvernance durabilité
+    R("Supervision de la durabilité par la gouvernance", "Sustainability oversight by governance", "ESRS 2 GOV-1",
+      "ok" if gov.sustainability_committee else "no",
+      "Comité de durabilité en place" if gov.sustainability_committee else "Pas de comité dédié",
+      "Sustainability committee in place" if gov.sustainability_committee else "No dedicated committee")
+
+    # Parité effectifs
+    g = soc.female_employees_percent
+    R("Mixité des effectifs (cible 40 %)", "Workforce gender balance (40% target)", "Index égalité / ESRS S1-9",
+      "na" if g is None else ("ok" if g >= 40 else ("partial" if g >= 35 else "no")),
+      "Donnée non renseignée" if g is None else f"{g:.0f} % de femmes",
+      "Not reported" if g is None else f"{g:.0f}% women")
+
+    # Indépendance du conseil
+    bi = gov.independent_board_percent
+    R("Indépendance du conseil (seuil 50 %)", "Board independence (50% threshold)", "AFEP-MEDEF",
+      "na" if bi is None else ("ok" if bi >= 50 else ("partial" if bi >= 33 else "no")),
+      "Donnée non renseignée" if bi is None else f"{bi:.0f} % d'administrateurs indépendants",
+      "Not reported" if bi is None else f"{bi:.0f}% independent directors")
+
+    # Taxonomie UE
+    has_tx = tx and any(v is not None for v in
+                        (tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent))
+    R("Publication des indicateurs Taxonomie UE", "EU Taxonomy KPI disclosure", "Règlement (UE) 2020/852",
+      "ok" if has_tx else "no",
+      "Parts alignées publiées (CA/CapEx/OpEx)" if has_tx else "Éligibilité et alignement à évaluer",
+      "Aligned shares disclosed (turnover/CapEx/OpEx)" if has_tx else "Eligibility and alignment to be assessed")
+
+    # Trajectoire climat
+    R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
+      "ok" if env.co2_emissions_tonnes else "partial",
+      "Trajectoire -42 % à 2030 définie (réf. SBTi)" if env.co2_emissions_tonnes
+      else "Trajectoire à définir une fois le bilan GES établi",
+      "-42% by 2030 pathway defined (SBTi ref.)" if env.co2_emissions_tonnes
+      else "Pathway to be set once the GHG inventory is established")
+
+    return rows
+
+
+# Responsable (fonction) et objectif chiffré par recommandation — plan d'action
+_REC_OWNERS = {
+    "renewable": ("Direction des opérations", "Operations"),
+    "scope3": ("Direction RSE / Finance", "CSR / Finance"),
+    "parity": ("Direction des ressources humaines", "Human Resources"),
+    "training": ("Direction des ressources humaines", "Human Resources"),
+    "audit": ("Direction générale", "Executive Management"),
+    "committee": ("Conseil d'administration", "Board of Directors"),
+    "recycling": ("Direction des opérations", "Operations"),
+    "frameworks": ("Direction RSE", "CSR"),
+}
+
+_REC_OBJECTIVES = {
+    "renewable": ("50 % d'énergie renouvelable dans le mix", "50% renewable energy in the mix"),
+    "scope3": ("Scope 3 mesuré et publié au prochain exercice", "Scope 3 measured and disclosed next year"),
+    "parity": ("40 % de femmes dans les effectifs", "40% women in the workforce"),
+    "training": ("20 h de formation par salarié et par an", "20 training hours per employee per year"),
+    "audit": ("Assurance limitée obtenue sur le reporting", "Limited assurance obtained on reporting"),
+    "committee": ("Comité opérationnel dès le prochain trimestre", "Committee operational next quarter"),
+    "recycling": ("60 % de déchets recyclés", "60% of waste recycled"),
+    "frameworks": ("Alignement ODD / TCFD documenté", "SDG / TCFD alignment documented"),
+}

@@ -242,6 +242,9 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
         canvas.drawString(M + stringWidth(sc, fb, 76) + 6, 4.05 * cm, _slbl)
         canvas.setFont(f, 10.5); canvas.setFillColor(light)
         canvas.drawString(M, 3.15 * cm, meta)
+        # Référentiels de reporting (attendu d'un rapport professionnel)
+        canvas.setFont(fb, 9); canvas.setFillColor(pal["accent"])
+        canvas.drawString(M, 1.7 * cm, pdf_txt(TR["cover_refs"]))
         if request.company.presenter_name:
             pl = f"{TR['presented_by']} {request.company.presenter_name}"
             if request.company.presenter_title:
@@ -611,6 +614,48 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         "en matière de responsabilité environnementale, sociale et de gouvernance d'entreprise."
     )
     story.append(Paragraph(esc(exec_text), styles["body"]))
+    story.append(Spacer(1, 0.35 * cm))
+
+    # ── Digest décisionnel (forces / axes / risques / opportunités) ───────
+    from content_generator import risks_opportunities as _ro_fn, enriched_recommendations as _er_fn
+    _dg_ro = _ro_fn(request, scores)
+    _dg_recs = _er_fn(request, scores)[:3]
+    _red = colors.HexColor("#E74C3C")
+
+    def _digest_cell(head, items, col):
+        hexc = "#" + col.hexval()[2:]
+        flow = [Paragraph(f'<font color="{hexc}"><b>{esc(head).upper()}</b></font>',
+                          ParagraphStyle("dgh", fontSize=8.5, fontName=ts["font_bold"], spaceAfter=4))]
+        for it in items[:2]:
+            flow.append(Paragraph(f'<font color="{hexc}">•</font>  {esc(it)}',
+                        ParagraphStyle("dgi", fontSize=8, fontName=ts["font"],
+                                       textColor=pal["text"], leading=10.5, spaceAfter=3)))
+        return flow
+
+    dg_tbl = Table([[
+        _digest_cell(TR["digest_strengths"], scores.strengths, pal["env"]),
+        _digest_cell(TR["digest_weak"], scores.weaknesses, _red),
+    ], [
+        _digest_cell(TR["digest_risks"], [r["text"] for r in _dg_ro["risks"]], _red),
+        _digest_cell(TR["digest_opps"], [o["text"] for o in _dg_ro["opportunities"]], pal["env"]),
+    ]], colWidths=[8.25 * cm, 8.25 * cm])
+    dg_tbl.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+        ('INNERGRID', (0, 0), (-1, -1), 2, colors.white),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(dg_tbl)
+    if _dg_recs:
+        act_line = "   ".join(f"{i}. {r['title']}" for i, r in enumerate(_dg_recs, 1))
+        story.append(Spacer(1, 0.15 * cm))
+        story.append(Paragraph(
+            f'<b>{esc(TR["digest_actions"]).upper()}</b>  —  {esc(act_line)}',
+            ParagraphStyle("dga", fontSize=8, fontName=ts["font"], textColor=pal["primary"],
+                           leading=11, backColor=pal["light_bg"], borderPadding=6)))
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
@@ -844,28 +889,84 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(esc(_mt["next_hint"]), styles["body"]))
     story.append(Spacer(1, 0.4 * cm))
 
-    def _ro_cell(head, items, col):
-        hexc = "#" + col.hexval()[2:]
-        flow = [Paragraph(f'<font color="{hexc}"><b>{esc(head).upper()}</b></font>',
-                          ParagraphStyle("roh", fontSize=11, fontName=ts["font_bold"], spaceAfter=6))]
-        for it in items:
-            flow.append(Paragraph(
-                f'<font color="{hexc}"><b>{esc(it["tag"])}</b></font> — {esc(it["text"])}',
-                ParagraphStyle("roi", fontSize=9, fontName=ts["font"], textColor=pal["text"],
-                               leading=12, spaceAfter=6)))
-        return flow
-    ro_table = Table([[_ro_cell(TR["risks_head"], _ro["risks"], _red),
-                       _ro_cell(TR["opps_head"], _ro["opportunities"], pal["env"])]],
-                     colWidths=[8.25 * cm, 8.25 * cm])
+    # ── Analyse des écarts réglementaires (conforme / partiel / non conforme)
+    from content_generator import compliance_assessment
+    _gaps = compliance_assessment(request, scores)
+    story.append(Paragraph(TR["gap_title"], styles["h2"]))
+    _st_col = {"ok": "#2E7D32", "partial": "#D97706", "no": "#E74C3C", "na": "#7F8C8D"}
+    _st_lbl = {"ok": TR["st_ok"], "partial": TR["st_partial"], "no": TR["st_no"], "na": TR["st_na"]}
+    _gh = ParagraphStyle("gh", fontSize=8.5, fontName=ts["font_bold"], textColor=colors.white)
+    _gc = ParagraphStyle("gc", fontSize=8.5, fontName=ts["font"], textColor=pal["text"], leading=11)
+    _gb = ParagraphStyle("gb", fontSize=8.5, fontName=ts["font_bold"], textColor=pal["primary"], leading=11)
+    gap_rows = [[Paragraph(TR["gap_req"], _gh), Paragraph(TR["gap_ref"], _gh),
+                 Paragraph(TR["gap_status"], _gh), Paragraph(TR["gap_note"], _gh)]]
+    for g in _gaps:
+        gap_rows.append([
+            Paragraph(esc(g["req"]), _gb),
+            Paragraph(esc(g["ref"]), _gc),
+            Paragraph(f'<font color="{_st_col[g["status"]]}"><b>• {esc(_st_lbl[g["status"]])}</b></font>', _gc),
+            Paragraph(esc(g["note"]), _gc),
+        ])
+    gap_tbl = Table(gap_rows, colWidths=[5.4 * cm, 3.1 * cm, 2.8 * cm, 5.2 * cm])
+    gap_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), pal["primary"]),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [pal["light_bg"], colors.white]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E0E0E0")),
+    ]))
+    story.append(gap_tbl)
+    story.append(Spacer(1, 0.45 * cm))
+
+    # ── Risques : tableau impact / probabilité / priorité ────────────────
+    story.append(Paragraph(TR["risks_head"], styles["h2"]))
+    _prio_col = {"P1": "#E74C3C", "P2": "#D97706", "P3": "#7F8C8D"}
+    _rc = ParagraphStyle("rc", fontSize=8.5, fontName=ts["font"], textColor=pal["text"],
+                         leading=11, alignment=TA_CENTER)
+    risk_rows = [[Paragraph(TR["risk_desc"], _gh), Paragraph(TR["risk_impact"], _gh),
+                  Paragraph(TR["risk_lik"], _gh), Paragraph(TR["risk_prio"], _gh)]]
+    for it in _ro["risks"]:
+        pr = it.get("priority", "P2")
+        risk_rows.append([
+            Paragraph(f'<b>{esc(it["tag"])}</b> — {esc(it["text"])}',
+                      ParagraphStyle("rd2", fontSize=8.5, fontName=ts["font"],
+                                     textColor=pal["text"], leading=11)),
+            Paragraph(esc(it.get("impact", "—")), _rc),
+            Paragraph(esc(it.get("likelihood", "—")), _rc),
+            Paragraph(f'<font color="{_prio_col[pr]}"><b>{pr}</b></font>', _rc),
+        ])
+    risk_tbl = Table(risk_rows, colWidths=[9.9 * cm, 2.4 * cm, 2.4 * cm, 1.8 * cm])
+    risk_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), _red),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [pal["light_bg"], colors.white]),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E0E0E0")),
+    ]))
+    story.append(risk_tbl)
+    story.append(Spacer(1, 0.35 * cm))
+
+    # ── Opportunités : encadré synthétique ───────────────────────────────
+    opp_flow = [Paragraph(f'<font color="#{pal["env"].hexval()[2:]}"><b>{esc(TR["opps_head"]).upper()}</b></font>',
+                          ParagraphStyle("oh", fontSize=10.5, fontName=ts["font_bold"], spaceAfter=6))]
+    for it in _ro["opportunities"]:
+        opp_flow.append(Paragraph(
+            f'<font color="#{pal["env"].hexval()[2:]}"><b>{esc(it["tag"])}</b></font> — {esc(it["text"])}',
+            ParagraphStyle("oi", fontSize=9, fontName=ts["font"], textColor=pal["text"],
+                           leading=12, spaceAfter=5)))
+    ro_table = Table([[opp_flow]], colWidths=[16.5 * cm])
     ro_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
-        ('LINEBEFORE', (0, 0), (0, -1), 3, _red),
-        ('LINEBEFORE', (1, 0), (1, -1), 3, pal["env"]),
+        ('LINEBEFORE', (0, 0), (0, -1), 3, pal["env"]),
         ('LEFTPADDING', (0, 0), (-1, -1), 12),
         ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
     ]))
     story.append(ro_table)
 
@@ -884,13 +985,20 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             num = Paragraph(f'<font color="{hexc}"><b>{i}</b></font>', ParagraphStyle(
                 "rn", fontSize=17, fontName=ts["font_bold"], alignment=TA_CENTER))
             body = [
-                Paragraph(f'<b>{esc(rec["title"])}</b>  <font color="{hexc}" size="7">[{esc(rec["horizon"])}]</font>',
-                          ParagraphStyle("rt", fontSize=10.5, fontName=ts["font_bold"],
-                                         textColor=pal["primary"], spaceAfter=2, leading=13)),
+                Paragraph(f'<b>{esc(rec["title"])}</b>',
+                          ParagraphStyle("rt", fontSize=10, fontName=ts["font_bold"],
+                                         textColor=pal["primary"], spaceAfter=2, leading=12.5)),
                 Paragraph(esc(rec["detail"]), ParagraphStyle(
-                    "rd", fontSize=9, fontName=ts["font"], textColor=pal["text"], leading=12)),
+                    "rd", fontSize=8.5, fontName=ts["font"], textColor=pal["text"], leading=11)),
             ]
-            rows.append([num, body])
+            meta_cell = [
+                Paragraph(f'<font color="{hexc}"><b>{esc(rec.get("objective", ""))}</b></font>',
+                          ParagraphStyle("ro", fontSize=8.5, fontName=ts["font"], leading=11, spaceAfter=3)),
+                Paragraph(f'{esc(rec.get("owner", ""))}  ·  {esc(rec["horizon"])}',
+                          ParagraphStyle("rw", fontSize=8, fontName=ts["font"],
+                                         textColor=colors.HexColor("#7F8C8D"), leading=10.5)),
+            ]
+            rows.append([num, body, meta_cell])
         # Matrice de priorisation effort/impact (les numéros renvoient au tableau)
         if "priority" in chart_images:
             try:
@@ -903,13 +1011,20 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                 insight_callout(story, priority_reading(request, scores), pal["accent"], pal, ts)
             except Exception as e:
                 print(f"Priority image error: {e}")
-        rec_table = Table(rows, colWidths=[1.2 * cm, 15.3 * cm])
+        _gh0 = ParagraphStyle("rh0", fontSize=8.5, fontName=ts["font_bold"], textColor=colors.white)
+        _due = "Due" if request.language == "en" else "Échéance"
+        rows.insert(0, ["", Paragraph("Action", _gh0),
+                        Paragraph(f'{TR["objective_col"]}  ·  {TR["owner_col"]}  ·  {_due}', _gh0)])
+        rec_table = Table(rows, colWidths=[1.2 * cm, 9.8 * cm, 5.5 * cm])
         rec_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E0E0E0")),
             ('BACKGROUND', (0, 0), (-1, -1), pal["light_bg"]),
+            ('BACKGROUND', (0, 0), (-1, 0), pal["primary"]),
+            ('TOPPADDING', (0, 0), (-1, 0), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
             ('LEFTPADDING', (1, 0), (1, -1), 6),
         ]))
         story.append(rec_table)
