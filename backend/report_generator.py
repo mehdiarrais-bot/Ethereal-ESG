@@ -337,11 +337,37 @@ def build_styles(pal: dict, ts: dict) -> dict:
     }
 
 
-def section_header(story, title, color, pal, styles, ts):
-    """Themed section heading: rule / banner / goldrule / minimal."""
+def section_header(story, title, color, pal, styles, ts, icon=None):
+    """Themed section heading: rule / banner / goldrule / minimal.
+    `icon` : nom d'icône visual_kit (pictogramme de catégorie ESG)."""
     if ts["uppercase"]:
         title = title.upper()
     mode = ts["header"]
+
+    if icon:
+        try:
+            from visual_kit import icon_png
+            ic = Image(io.BytesIO(icon_png(icon, 96, "#" + color.hexval()[2:])),
+                       width=0.75 * cm, height=0.75 * cm)
+            head = Table([[ic, Paragraph(title, styles["h1"])]],
+                         colWidths=[1.1 * cm, 15.9 * cm])
+            head.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (0, 0), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ]))
+            story.append(head)
+            if mode == "goldrule":
+                story.append(HRFlowable(width="100%", thickness=0.8, color=pal["accent"]))
+            elif mode == "minimal":
+                story.append(HRFlowable(width="30%", thickness=0.7,
+                                        color=colors.HexColor("#BDBDBD"), hAlign='LEFT'))
+            else:
+                story.append(HRFlowable(width="100%", thickness=2, color=color))
+            story.append(Spacer(1, 0.3 * cm))
+            return
+        except Exception:
+            pass  # repli : en-tête standard sans icône
     if mode == "banner":
         # Green Nature: full-width colored banner with white text
         t = Table([[Paragraph(title, styles["h1_light"])]], colWidths=[17 * cm])
@@ -659,7 +685,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
-    section_header(story, TR["pdf_s2"], pal["env"], pal, styles, ts)
+    section_header(story, TR["pdf_s2"], pal["env"], pal, styles, ts, icon="leaf")
     story.append(Paragraph(
         f"{TR['score_env_label']} : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["env"], pal["env"], pal, ts)
@@ -712,7 +738,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Social ────────────────────────────────────────────────────────────
-    section_header(story, TR["pdf_s3"], pal["social"], pal, styles, ts)
+    section_header(story, TR["pdf_s3"], pal["social"], pal, styles, ts, icon="people")
     story.append(Paragraph(
         f"{TR['score_soc_label']} : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["social"], pal["social"], pal, ts)
@@ -749,7 +775,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Gouvernance ──────────────────────────────────────────────────────
-    section_header(story, TR["pdf_s4"], pal["gov"], pal, styles, ts)
+    section_header(story, TR["pdf_s4"], pal["gov"], pal, styles, ts, icon="scale")
     story.append(Paragraph(
         f"{TR['score_gov_label']} : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["gov"], pal["gov"], pal, ts)

@@ -440,15 +440,24 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
 
     if request.include_recommendations and scores.recommendations:
+        from content_generator import enriched_recommendations
         add_heading(doc, TR["pdf_s7"], 1, colors["primary"], style=style)
         add_hr(doc, colors["accent"])
-        for i, rec in enumerate(scores.recommendations, 1):
+        for i, rec in enumerate(enriched_recommendations(request, scores), 1):
             p = doc.add_paragraph()
             num = p.add_run(f"{i}.  ")
             num.bold = True
             num.font.color.rgb = hex_to_rgb(colors["accent"])
-            p.add_run(rec).font.size = Pt(10)
-            p.paragraph_format.space_after = Pt(4)
+            tr_ = p.add_run(rec["title"]); tr_.bold = True; tr_.font.size = Pt(10.5)
+            p.paragraph_format.space_after = Pt(1)
+            d = doc.add_paragraph()
+            d.paragraph_format.left_indent = Cm(0.7)
+            d.paragraph_format.space_after = Pt(6)
+            dr = d.add_run(rec["detail"]); dr.font.size = Pt(9.5)
+            meta = d.add_run(f'\n{TR["objective_col"]} : {rec["objective"]}  ·  '
+                             f'{TR["owner_col"]} : {rec["owner"]}  ·  {rec["horizon"]}')
+            meta.font.size = Pt(8.5)
+            meta.font.color.rgb = hex_to_rgb("7F8C8D")
 
     # ── Diagnostic stratégique : benchmark + maturité + R&O + roadmap ─────
     from content_generator import benchmark_verdict, maturity_text, risks_opportunities, roadmap_12m
@@ -500,8 +509,37 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
     doc.add_paragraph(_mt["next_hint"])
 
+    # ── Analyse des écarts réglementaires ─────────────────────────────────
+    from content_generator import compliance_assessment
+    _ga = compliance_assessment(request, scores)
+    add_heading(doc, TR["gap_title"], 2, colors["secondary"], style=style)
+    _st_hex = {"ok": "2E7D32", "partial": "D97706", "no": "E74C3C", "na": "7F8C8D"}
+    _st_lbl = {"ok": TR["st_ok"], "partial": TR["st_partial"], "no": TR["st_no"], "na": TR["st_na"]}
+    gtbl = doc.add_table(rows=len(_ga) + 1, cols=4)
+    gtbl.style = "Table Grid"
+    for ci, h in enumerate((TR["gap_req"], TR["gap_ref"], TR["gap_status"], TR["gap_note"])):
+        c = gtbl.rows[0].cells[ci]
+        run = c.paragraphs[0].add_run(h); run.bold = True; run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        shade_cell(c, colors["primary"])
+    for ri, g in enumerate(_ga, 1):
+        vals = (g["req"], g["ref"], _st_lbl[g["status"]], g["note"])
+        for ci, v in enumerate(vals):
+            run = gtbl.rows[ri].cells[ci].paragraphs[0].add_run(v)
+            run.font.size = Pt(9)
+            if ci == 0:
+                run.bold = True
+            if ci == 2:
+                run.bold = True
+                run.font.color.rgb = hex_to_rgb(_st_hex[g["status"]])
+    doc.add_paragraph()
+
     add_heading(doc, TR["risks_head"], 2, "E74C3C", style=style)
-    add_bullet_list(doc, [f'{i["tag"]} — {i["text"]}' for i in _ro["risks"]], "▪", "E74C3C")
+    add_bullet_list(doc, [
+        f'[{i.get("priority", "P2")}] {i["tag"]} — {i["text"]} '
+        f'({TR["risk_impact"].lower()} : {i.get("impact", "—").lower()} · '
+        f'{TR["risk_lik"].lower()} : {i.get("likelihood", "—").lower()})'
+        for i in _ro["risks"]], "▪", "E74C3C")
     add_heading(doc, TR["opps_head"], 2, colors["env"], style=style)
     add_bullet_list(doc, [f'{i["tag"]} — {i["text"]}' for i in _ro["opportunities"]], "▪", colors["env"])
 

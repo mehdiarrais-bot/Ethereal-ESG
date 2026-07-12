@@ -716,6 +716,34 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_text(slide, t["bench_note"], Inches(0.4), Inches(6.95), Inches(7.5), Inches(0.35),
                  font_size=9, italic=True, color=theme["muted"], font=fb)
 
+    # ── SLIDE 2b2: Analyse des écarts réglementaires ─────────────────────
+    from content_generator import compliance_assessment
+    _ga = compliance_assessment(request, scores)
+    if _ga:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              t["gap_title"], header_color, kicker=t["benchmark_kicker"])
+        _dk = style["dark_slides"]
+        _stc = {"ok": RGBColor(0x2E, 0x7D, 0x32), "partial": RGBColor(0xD9, 0x77, 0x06),
+                "no": RGBColor(0xE7, 0x4C, 0x3C), "na": RGBColor(0x7F, 0x8C, 0x8D)}
+        _stl = {"ok": t["st_ok"], "partial": t["st_partial"], "no": t["st_no"], "na": t["st_na"]}
+        row_h = Inches(0.68)
+        for i, g in enumerate(_ga[:8]):
+            gy = Inches(1.45) + i * row_h
+            if i % 2 == 0:
+                add_bg_rect(slide, Inches(0.3), gy, Inches(12.73), row_h, theme["card_bg"])
+            add_text(slide, g["req"], Inches(0.5), gy + Inches(0.07), Inches(5.3), Inches(0.55),
+                     font_size=12.5, bold=True, color=theme["text_dark"], font=fb)
+            add_text(slide, g["ref"], Inches(5.85), gy + Inches(0.16), Inches(1.9), Inches(0.4),
+                     font_size=10, color=theme["muted"], font=fb)
+            chip_w = Inches(1.75)
+            add_shape(slide, ROUNDED_RECT, Inches(7.85), gy + Inches(0.14), chip_w, Inches(0.4),
+                      fill=_stc[g["status"]])
+            add_text(slide, _stl[g["status"]], Inches(7.85), gy + Inches(0.2), chip_w, Inches(0.3),
+                     font_size=10.5, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+                     align=PP_ALIGN.CENTER, font=fb)
+            add_text(slide, g["note"], Inches(9.8), gy + Inches(0.07), Inches(3.2), Inches(0.58),
+                     font_size=10, color=theme["text_dark"] if not _dk else theme["subtitle"], font=fb)
+
     # ── SLIDE 2c: Chiffre-choc (ancrage visuel / focal point) ───────────
     from content_generator import hero_stat
     _hs = hero_stat(request, scores)
@@ -939,6 +967,14 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                 add_text(slide, tag, px + Inches(0.3), iy + Inches(0.02), tag_w, Inches(0.26),
                          font_size=9.5, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
                          align=PP_ALIGN.CENTER, font=fb)
+                # chip de priorité (risques cotés P1-P3)
+                if item.get("priority"):
+                    _pc = {"P1": RGBColor(0xE7, 0x4C, 0x3C), "P2": RGBColor(0xD9, 0x77, 0x06),
+                           "P3": RGBColor(0x7F, 0x8C, 0x8D)}[item["priority"]]
+                    add_shape(slide, OVAL, px + pw - Inches(0.75), iy, Inches(0.42), Inches(0.3), fill=_pc)
+                    add_text(slide, item["priority"], px + pw - Inches(0.75), iy + Inches(0.03),
+                             Inches(0.42), Inches(0.24), font_size=9.5, bold=True,
+                             color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=fb)
                 add_text(slide, item["text"], px + Inches(0.3), iy + Inches(0.38), pw - Inches(0.6), Inches(0.6),
                          font_size=12.5, color=theme["text_dark"], font=fb)
 
@@ -989,7 +1025,10 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             # titre + détail
             add_text(slide, rec["title"], Inches(1.65), y + Inches(0.12), Inches(8.7), Inches(0.45),
                      font_size=15, bold=True, color=theme["text_dark"], font=ft)
-            add_text(slide, rec["detail"], Inches(1.65), y + Inches(0.55), Inches(9.2), Inches(0.5),
+            _det = rec["detail"]
+            if rec.get("owner"):
+                _det = f'{_det}  —  {rec["owner"]}'
+            add_text(slide, _det, Inches(1.65), y + Inches(0.55), Inches(9.2), Inches(0.5),
                      font_size=11, color=theme["muted"], font=fb)
             # chip horizon
             chip_w = Inches(1.7)
