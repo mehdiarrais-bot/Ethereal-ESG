@@ -591,6 +591,31 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                  Inches(0.7), Inches(5.9), Inches(11.9), Inches(0.5),
                  font_size=15, color=theme["muted"], font=fb)
 
+    # ── SLIDE 1bis2: Mot de la direction (citation pleine page) ──────────
+    if request.company.ceo_quote:
+        slide = prs.slides.add_slide(blank_layout)
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
+        add_bg_rect(slide, 0, SLIDE_H - Inches(0.12), SLIDE_W, Inches(0.12), theme["accent"])
+        add_text(slide, t["quote_kicker"], Inches(0), Inches(1.0), SLIDE_W, Inches(0.45),
+                 font_size=13, bold=True, color=theme["accent"], align=PP_ALIGN.CENTER, font=fb)
+        # Guillemet géant en filigrane
+        add_text(slide, "“", Inches(0.9), Inches(1.0), Inches(3), Inches(2.5),
+                 font_size=160, bold=True, color=theme["card_bg"], font=ft)
+        qt = request.company.ceo_quote.strip().strip('"“”')
+        add_text(slide, f"« {qt} »" if request.language != "en" else f"“{qt}”",
+                 Inches(1.8), Inches(2.3), SLIDE_W - Inches(3.6), Inches(3.2),
+                 font_size=24, italic=True, color=theme["text_light"],
+                 align=PP_ALIGN.CENTER, font=ft)
+        if request.company.presenter_name:
+            attrib = request.company.presenter_name
+            if request.company.presenter_title:
+                attrib += f" — {request.company.presenter_title}"
+            add_bg_rect(slide, SLIDE_W / 2 - Inches(0.75), Inches(5.7), Inches(1.5), Inches(0.04),
+                        theme["accent"])
+            add_text(slide, attrib, Inches(0), Inches(5.95), SLIDE_W, Inches(0.5),
+                     font_size=14, bold=True, color=theme["subtitle"],
+                     align=PP_ALIGN.CENTER, font=fb)
+
     # ── SLIDE 1ter: Sommaire (repère de lecture, 3 actes) ────────────────
     _dk0 = style["dark_slides"]
     slide = prs.slides.add_slide(blank_layout)

@@ -630,6 +630,37 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(toc_tbl)
     story.append(Spacer(1, 0.55 * cm))
 
+    # ── Mot de la direction (citation éditoriale) ─────────────────────────
+    if request.company.ceo_quote:
+        _q = request.company.ceo_quote.strip().strip('"“”')
+        _qtxt = f"« {_q} »" if request.language != "en" else f"“{_q}”"
+        q_flow = [
+            Paragraph(TR["quote_kicker"], ParagraphStyle(
+                "qk", fontSize=8.5, fontName=ts["font_bold"],
+                textColor=pal["accent"], spaceAfter=8)),
+            Paragraph(esc(_qtxt), ParagraphStyle(
+                "qt", fontSize=13, fontName=ts["font_italic"],
+                textColor=colors.white, leading=19)),
+        ]
+        if request.company.presenter_name:
+            _attrib = request.company.presenter_name
+            if request.company.presenter_title:
+                _attrib += f" — {request.company.presenter_title}"
+            q_flow.append(Paragraph(esc(_attrib), ParagraphStyle(
+                "qa", fontSize=9.5, fontName=ts["font_bold"],
+                textColor=colors.HexColor("#C6CFDE"), spaceBefore=10)))
+        q_tbl = Table([[q_flow]], colWidths=[17 * cm])
+        q_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
+            ('LINEBEFORE', (0, 0), (0, -1), 5, pal["accent"]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 18),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 18),
+            ('TOPPADDING', (0, 0), (-1, -1), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+        ]))
+        story.append(q_tbl)
+        story.append(Spacer(1, 0.55 * cm))
+
     # ── Executive Summary ──────────────────────────────────────────────────
     section_header(story, TR["pdf_s1"], pal["secondary"], pal, styles, ts)
 

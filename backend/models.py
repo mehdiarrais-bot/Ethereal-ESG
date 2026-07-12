@@ -163,6 +163,8 @@ class CompanyInfo(BaseModel):
     # Initiatives/projets internes (séparés par ; ou ,), tissés dans les textes
     # pour ancrer le rapport dans la réalité de l'entreprise.
     key_initiatives: Optional[str] = Field(None, max_length=600)
+    # Mot du dirigeant : citation libre, mise en scène en ouverture des livrables.
+    ceo_quote: Optional[str] = Field(None, max_length=500)
 
     @field_validator('name', 'sector', 'country', mode='before')
     @classmethod
@@ -182,6 +184,13 @@ class CompanyInfo(BaseModel):
         if v is None or v == '':
             return None
         return sanitize_text(str(v), 600)
+
+    @field_validator('ceo_quote', mode='before')
+    @classmethod
+    def sanitize_quote(cls, v):
+        if v is None or v == '':
+            return None
+        return sanitize_text(str(v), 500)
 
     @field_validator('logo_base64', mode='after')
     @classmethod

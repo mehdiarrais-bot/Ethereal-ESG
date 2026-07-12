@@ -319,6 +319,29 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     doc.add_page_break()
 
+    # ── Mot de la direction (citation) ────────────────────────────────────
+    if request.company.ceo_quote:
+        kp = doc.add_paragraph()
+        kr = kp.add_run(TR["quote_kicker"])
+        kr.bold = True; kr.font.size = Pt(9)
+        kr.font.color.rgb = hex_to_rgb(colors["accent"])
+        _q = request.company.ceo_quote.strip().strip('"“”')
+        qp = doc.add_paragraph()
+        qr = qp.add_run(f"« {_q} »" if request.language != "en" else f"“{_q}”")
+        qr.italic = True; qr.font.size = Pt(13)
+        qr.font.color.rgb = hex_to_rgb(colors["primary"])
+        shade_paragraph(qp, colors.get("light", "F0F2F5"))
+        qp.paragraph_format.space_after = Pt(4)
+        if request.company.presenter_name:
+            ap = doc.add_paragraph()
+            attrib = request.company.presenter_name
+            if request.company.presenter_title:
+                attrib += f" — {request.company.presenter_title}"
+            ar = ap.add_run(attrib)
+            ar.bold = True; ar.font.size = Pt(9.5)
+            ar.font.color.rgb = hex_to_rgb("7F8C8D")
+            ap.paragraph_format.space_after = Pt(18)
+
     # ── 1. Synthèse Exécutive ─────────────────────────────────────────────
     add_heading(doc, TR["pdf_s1"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])

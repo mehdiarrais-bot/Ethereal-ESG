@@ -191,6 +191,19 @@ export default function StepCompany({ form, updateSection, onImport }) {
           </FormField>
 
           <FormField
+            label="Mot du dirigeant"
+            hint="Citation libre mise en scène en ouverture des livrables (PDF, PPTX, Word)"
+          >
+            <input
+              type="text"
+              value={company.ceo_quote || ''}
+              onChange={e => set('ceo_quote')(e.target.value)}
+              placeholder="Ex: La performance durable est au cœur de notre stratégie industrielle."
+              maxLength={500}
+            />
+          </FormField>
+
+          <FormField
             label="Initiatives internes"
             hint="Projets/actions réels, séparés par des virgules — cités dans les textes du rapport"
           >
