@@ -160,6 +160,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
             <button className="btn btn-docx btn-lg" onClick={() => onDownload('docx')} disabled={busy || !scores}>
               📝 Word .docx
             </button>
+            <button className="btn btn-docx" onClick={() => onDownload('proposal')} disabled={busy || !scores}
+                    title="Lettre de mission commerciale basée sur le pré-diagnostic (écarts, maturité, phases)">
+              🖋 Lettre de mission
+            </button>
           </div>
 
           <ProgressBar progress={progress} loading={loading} />

@@ -406,6 +406,20 @@ def generate_word(request: ESGRequest):
     )
 
 
+@app.post("/api/generate/proposal")
+def generate_proposal(request: ESGRequest):
+    """Lettre de mission ESG (Word) — document commercial du consultant."""
+    from proposal_generator import generate_proposal_docx
+    scores = calculate_esg_scores(request)
+    docx_bytes = generate_proposal_docx(request, scores)
+    filename = f"Lettre_de_mission_{safe_name(request.company.name)}_{request.company.reporting_year}.docx"
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
 # Serve frontend static files
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.exists(frontend_path):
