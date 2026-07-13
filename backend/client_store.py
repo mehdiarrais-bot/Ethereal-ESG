@@ -35,6 +35,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+# Statuts du mini-CRM (cycle de vie d'une mission freelance)
+STATUSES = ("prospect", "signed", "delivered", "archived")
+
+
 def list_clients() -> list:
     """Liste synthétique, triée par date de mise à jour décroissante."""
     _ensure_dir()
@@ -49,6 +53,7 @@ def list_clients() -> list:
             out.append({
                 "id": d["id"], "name": d.get("name", "—"),
                 "sector": d.get("sector", ""), "updated_at": d.get("updated_at", ""),
+                "status": d.get("status", "prospect"),
                 "years": [h["year"] for h in d.get("score_history", [])],
                 "last_score": (last or {}).get("scores", {}).get("total"),
                 "last_rating": (last or {}).get("scores", {}).get("rating"),
@@ -57,6 +62,59 @@ def list_clients() -> list:
             continue  # fichier corrompu : ignoré de la liste
     out.sort(key=lambda c: c["updated_at"], reverse=True)
     return out
+
+
+def set_status(client_id: str, status: str) -> dict:
+    """Change le statut CRM d'un dossier."""
+    if status not in STATUSES:
+        raise ValueError("invalid status")
+    d = get_client(client_id)
+    d["status"] = status
+    d["updated_at"] = _now()
+    with open(_path(client_id), "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+    return d
+
+
+def export_all() -> bytes:
+    """Archive zip de tous les dossiers (sauvegarde portable)."""
+    import zipfile
+    _ensure_dir()
+    buf = __import__("io").BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for fn in sorted(os.listdir(DATA_DIR)):
+            if fn.endswith(".json"):
+                z.write(os.path.join(DATA_DIR, fn), arcname=fn)
+    buf.seek(0)
+    return buf.read()
+
+
+def import_archive(data: bytes) -> dict:
+    """Restaure une archive zip de dossiers. Fusion par id (l'archive gagne).
+    Retourne {imported, skipped}."""
+    import zipfile
+    _ensure_dir()
+    imported, skipped = 0, 0
+    with zipfile.ZipFile(__import__("io").BytesIO(data)) as z:
+        for info in z.infolist():
+            fn = os.path.basename(info.filename)
+            if not fn.endswith(".json"):
+                continue
+            stem = fn[:-5]
+            if not _ID_RE.match(stem):
+                skipped += 1
+                continue
+            try:
+                d = json.loads(z.read(info).decode("utf-8"))
+                if d.get("id") != stem or "form" not in d:
+                    skipped += 1
+                    continue
+                with open(_path(stem), "w", encoding="utf-8") as f:
+                    json.dump(d, f, ensure_ascii=False)
+                imported += 1
+            except Exception:
+                skipped += 1
+    return {"imported": imported, "skipped": skipped}
 
 
 def get_client(client_id: str) -> dict:

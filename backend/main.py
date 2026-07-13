@@ -187,6 +187,39 @@ def clients_save(payload: dict):
             "score_history": d["score_history"]}
 
 
+@app.patch("/api/clients/{client_id}/status")
+def clients_set_status(client_id: str, payload: dict):
+    """Statut CRM du dossier : prospect / signed / delivered / archived."""
+    try:
+        d = client_store.set_status(client_id, str(payload.get("status", "")))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dossier introuvable")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Statut ou identifiant invalide")
+    return {"id": d["id"], "status": d["status"], "updated_at": d["updated_at"]}
+
+
+@app.get("/api/clients-export")
+def clients_export():
+    """Sauvegarde portable : zip de tous les dossiers clients."""
+    data = client_store.export_all()
+    return StreamingResponse(
+        io.BytesIO(data), media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="dossiers_esg_backup.zip"'})
+
+
+@app.post("/api/clients-import")
+async def clients_import(file: UploadFile = File(...)):
+    """Restaure une sauvegarde zip de dossiers (fusion par identifiant)."""
+    data = await file.read()
+    if len(data) > MAX_BODY_BYTES:
+        raise HTTPException(status_code=413, detail="Archive trop volumineuse")
+    try:
+        return client_store.import_archive(data)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Archive invalide")
+
+
 @app.delete("/api/clients/{client_id}")
 def clients_delete(client_id: str):
     try:
@@ -404,6 +437,18 @@ def generate_word(request: ESGRequest):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+@app.post("/api/generate/onepager")
+def generate_onepager(request: ESGRequest):
+    """Synthèse ESG une page (PDF) — le document que le dirigeant transfère."""
+    from onepager_generator import generate_onepager_pdf
+    scores = calculate_esg_scores(request)
+    pdf_bytes = generate_onepager_pdf(request, scores)
+    filename = f"Synthese_1page_{safe_name(request.company.name)}_{request.company.reporting_year}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @app.post("/api/generate/proposal")

@@ -204,7 +204,7 @@ export default function App() {
     startProgress()
     try {
       const endpoints = { pptx: '/api/generate/pptx', pdf: '/api/generate/pdf', docx: '/api/generate/docx',
-                          proposal: '/api/generate/proposal' }
+                          proposal: '/api/generate/proposal', onepager: '/api/generate/onepager' }
       const payload = buildPayload(form)
       // Évolution N-1 : dernier exercice de l'historique antérieur à l'exercice courant
       const year = Number(form.company?.reporting_year) || 0

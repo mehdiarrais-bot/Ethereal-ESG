@@ -160,6 +160,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
             <button className="btn btn-docx btn-lg" onClick={() => onDownload('docx')} disabled={busy || !scores}>
               📝 Word .docx
             </button>
+            <button className="btn btn-pdf" onClick={() => onDownload('onepager')} disabled={busy || !scores}
+                    title="Synthèse une page (PDF) : score, benchmark, risques/opportunités, top-3 actions">
+              📃 Synthèse 1 page
+            </button>
             <button className="btn btn-docx" onClick={() => onDownload('proposal')} disabled={busy || !scores}
                     title="Lettre de mission commerciale basée sur le pré-diagnostic (écarts, maturité, phases)">
               🖋 Lettre de mission

@@ -37,6 +37,35 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
     } catch { return '' }
   }
 
+  // Mini-CRM : cycle de vie d'une mission
+  const STATUSES = [
+    { id: 'prospect', label: 'Prospect', color: '#38bdf8' },
+    { id: 'signed', label: 'Signé', color: '#c084fc' },
+    { id: 'delivered', label: 'Livré', color: '#34d399' },
+    { id: 'archived', label: 'Archivé', color: '#94a3b8' },
+  ]
+
+  const setStatus = async (id, status) => {
+    try {
+      await fetch(`/api/clients/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      setClients(cs => cs.map(c => c.id === id ? { ...c, status } : c))
+    } catch {}
+  }
+
+  const restoreBackup = async (file) => {
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/api/clients-import', { method: 'POST', body: fd })
+      if (res.ok) refresh()
+    } catch {}
+  }
+
   return (
     <div className="clients-wrap" ref={boxRef}>
       <button className="hdr-btn clients-save" onClick={onSave} disabled={saving}
@@ -69,6 +98,15 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
                     {c.years?.length > 0 && <> · exercices : {c.years.join(', ')}</>}
                   </div>
                 </button>
+                <select
+                  className="client-status"
+                  value={c.status || 'prospect'}
+                  onChange={e => setStatus(c.id, e.target.value)}
+                  style={{ color: (STATUSES.find(s => s.id === (c.status || 'prospect')) || {}).color }}
+                  title="Statut de la mission"
+                >
+                  {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
                 {c.last_score != null && (
                   <div className="client-score" title={`Score ${c.last_score}/100`}>
                     {Math.round(c.last_score)}<small>·{c.last_rating}</small>
@@ -85,6 +123,16 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
                 )}
               </div>
             ))}
+          </div>
+          <div className="clients-backup">
+            <a className="backup-btn" href="/api/clients-export" download title="Télécharger tous les dossiers (.zip)">
+              ⬇ Sauvegarde
+            </a>
+            <label className="backup-btn" title="Restaurer une sauvegarde (.zip)">
+              ⬆ Restaurer
+              <input type="file" accept=".zip" style={{ display: 'none' }}
+                     onChange={e => { restoreBackup(e.target.files?.[0]); e.target.value = '' }} />
+            </label>
           </div>
         </div>
       )}
@@ -134,6 +182,23 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
         }
         .client-del:hover { color: #f87171; border-color: rgba(248,113,113,0.4); }
         .client-del.confirm { color: #fff; background: #dc2626; font-size: 10.5px; font-weight: 700; }
+        .client-status {
+          background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+          border-radius: 8px; font-size: 10.5px; font-weight: 700; padding: 3px 4px;
+          cursor: pointer;
+        }
+        .client-status option { color: #1e293b; }
+        .clients-backup {
+          display: flex; gap: 8px; padding: 10px 14px;
+          border-top: 1px solid var(--glass-border);
+        }
+        .backup-btn {
+          flex: 1; text-align: center; font-size: 11.5px; font-weight: 700;
+          color: var(--text); background: rgba(124,92,246,0.15);
+          border: 1px solid var(--glass-border); border-radius: 8px;
+          padding: 7px 0; cursor: pointer; text-decoration: none;
+        }
+        .backup-btn:hover { background: rgba(124,92,246,0.3); }
         @media (max-width: 560px) { .clients-pop { width: 300px; } }
       `}</style>
     </div>
