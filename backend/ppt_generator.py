@@ -668,6 +668,15 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
              font_size=30, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, t["global_score_caption"], Inches(0.2), Inches(5.85), Inches(4.35), Inches(0.4),
              font_size=12, bold=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
+    # Évolution vs exercice précédent (dossier client multi-exercices)
+    _prev = getattr(request, "previous_scores", None)
+    if _prev:
+        _d = scores.total_esg_score - _prev["total"]
+        _dc = (RGBColor(0x4C, 0xAF, 0x50) if _d >= 0.5
+               else RGBColor(0xE7, 0x4C, 0x3C) if _d <= -0.5 else theme["subtitle"])
+        _dl = (f"+{_d:.0f} pts" if _d >= 0.5 else f"{_d:.0f} pts" if _d <= -0.5 else "=")
+        add_text(slide, f"{_dl}  vs {_prev['year']}", Inches(0.2), Inches(6.3), Inches(4.35), Inches(0.4),
+                 font_size=14, bold=True, color=_dc, align=PP_ALIGN.CENTER, font=fb)
 
     # ── Droite : titre éditorial + verdict (secondaire) ─────────────
     RX = Inches(5.2)

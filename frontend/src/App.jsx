@@ -80,6 +80,7 @@ export default function App() {
   const [clientId, setClientId] = useState(null)
   const [clientSaving, setClientSaving] = useState(false)
   const [clientDirty, setClientDirty] = useState(false)
+  const [clientHistory, setClientHistory] = useState([])
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
@@ -109,6 +110,7 @@ export default function App() {
       }
       const d = await res.json()
       setClientId(d.id)
+      setClientHistory(d.score_history || [])
       setClientDirty(false)
     } catch (e) {
       setError(`Enregistrement : ${e.message}`)
@@ -124,6 +126,7 @@ export default function App() {
       const d = await res.json()
       setForm(hydrateForm(d.form))
       setClientId(d.id)
+      setClientHistory(d.score_history || [])
       setTimeout(() => setClientDirty(false), 100)
       setStep(0)
     } catch (e) {
@@ -150,6 +153,7 @@ export default function App() {
   const resetForm = () => {
     setForm(EMPTY_FORM)
     setClientId(null)
+    setClientHistory([])
     setError(null)
   }
 
@@ -200,10 +204,17 @@ export default function App() {
     startProgress()
     try {
       const endpoints = { pptx: '/api/generate/pptx', pdf: '/api/generate/pdf', docx: '/api/generate/docx' }
+      const payload = buildPayload(form)
+      // Évolution N-1 : dernier exercice de l'historique antérieur à l'exercice courant
+      const year = Number(form.company?.reporting_year) || 0
+      const prev = (clientHistory || []).filter(h => h.year < year).pop()
+      if (prev) {
+        payload.previous_scores = { year: prev.year, ...prev.scores }
+      }
       const res = await fetch(endpoints[type], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload(form)),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         let msg = `Erreur serveur ${res.status}`

@@ -524,6 +524,32 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                f"CSRD, un atout pour la vérification et le dialogue investisseurs.")
         )
 
+    # ── 4ter. Évolution année sur année (historique du dossier client) ───
+    prev = getattr(request, "previous_scores", None)
+    if prev:
+        dt = scores.total_esg_score - prev["total"]
+        de = scores.environmental_score - prev["env"]
+        ds = scores.social_score - prev["social"]
+        dg = scores.governance_score - prev["gov"]
+        def sg(v):
+            return f"+{v:.0f}" if v >= 0.5 else (f"{v:.0f}" if v <= -0.5 else "=")
+        if en:
+            if abs(dt) < 0.5:
+                move = "is stable"
+            else:
+                move = f"{'gains' if dt > 0 else 'loses'} {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
+            content["executive_summary"] += (
+                f" Versus fiscal year {prev['year']}, the overall score {move} "
+                f"(environment {sg(de)}, social {sg(ds)}, governance {sg(dg)}).")
+        else:
+            if abs(dt) < 0.5:
+                move = "est stable"
+            else:
+                move = f"{'progresse' if dt > 0 else 'recule'} de {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
+            content["executive_summary"] += (
+                f" Par rapport à l'exercice {prev['year']}, le score global {move} "
+                f"(environnement {sg(de)}, social {sg(ds)}, gouvernance {sg(dg)}).")
+
     # ── 4bis. Initiatives internes : ancrage dans la réalité de l'entreprise ─
     ki_raw = getattr(request.company, "key_initiatives", None)
     if ki_raw:

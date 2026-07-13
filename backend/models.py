@@ -241,6 +241,22 @@ class ESGRequest(BaseModel):
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True
+    # Scores de l'exercice précédent (issus de l'historique du dossier client)
+    # pour afficher l'évolution année sur année dans les livrables.
+    # Forme : {year, env, social, gov, total}
+    previous_scores: Optional[dict] = None
+
+    @field_validator('previous_scores', mode='before')
+    @classmethod
+    def check_previous(cls, v):
+        if not v:
+            return None
+        try:
+            return {"year": int(v["year"]), "env": float(v["env"]),
+                    "social": float(v["social"]), "gov": float(v["gov"]),
+                    "total": float(v["total"])}
+        except (KeyError, TypeError, ValueError):
+            return None  # historique incomplet : ignoré silencieusement
 
 
 class ESGScores(BaseModel):
