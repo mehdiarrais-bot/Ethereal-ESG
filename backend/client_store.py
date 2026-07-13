@@ -1,0 +1,101 @@
+"""
+Gestion des dossiers clients — stockage 100 % local (JSON sur disque).
+
+Chaque dossier : {id, name, sector, created_at, updated_at, form,
+score_history: [{year, saved_at, scores{env,social,gov,total,rating}}]}.
+L'historique est indexé par exercice (reporting_year) : une sauvegarde
+du même exercice remplace l'entrée, un nouvel exercice s'ajoute —
+ce qui permet le suivi année après année d'un même client.
+"""
+import json
+import os
+import re
+import uuid
+from datetime import datetime, timezone
+
+DATA_DIR = os.environ.get(
+    "ESG_DATA_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "clients"),
+)
+
+_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
+def _ensure_dir():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+
+def _path(client_id: str) -> str:
+    if not _ID_RE.match(client_id):
+        raise ValueError("invalid client id")
+    return os.path.join(DATA_DIR, f"{client_id}.json")
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def list_clients() -> list:
+    """Liste synthétique, triée par date de mise à jour décroissante."""
+    _ensure_dir()
+    out = []
+    for fn in os.listdir(DATA_DIR):
+        if not fn.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(DATA_DIR, fn), encoding="utf-8") as f:
+                d = json.load(f)
+            last = d["score_history"][-1] if d.get("score_history") else None
+            out.append({
+                "id": d["id"], "name": d.get("name", "—"),
+                "sector": d.get("sector", ""), "updated_at": d.get("updated_at", ""),
+                "years": [h["year"] for h in d.get("score_history", [])],
+                "last_score": (last or {}).get("scores", {}).get("total"),
+                "last_rating": (last or {}).get("scores", {}).get("rating"),
+            })
+        except Exception:
+            continue  # fichier corrompu : ignoré de la liste
+    out.sort(key=lambda c: c["updated_at"], reverse=True)
+    return out
+
+
+def get_client(client_id: str) -> dict:
+    with open(_path(client_id), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_client(form: dict, scores: dict, client_id: str = None) -> dict:
+    """Crée ou met à jour un dossier ; l'historique de scores est mis à
+    jour pour l'exercice courant (remplacement) ou complété (nouvel exercice)."""
+    _ensure_dir()
+    now = _now()
+    company = form.get("company", {}) or {}
+    year = int(company.get("reporting_year") or 0)
+
+    if client_id:
+        d = get_client(client_id)
+    else:
+        d = {"id": uuid.uuid4().hex, "created_at": now, "score_history": []}
+
+    d["name"] = (company.get("name") or "Sans nom").strip()[:200]
+    d["sector"] = (company.get("sector") or "")[:100]
+    d["updated_at"] = now
+    d["form"] = form
+
+    entry = {"year": year, "saved_at": now, "scores": scores}
+    hist = [h for h in d.get("score_history", []) if h["year"] != year]
+    hist.append(entry)
+    hist.sort(key=lambda h: h["year"])
+    d["score_history"] = hist
+
+    with open(_path(d["id"]), "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+    return d
+
+
+def delete_client(client_id: str) -> bool:
+    p = _path(client_id)
+    if os.path.exists(p):
+        os.remove(p)
+        return True
+    return False

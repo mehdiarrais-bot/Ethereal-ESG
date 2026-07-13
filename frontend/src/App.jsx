@@ -8,6 +8,7 @@ import StepGovernance from './components/steps/StepGovernance'
 import StepOutput from './components/steps/StepOutput'
 import ResultsPanel from './components/ResultsPanel'
 import MiniScorebar from './components/MiniScorebar'
+import ClientsPanel from './components/ClientsPanel'
 import { useESGScore } from './hooks/useESGScore'
 import { DEMO_DATA } from './demoData'
 import './App.css'
@@ -49,6 +50,25 @@ const EMPTY_FORM = {
   include_cover_image: true,
 }
 
+// Réhydrate un formulaire sauvegardé (null → '' pour les champs de saisie),
+// en s'appuyant sur EMPTY_FORM comme gabarit de types.
+function hydrateForm(saved) {
+  const merged = JSON.parse(JSON.stringify(EMPTY_FORM))
+  for (const [sec, tpl] of Object.entries(EMPTY_FORM)) {
+    if (typeof tpl === 'object' && tpl !== null) {
+      const src = saved[sec] || {}
+      for (const key of Object.keys(tpl)) {
+        const v = src[key]
+        // null/undefined → valeur gabarit ('' pour saisies, null pour booléens/logo)
+        merged[sec][key] = (v === null || v === undefined) ? tpl[key] : v
+      }
+    } else if (saved[sec] !== undefined && saved[sec] !== null) {
+      merged[sec] = saved[sec]
+    }
+  }
+  return merged
+}
+
 export default function App() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -57,12 +77,66 @@ export default function App() {
   const [downloadLink, setDownloadLink] = useState(null)
   const [error, setError] = useState(null)
   const [showResults, setShowResults] = useState(true)
+  const [clientId, setClientId] = useState(null)
+  const [clientSaving, setClientSaving] = useState(false)
+  const [clientDirty, setClientDirty] = useState(false)
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
   useEffect(() => {
     fetch('/api/warmup').catch(() => {})
   }, [])
+
+  useEffect(() => { setClientDirty(true) }, [form])
+
+  const saveClient = async () => {
+    if (!form.company?.name) {
+      setError("Renseignez au moins le nom de l'entreprise avant d'enregistrer.")
+      return
+    }
+    setClientSaving(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: clientId, form: buildPayload(form) }),
+      })
+      if (!res.ok) {
+        let msg = `Erreur ${res.status}`
+        try { const j = await res.json(); msg = j.detail || msg } catch {}
+        throw new Error(msg)
+      }
+      const d = await res.json()
+      setClientId(d.id)
+      setClientDirty(false)
+    } catch (e) {
+      setError(`Enregistrement : ${e.message}`)
+    }
+    setClientSaving(false)
+  }
+
+  const loadClient = async (id) => {
+    setError(null)
+    try {
+      const res = await fetch(`/api/clients/${id}`)
+      if (!res.ok) throw new Error(`Erreur ${res.status}`)
+      const d = await res.json()
+      setForm(hydrateForm(d.form))
+      setClientId(d.id)
+      setTimeout(() => setClientDirty(false), 100)
+      setStep(0)
+    } catch (e) {
+      setError(`Chargement : ${e.message}`)
+    }
+  }
+
+  const deleteClient = async (id) => {
+    try {
+      await fetch(`/api/clients/${id}`, { method: 'DELETE' })
+      if (id === clientId) setClientId(null)
+    } catch {}
+  }
 
   const updateSection = useCallback((section, data) => {
     setForm(f => ({ ...f, [section]: { ...f[section], ...data } }))
@@ -75,6 +149,7 @@ export default function App() {
 
   const resetForm = () => {
     setForm(EMPTY_FORM)
+    setClientId(null)
     setError(null)
   }
 
@@ -187,7 +262,11 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <Header onLoadDemo={loadDemo} onReset={resetForm} scores={scores} showResults={showResults} onToggleResults={() => setShowResults(r => !r)} />
+      <Header onLoadDemo={loadDemo} onReset={resetForm} scores={scores} showResults={showResults} onToggleResults={() => setShowResults(r => !r)}
+        clientsPanel={
+          <ClientsPanel currentId={clientId} saving={clientSaving} dirty={clientDirty}
+                        onSave={saveClient} onLoad={loadClient} onDelete={deleteClient} />
+        } />
       <div className="app-body">
         <Sidebar steps={STEPS} current={step} onChange={setStep} scores={scores} />
         <div className="main-column">

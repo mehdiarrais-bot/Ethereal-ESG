@@ -1,4 +1,4 @@
-export default function Header({ onLoadDemo, onReset, scores, showResults, onToggleResults }) {
+export default function Header({ onLoadDemo, onReset, scores, showResults, onToggleResults, clientsPanel }) {
   return (
     <header className="header">
       <div className="header-inner">
@@ -16,6 +16,7 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
             <span className="badge badge-gov">⚖️ Gouvernance</span>
           </div>
           <div className="header-actions">
+            {clientsPanel}
             {scores && (
               <button className="hdr-btn hdr-btn-score" onClick={onToggleResults}>
                 📊 {scores.total_esg_score?.toFixed(1)} · {scores.rating} {showResults ? '◀' : '▶'}

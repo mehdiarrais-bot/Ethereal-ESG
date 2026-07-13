@@ -145,6 +145,58 @@ def calculate(request: ESGRequest):
     return scores
 
 
+# ── Dossiers clients (stockage local, workflow multi-clients) ────────────
+import client_store
+
+
+@app.get("/api/clients")
+def clients_list():
+    return client_store.list_clients()
+
+
+@app.get("/api/clients/{client_id}")
+def clients_get(client_id: str):
+    try:
+        return client_store.get_client(client_id)
+    except (FileNotFoundError, ValueError):
+        raise HTTPException(status_code=404, detail="Dossier introuvable")
+
+
+@app.post("/api/clients")
+def clients_save(payload: dict):
+    """Sauvegarde un dossier : {form: <ESGRequest-like>, id?: str}.
+    Le formulaire est validé, les scores calculés et historisés par exercice."""
+    form = payload.get("form")
+    if not isinstance(form, dict):
+        raise HTTPException(status_code=422, detail="Champ 'form' manquant")
+    try:
+        request = ESGRequest(**form)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Formulaire invalide : {e}")
+    s = calculate_esg_scores(request)
+    scores = {"env": s.environmental_score, "social": s.social_score,
+              "gov": s.governance_score, "total": s.total_esg_score, "rating": s.rating}
+    cid = payload.get("id")
+    try:
+        d = client_store.save_client(form, scores, client_id=cid)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dossier introuvable")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Identifiant invalide")
+    return {"id": d["id"], "name": d["name"], "updated_at": d["updated_at"],
+            "score_history": d["score_history"]}
+
+
+@app.delete("/api/clients/{client_id}")
+def clients_delete(client_id: str):
+    try:
+        if not client_store.delete_client(client_id):
+            raise HTTPException(status_code=404, detail="Dossier introuvable")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Identifiant invalide")
+    return {"ok": True}
+
+
 MAX_IMPORT_BYTES = 2_000_000  # 2 Mo
 
 
