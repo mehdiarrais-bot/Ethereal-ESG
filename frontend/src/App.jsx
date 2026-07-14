@@ -9,6 +9,7 @@ import StepOutput from './components/steps/StepOutput'
 import ResultsPanel from './components/ResultsPanel'
 import MiniScorebar from './components/MiniScorebar'
 import ClientsPanel from './components/ClientsPanel'
+import PortfolioView from './components/PortfolioView'
 import { useESGScore } from './hooks/useESGScore'
 import { DEMO_DATA } from './demoData'
 import './App.css'
@@ -83,6 +84,7 @@ export default function App() {
   const [clientSaving, setClientSaving] = useState(false)
   const [clientDirty, setClientDirty] = useState(false)
   const [clientHistory, setClientHistory] = useState([])
+  const [showPortfolio, setShowPortfolio] = useState(false)
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
@@ -283,9 +285,18 @@ export default function App() {
     <div className="app-layout">
       <Header onLoadDemo={loadDemo} onReset={resetForm} scores={scores} showResults={showResults} onToggleResults={() => setShowResults(r => !r)}
         clientsPanel={
-          <ClientsPanel currentId={clientId} saving={clientSaving} dirty={clientDirty}
-                        onSave={saveClient} onLoad={loadClient} onDelete={deleteClient} />
+          <>
+            <button className="hdr-btn" onClick={() => setShowPortfolio(true)}
+                    title="Vue d'ensemble de tous vos clients : statuts, scores, trajectoires">
+              📊 Portefeuille
+            </button>
+            <ClientsPanel currentId={clientId} saving={clientSaving} dirty={clientDirty}
+                          onSave={saveClient} onLoad={loadClient} onDelete={deleteClient} />
+          </>
         } />
+      {showPortfolio && (
+        <PortfolioView onClose={() => setShowPortfolio(false)} onLoad={loadClient} />
+      )}
       <div className="app-body">
         <Sidebar steps={STEPS} current={step} onChange={setStep} scores={scores} />
         <div className="main-column">

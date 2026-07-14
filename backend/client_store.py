@@ -66,6 +66,9 @@ def list_clients() -> list:
                 "years": [h["year"] for h in d.get("score_history", [])],
                 "last_score": (last or {}).get("scores", {}).get("total"),
                 "last_rating": (last or {}).get("scores", {}).get("rating"),
+                # trajectoire condensée pour la vue portefeuille
+                "history": [{"year": h["year"], "total": h["scores"].get("total")}
+                            for h in d.get("score_history", [])],
             })
         except Exception:
             continue  # fichier corrompu : ignoré de la liste
