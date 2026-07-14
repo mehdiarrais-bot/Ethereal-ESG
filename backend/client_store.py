@@ -35,6 +35,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _atomic_write(path: str, data: dict):
+    """Écriture atomique (temp + rename) : une coupure en cours d'écriture
+    ne peut pas corrompre un dossier existant."""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
 # Statuts du mini-CRM (cycle de vie d'une mission freelance)
 STATUSES = ("prospect", "signed", "delivered", "archived")
 
@@ -71,8 +80,7 @@ def set_status(client_id: str, status: str) -> dict:
     d = get_client(client_id)
     d["status"] = status
     d["updated_at"] = _now()
-    with open(_path(client_id), "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False)
+    _atomic_write(_path(client_id), d)
     return d
 
 
@@ -109,8 +117,7 @@ def import_archive(data: bytes) -> dict:
                 if d.get("id") != stem or "form" not in d:
                     skipped += 1
                     continue
-                with open(_path(stem), "w", encoding="utf-8") as f:
-                    json.dump(d, f, ensure_ascii=False)
+                _atomic_write(_path(stem), d)
                 imported += 1
             except Exception:
                 skipped += 1
@@ -146,8 +153,7 @@ def save_client(form: dict, scores: dict, client_id: str = None) -> dict:
     hist.sort(key=lambda h: h["year"])
     d["score_history"] = hist
 
-    with open(_path(d["id"]), "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False)
+    _atomic_write(_path(d["id"]), d)
     return d
 
 
