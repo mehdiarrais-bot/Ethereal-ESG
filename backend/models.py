@@ -241,6 +241,25 @@ class ESGRequest(BaseModel):
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True
+    # Actions du plan précédent marquées « réalisées » par le consultant
+    # (suivi de mission) : [{title, year}, ...]
+    completed_actions: Optional[list] = None
+
+    @field_validator('completed_actions', mode='before')
+    @classmethod
+    def check_completed(cls, v):
+        if not v:
+            return None
+        out = []
+        for item in v:
+            try:
+                title = sanitize_text(str(item["title"]), 200)
+                if title:
+                    out.append({"title": title, "year": int(item.get("year") or 0)})
+            except (KeyError, TypeError, ValueError):
+                continue
+        return out[:12] or None
+
     # Analyses libres du consultant, affichées dans des encarts dédiés
     # « L'analyse du consultant » : {global, env, social, gov}
     consultant_notes: Optional[dict] = None

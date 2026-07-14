@@ -85,6 +85,7 @@ export default function App() {
   const [clientDirty, setClientDirty] = useState(false)
   const [clientHistory, setClientHistory] = useState([])
   const [showPortfolio, setShowPortfolio] = useState(false)
+  const [clientActions, setClientActions] = useState([])
 
   const { scores, loading: scoreLoading, buildPayload } = useESGScore(form)
 
@@ -131,6 +132,7 @@ export default function App() {
       setForm(hydrateForm(d.form))
       setClientId(d.id)
       setClientHistory(d.score_history || [])
+      setClientActions(d.completed_actions || [])
       setTimeout(() => setClientDirty(false), 100)
       setStep(0)
     } catch (e) {
@@ -142,6 +144,23 @@ export default function App() {
     try {
       await fetch(`/api/clients/${id}`, { method: 'DELETE' })
       if (id === clientId) setClientId(null)
+    } catch {}
+  }
+
+  const toggleAction = async (title) => {
+    if (!clientId) return
+    const year = Number(form.company?.reporting_year) || 0
+    const exists = clientActions.some(a => a.title === title)
+    const next = exists
+      ? clientActions.filter(a => a.title !== title)
+      : [...clientActions, { title, year }]
+    setClientActions(next)
+    try {
+      await fetch(`/api/clients/${clientId}/actions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: next }),
+      })
     } catch {}
   }
 
@@ -158,6 +177,7 @@ export default function App() {
     setForm(EMPTY_FORM)
     setClientId(null)
     setClientHistory([])
+    setClientActions([])
     setError(null)
   }
 
@@ -221,6 +241,9 @@ export default function App() {
       if (clientHistory?.length) {
         payload.score_history = clientHistory.map(h => ({ year: h.year, ...h.scores }))
       }
+      if (clientActions?.length) {
+        payload.completed_actions = clientActions
+      }
       const res = await fetch(endpoints[type], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -277,7 +300,7 @@ export default function App() {
       progress={downloadProgress}
       downloadLink={downloadLink}
       onClearLink={() => setDownloadLink(null)}
-      scores={scores}
+      scores={scores} clientId={clientId} clientActions={clientActions} onToggleAction={toggleAction}
     />,
   ]
 

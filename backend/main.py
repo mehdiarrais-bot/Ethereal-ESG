@@ -199,6 +199,21 @@ def clients_set_status(client_id: str, payload: dict):
     return {"id": d["id"], "status": d["status"], "updated_at": d["updated_at"]}
 
 
+@app.patch("/api/clients/{client_id}/actions")
+def clients_set_actions(client_id: str, payload: dict):
+    """Suivi du plan d'action : liste des actions réalisées [{title, year}]."""
+    actions = payload.get("completed")
+    if not isinstance(actions, list):
+        raise HTTPException(status_code=422, detail="Champ 'completed' manquant")
+    try:
+        d = client_store.set_completed_actions(client_id, actions)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dossier introuvable")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Identifiant invalide")
+    return {"id": d["id"], "completed_actions": d.get("completed_actions", [])}
+
+
 @app.get("/api/clients-export")
 def clients_export():
     """Sauvegarde portable : zip de tous les dossiers clients."""

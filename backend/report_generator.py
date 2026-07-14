@@ -1083,6 +1083,31 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         from content_generator import enriched_recommendations
         story.append(Spacer(1, 0.4 * cm))
         section_header(story, TR["pdf_s7"], pal["accent"], pal, styles, ts)
+
+        # Suivi de mission : actions du plan précédent menées à bien
+        _done = getattr(request, "completed_actions", None) or []
+        if _done:
+            _green = colors.HexColor("#2E7D32")
+            done_flow = [Paragraph(
+                f'<font color="#2E7D32"><b>{esc(TR["done_head"]).upper()}</b></font>',
+                ParagraphStyle("dh", fontSize=9.5, fontName=ts["font_bold"], spaceAfter=5))]
+            for item in _done:
+                yr = f" ({item['year']})" if item.get("year") else ""
+                done_flow.append(Paragraph(
+                    f'<font color="#2E7D32">•</font>  {esc(item["title"])}{esc(yr)}',
+                    ParagraphStyle("di", fontSize=9, fontName=ts["font"],
+                                   textColor=pal["text"], leading=12, spaceAfter=3)))
+            done_tbl = Table([[done_flow]], colWidths=[16.5 * cm])
+            done_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#EDF7EE")),
+                ('LINEBEFORE', (0, 0), (0, -1), 3, _green),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('TOPPADDING', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
+            ]))
+            story.append(done_tbl)
+            story.append(Spacer(1, 0.3 * cm))
         pcol = {"env": pal["env"], "social": pal["social"], "gov": pal["gov"]}
         rows = []
         for i, rec in enumerate(enriched_recommendations(request, scores), 1):

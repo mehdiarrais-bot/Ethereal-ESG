@@ -87,6 +87,23 @@ def set_status(client_id: str, status: str) -> dict:
     return d
 
 
+def set_completed_actions(client_id: str, actions: list) -> dict:
+    """Enregistre le suivi du plan d'action (actions réalisées)."""
+    clean = []
+    for item in (actions or [])[:12]:
+        try:
+            title = str(item["title"]).strip()[:200]
+            if title:
+                clean.append({"title": title, "year": int(item.get("year") or 0)})
+        except (KeyError, TypeError, ValueError):
+            continue
+    d = get_client(client_id)
+    d["completed_actions"] = clean
+    d["updated_at"] = _now()
+    _atomic_write(_path(client_id), d)
+    return d
+
+
 def export_all() -> bytes:
     """Archive zip de tous les dossiers (sauvegarde portable)."""
     import zipfile

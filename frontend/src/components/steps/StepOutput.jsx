@@ -84,7 +84,7 @@ function ProgressBar({ progress, loading }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores }) {
+export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores, clientId, clientActions, onToggleAction }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
   const [showPreview, setShowPreview] = useState(false)
   const busy = loading
@@ -183,6 +183,27 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
             ))}
           </div>
         </div>
+
+        {clientId && scores?.recommendations?.length > 0 && (
+          <div className="output-section">
+            <div className="output-section-title">✅ Suivi du plan d\u2019action</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+              Cochez les actions réalisées : elles apparaîtront comme « acquis » dans les
+              prochains livrables (encart vert + mention en synthèse). Sauvegarde immédiate.
+            </div>
+            <div className="actions-track">
+              {[...new Set([...(scores.recommendations || []), ...(clientActions || []).map(a => a.title)])].map(title => {
+                const done = (clientActions || []).some(a => a.title === title)
+                return (
+                  <label key={title} className={`action-check ${done ? 'done' : ''}`}>
+                    <input type="checkbox" checked={done} onChange={() => onToggleAction(title)} />
+                    {title}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="output-section">
           <div className="output-section-title">🌍 Langue des livrables</div>
@@ -357,6 +378,15 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           border-color: rgba(34,211,238,0.35);
           color: var(--neon);
         }
+        .actions-track { display: flex; flex-direction: column; gap: 6px; }
+        .action-check {
+          display: flex; align-items: center; gap: 9px;
+          font-size: 12.5px; color: var(--text); cursor: pointer;
+          padding: 7px 10px; border-radius: 8px;
+          background: var(--glass); border: 1px solid var(--glass-border);
+        }
+        .action-check.done { opacity: 0.75; }
+        .action-check.done { text-decoration: line-through; border-color: rgba(52,211,153,0.5); }
         .notes-grid {
           display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px;
         }

@@ -550,6 +550,22 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 f" Par rapport à l'exercice {prev['year']}, le score global {move} "
                 f"(environnement {sg(de)}, social {sg(ds)}, gouvernance {sg(dg)}).")
 
+    # ── 4quater. Suivi du plan d'action (actions réalisées) ──────────────
+    done = getattr(request, "completed_actions", None) or []
+    if done:
+        titles = [d["title"] for d in done[:2]]
+        listed = (" and ".join(f"“{t}”" for t in titles) if en
+                  else " et ".join(f"« {t} »" for t in titles))
+        if en:
+            content["executive_summary"] += (
+                f" Since the previous action plan, {_nb(len(done), en=True)} "
+                f"action{'s have' if len(done) > 1 else ' has'} been completed, including {listed} — "
+                f"tangible proof that the roadmap is being executed.")
+        else:
+            content["executive_summary"] += (
+                f" Depuis le précédent plan d'action, {_agree(len(done), 'action a été menée à bien', 'actions ont été menées à bien', fem=True)}, "
+                f"dont {listed} — preuve tangible que la feuille de route est exécutée.")
+
     # ── 4bis. Initiatives internes : ancrage dans la réalité de l'entreprise ─
     ki_raw = getattr(request.company, "key_initiatives", None)
     if ki_raw:
