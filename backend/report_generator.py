@@ -417,6 +417,30 @@ def insight_callout(story, text, color, pal, ts):
     story.append(Spacer(1, 0.3 * cm))
 
 
+def consultant_callout(story, text, pal, ts, TR):
+    """Encart « L'analyse du consultant » — visuellement distinct de la
+    lecture métier automatique (fond primaire clair, libellé dédié, italique)."""
+    flow = [
+        Paragraph(TR["consultant_note"], ParagraphStyle(
+            "cnh", fontSize=8, fontName=ts["font_bold"],
+            textColor=pal["accent"], spaceAfter=4)),
+        Paragraph(esc(text), ParagraphStyle(
+            "cnb", fontSize=10, fontName=ts["font_italic"],
+            textColor=colors.white, leading=14.5)),
+    ]
+    t = Table([[flow]], colWidths=[16.5 * cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), pal["primary"]),
+        ('LINEBEFORE', (0, 0), (0, -1), 3, pal["accent"]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.3 * cm))
+
+
 def pdf_divider(story, part_no, title, subtitle, pal, ts):
     """Carton de transition quasi pleine page (rythme éditorial)."""
     num = Paragraph(f'<font color="#{pal["accent"].hexval()[2:]}">{esc(part_no)}</font>',
@@ -716,6 +740,10 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
             f'<b>{esc(TR["digest_actions"]).upper()}</b>  —  {esc(act_line)}',
             ParagraphStyle("dga", fontSize=8, fontName=ts["font"], textColor=pal["primary"],
                            leading=11, backColor=pal["light_bg"], borderPadding=6)))
+    _notes = getattr(request, "consultant_notes", None) or {}
+    if _notes.get("global"):
+        story.append(Spacer(1, 0.25 * cm))
+        consultant_callout(story, _notes["global"], pal, ts, TR)
     story.append(Spacer(1, 0.5 * cm))
 
     # ── Environnement ─────────────────────────────────────────────────────
@@ -723,6 +751,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(
         f"{TR['score_env_label']} : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["env"], pal["env"], pal, ts)
+    if _notes.get("env"):
+        consultant_callout(story, _notes["env"], pal, ts, TR)
 
     env_text = content.get("environmental",
         "L'analyse environnementale couvre les émissions de gaz à effet de serre, "
@@ -776,6 +806,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(
         f"{TR['score_soc_label']} : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["social"], pal["social"], pal, ts)
+    if _notes.get("social"):
+        consultant_callout(story, _notes["social"], pal, ts, TR)
 
     soc_text = content.get("social",
         "La performance sociale englobe la gestion des ressources humaines, la diversité, "
@@ -813,6 +845,8 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(
         f"{TR['score_gov_label']} : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
     insight_callout(story, _pi["gov"], pal["gov"], pal, ts)
+    if _notes.get("gov"):
+        consultant_callout(story, _notes["gov"], pal, ts, TR)
 
     gov_text = content.get("governance",
         "La gouvernance évalue la qualité de la direction, l'indépendance du conseil, "

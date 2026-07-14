@@ -241,6 +241,22 @@ class ESGRequest(BaseModel):
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True
+    # Analyses libres du consultant, affichées dans des encarts dédiés
+    # « L'analyse du consultant » : {global, env, social, gov}
+    consultant_notes: Optional[dict] = None
+
+    @field_validator('consultant_notes', mode='before')
+    @classmethod
+    def check_notes(cls, v):
+        if not v or not isinstance(v, dict):
+            return None
+        out = {}
+        for key in ("global", "env", "social", "gov"):
+            note = v.get(key)
+            if note and str(note).strip():
+                out[key] = sanitize_text(str(note), 1000)
+        return out or None
+
     # Couleurs de marque du client : {primary: '#RRGGBB', accent: '#RRGGBB'}.
     # Décline le thème choisi aux couleurs du client (PPTX, PDF, graphiques).
     custom_colors: Optional[dict] = None

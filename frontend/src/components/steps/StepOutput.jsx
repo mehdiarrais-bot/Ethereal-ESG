@@ -161,6 +161,30 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         </div>
 
         <div className="output-section">
+          <div className="output-section-title">💬 Vos analyses (encarts « L\u2019analyse du consultant »)</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
+            Facultatif — vos commentaires d\u2019expert, affichés dans des encarts dédiés des livrables.
+            C\u2019est ce qui distingue votre diagnostic d\u2019un rapport automatique.
+          </div>
+          <div className="notes-grid">
+            {[['global', 'Synthèse globale'], ['env', 'Environnement'], ['social', 'Social'], ['gov', 'Gouvernance']].map(([k, label]) => (
+              <label key={k} className="note-field">
+                {label}
+                <textarea
+                  rows={2}
+                  maxLength={1000}
+                  value={form.consultant_notes?.[k] || ''}
+                  onChange={e => set('consultant_notes')({ ...(form.consultant_notes || {}), [k]: e.target.value })}
+                  placeholder={k === 'global'
+                    ? 'Ex: La priorité 2026 est la fiabilisation du reporting énergie avant l\u2019audit\u2026'
+                    : 'Votre lecture de ce pilier\u2026'}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="output-section">
           <div className="output-section-title">🌍 Langue des livrables</div>
           <div className="lang-toggle">
             <button type="button" className={`lang-btn ${(form.language || 'fr') === 'fr' ? 'active' : ''}`}
@@ -333,6 +357,21 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           border-color: rgba(34,211,238,0.35);
           color: var(--neon);
         }
+        .notes-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px;
+        }
+        .note-field {
+          display: flex; flex-direction: column; gap: 4px;
+          font-size: 11.5px; font-weight: 700; color: var(--text);
+        }
+        .note-field textarea {
+          background: var(--glass); border: 1px solid var(--glass-border);
+          border-radius: 8px; color: var(--text); font-size: 12px;
+          padding: 8px 10px; resize: vertical; min-height: 46px;
+          font-family: inherit; font-weight: 400;
+        }
+        .note-field textarea:focus { outline: none; border-color: var(--violet); }
+        @media (max-width: 700px) { .notes-grid { grid-template-columns: 1fr; } }
         .color-pick {
           display: inline-flex; align-items: center; gap: 8px;
           font-size: 12px; color: var(--text); font-weight: 600;

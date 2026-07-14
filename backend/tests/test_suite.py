@@ -148,6 +148,28 @@ def test_initiatives_and_quote_injected():
     assert r.company.ceo_quote == "Notre cap est fixé."
 
 
+def test_consultant_notes_rendered_and_absent():
+    import fitz
+    from report_generator import generate_pdf_report
+    from main import build_advanced_charts
+    notes = {"global": "Note de synthese du consultant.",
+             "env": "Le site de Lyon concentre les emissions."}
+    r = make_request(consultant_notes=notes)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    full = "".join(doc[i].get_text() for i in range(doc.page_count))
+    assert full.count("ANALYSE DU CONSULTANT") == 2
+    assert "site de Lyon" in full
+    # sans notes : aucun encart
+    r2 = make_request()
+    c2 = generate_esg_content(r2, s)
+    pdf2 = generate_pdf_report(r2, s, c2, build_advanced_charts(r2, s, light_bg=True))
+    doc2 = fitz.open(stream=pdf2, filetype="pdf")
+    assert not any("ANALYSE DU CONSULTANT" in doc2[i].get_text() for i in range(doc2.page_count))
+
+
 # ── Scoring sectoriel & diagnostic ────────────────────────────────────────
 
 def test_sector_carbon_grids_differ():

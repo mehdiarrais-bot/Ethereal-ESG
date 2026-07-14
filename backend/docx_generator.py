@@ -177,6 +177,22 @@ def add_bullet_list(doc, items, icon, color_hex):
         p.paragraph_format.space_after = Pt(3)
 
 
+
+def add_consultant_note(doc, text, colors, TR):
+    """Encart « L'analyse du consultant » (fond primaire clair, italique)."""
+    kp = doc.add_paragraph()
+    kr = kp.add_run(TR["consultant_note"])
+    kr.bold = True; kr.font.size = Pt(8.5)
+    kr.font.color.rgb = hex_to_rgb(colors["accent"])
+    kp.paragraph_format.space_before = Pt(6)
+    kp.paragraph_format.space_after = Pt(1)
+    np_ = doc.add_paragraph()
+    nr = np_.add_run(text)
+    nr.italic = True; nr.font.size = Pt(10)
+    nr.font.color.rgb = hex_to_rgb(colors["primary"])
+    shade_paragraph(np_, colors.get("light", "F0F2F5"))
+    np_.paragraph_format.space_after = Pt(8)
+
 def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                          logo_bytes: bytes = None, cover_art: bytes = None,
                          charts: dict = None) -> bytes:
@@ -352,11 +368,16 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
         f"avec un score global de {scores.total_esg_score}/100 (note {scores.rating}).")
     doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
+    _notes = getattr(request, "consultant_notes", None) or {}
+    if _notes.get("global"):
+        add_consultant_note(doc, _notes["global"], colors, TR)
 
     # ── 2. Environnement ──────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s2"], 1, colors["env"], style=style)
     add_hr(doc, colors["env"])
     add_conclusion(_hl["env"], colors["env"])
+    if _notes.get("env"):
+        add_consultant_note(doc, _notes["env"], colors, TR)
     add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"])
 
     env_text = content.get("environmental", "Analyse des données environnementales.")
@@ -378,6 +399,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_heading(doc, TR["pdf_s3"], 1, colors["social"], style=style)
     add_hr(doc, colors["social"])
     add_conclusion(_hl["social"], colors["social"])
+    if _notes.get("social"):
+        add_consultant_note(doc, _notes["social"], colors, TR)
     add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"])
 
     soc_text = content.get("social", "Analyse des données sociales.")
@@ -397,6 +420,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_heading(doc, TR["pdf_s4"], 1, colors["gov"], style=style)
     add_hr(doc, colors["gov"])
     add_conclusion(_hl["gov"], colors["gov"])
+    if _notes.get("gov"):
+        add_consultant_note(doc, _notes["gov"], colors, TR)
     add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"])
 
     gov_text = content.get("governance", "Analyse des données de gouvernance.")

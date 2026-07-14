@@ -713,6 +713,22 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     header_color = theme["accent"] if style["header"] == "hairline" else theme["bg_primary"]
 
+    # ── SLIDE 2a: L'analyse du consultant (note globale) ─────────────────
+    _cnotes = getattr(request, "consultant_notes", None) or {}
+    if _cnotes.get("global"):
+        slide = prs.slides.add_slide(blank_layout)
+        add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_secondary"])
+        add_bg_rect(slide, 0, 0, Inches(0.14), SLIDE_H, theme["accent"])
+        add_text(slide, t["consultant_note"], Inches(0.7), Inches(0.8), Inches(11.9), Inches(0.5),
+                 font_size=14, bold=True, color=theme["accent"], font=fb)
+        add_bg_rect(slide, Inches(0.75), Inches(1.45), Inches(1.8), Inches(0.05), theme["accent"])
+        add_text(slide, _cnotes["global"], Inches(0.75), Inches(2.0), Inches(11.8), Inches(4.6),
+                 font_size=19, italic=True, color=theme["text_dark"], font=ft)
+        if request.company.presenter_name:
+            add_text(slide, request.company.presenter_name, Inches(0.75), Inches(6.6),
+                     Inches(11.8), Inches(0.4), font_size=12, bold=True,
+                     color=theme["muted"], font=fb)
+
     # ── DIVIDER: Acte 1 — Diagnostic ────────────────────────────────────
     section_divider(prs, blank_layout, theme, style, "01", t["div1_title"], t["div1_sub"])
 
