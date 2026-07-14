@@ -528,6 +528,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     theme = THEMES.get(request.aesthetic_theme, THEMES[AestheticTheme.CORPORATE_BLUE])
     style = STYLES.get(request.aesthetic_theme, STYLES[AestheticTheme.CORPORATE_BLUE])
+    if getattr(request, "custom_colors", None):
+        from branding import brand_pptx_theme
+        theme = brand_pptx_theme(theme, request.custom_colors)
     ft, fb = style["font_title"], style["font_body"]
     ptype = request.presentation_type
     t = L(request.language)

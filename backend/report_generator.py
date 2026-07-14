@@ -506,6 +506,9 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                          chart_images: dict, logo_bytes: bytes = None) -> bytes:
     buf = io.BytesIO()
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
+    if getattr(request, "custom_colors", None):
+        from branding import brand_pdf_palette
+        pal = brand_pdf_palette(pal, request.custom_colors)
     ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
     styles = build_styles(pal, ts)
     ts = styles["_ts"]  # polices résolues (TTF système ou base-14)

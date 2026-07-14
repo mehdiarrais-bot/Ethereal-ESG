@@ -84,18 +84,22 @@ THEME_COLORS = {
 DARK_THEMES = {AestheticTheme.DARK_PREMIUM, AestheticTheme.ROYAL_PURPLE}
 
 
-def get_colors(theme: AestheticTheme, light_bg: bool = False) -> dict:
+def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict = None) -> dict:
     c = dict(THEME_COLORS.get(theme, THEME_COLORS[AestheticTheme.CORPORATE_BLUE]))
     if light_bg and theme in DARK_THEMES:
         # Variante pour insertion sur page blanche (PDF)
         c["bg"] = "#FFFFFF"
         c["text"] = "#2C3E50"
         c["secondary"] = "#5A6B7C"
+    if brand:
+        # Couleurs de marque du client : accent + primaire ; piliers inchangés
+        from branding import brand_chart_colors
+        c = brand_chart_colors(c, brand)
     return c
 
 
-def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
-    colors = get_colors(theme, light_bg)
+def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -134,8 +138,8 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False
     return buf.read()
 
 
-def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
-    colors = get_colors(theme, light_bg)
+def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -186,8 +190,8 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
     return buf.read()
 
 
-def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
-    colors = get_colors(theme, light_bg)
+def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -237,14 +241,14 @@ def _pillar_hex(colors, pillar):
     return colors.get(pillar, colors["secondary"])
 
 
-def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Matrice de double matérialité — points numérotés + légende latérale.
 
     Chaque enjeu porte un numéro dans sa bulle et est repris dans une légende
     groupée par pilier : plus aucun chevauchement de labels, lisible pour un
     comité de direction.
     """
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
     grid = colors["secondary"]
@@ -308,13 +312,13 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
     return buf.read()
 
 
-def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Matrice de priorisation effort/impact des recommandations (2×2 conseil).
 
     Chaque action porte le numéro qu'elle a dans la liste des recommandations,
     colorée par pilier ; quadrants nommés (quick wins en évidence).
     """
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
     grid = colors["secondary"]
@@ -375,9 +379,9 @@ def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = Fa
     return buf.read()
 
 
-def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Objectifs par pilier : actuel vs. cible (barres groupées)."""
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -417,9 +421,9 @@ def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, 
     return buf.read()
 
 
-def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Trajectoire de décarbonation type SBTi (1,5°C, -42% à 2030)."""
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -455,9 +459,9 @@ def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool 
     return buf.read()
 
 
-def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Barres d'alignement Taxonomie UE (CA / CapEx / OpEx)."""
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
@@ -537,9 +541,9 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def benchmark_chart(comp: dict, avg: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr') -> bytes:
+def benchmark_chart(comp: dict, avg: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Barres groupées : entreprise vs. moyenne du secteur (E/S/G/Global)."""
-    colors = get_colors(theme, light_bg)
+    colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
     fig, ax = plt.subplots(figsize=(7.4, 4.6), facecolor=bg)

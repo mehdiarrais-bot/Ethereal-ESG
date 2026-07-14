@@ -17,7 +17,42 @@ def score_metric(value: float, thresholds: List[Tuple[float, float]], higher_is_
     return thresholds[-1][1]
 
 
-def calculate_environmental_score(env: EnvironmentalData, revenue: float = None) -> Tuple[float, dict]:
+# Seuils d'intensité carbone (t CO₂e / M€ CA) différenciés par famille
+# sectorielle : une industrie lourde n'est pas jugée sur la grille des
+# services. Format : [(seuil, score)...] du meilleur au moins bon.
+SECTOR_CARBON_THRESHOLDS = {
+    "services": [(5, 100), (15, 80), (40, 60), (150, 40), (500, 20)],
+    "finance": [(5, 100), (15, 80), (40, 60), (150, 40), (500, 20)],
+    "numérique": [(8, 100), (25, 80), (60, 60), (200, 40), (600, 20)],
+    "tech": [(8, 100), (25, 80), (60, 60), (200, 40), (600, 20)],
+    "commerce": [(10, 100), (40, 80), (100, 60), (350, 40), (800, 20)],
+    "santé": [(10, 100), (40, 80), (100, 60), (350, 40), (800, 20)],
+    "pharma": [(15, 100), (50, 80), (120, 60), (400, 40), (900, 20)],
+    "industri": [(30, 100), (100, 80), (250, 60), (700, 40), (1500, 20)],
+    "chimie": [(40, 100), (130, 80), (320, 60), (900, 40), (1800, 20)],
+    "construction": [(30, 100), (100, 80), (250, 60), (700, 40), (1500, 20)],
+    "btp": [(30, 100), (100, 80), (250, 60), (700, 40), (1500, 20)],
+    "transport": [(50, 100), (160, 80), (400, 60), (1100, 40), (2200, 20)],
+    "logisti": [(50, 100), (160, 80), (400, 60), (1100, 40), (2200, 20)],
+    "agro": [(40, 100), (130, 80), (320, 60), (900, 40), (1800, 20)],
+    "agri": [(40, 100), (130, 80), (320, 60), (900, 40), (1800, 20)],
+    "énergie": [(60, 100), (200, 80), (500, 60), (1400, 40), (2800, 20)],
+}
+_DEFAULT_CARBON_THRESHOLDS = [(10, 100), (50, 80), (100, 60), (500, 40), (1000, 20)]
+
+
+def carbon_thresholds_for(sector: str) -> Tuple[list, bool]:
+    """Grille d'intensité carbone du secteur ; second élément : grille
+    sectorielle trouvée (True) ou grille générique (False)."""
+    s = (sector or "").lower()
+    for key, th in SECTOR_CARBON_THRESHOLDS.items():
+        if key in s:
+            return th, True
+    return _DEFAULT_CARBON_THRESHOLDS, False
+
+
+def calculate_environmental_score(env: EnvironmentalData, revenue: float = None,
+                                  sector: str = None) -> Tuple[float, dict]:
     scores = {}
     details = {}
 
@@ -35,14 +70,14 @@ def calculate_environmental_score(env: EnvironmentalData, revenue: float = None)
         ])
         details["waste_recycled"] = env.waste_recycled_percent
 
-    # Carbon intensity (lower = better)
+    # Carbon intensity (lower = better) — grille différenciée par secteur
     carbon_intensity = None
     if env.co2_emissions_tonnes and revenue:
         carbon_intensity = (env.co2_emissions_tonnes / revenue) * 1_000_000
-        scores["carbon"] = score_metric(carbon_intensity, [
-            (10, 100), (50, 80), (100, 60), (500, 40), (1000, 20)
-        ], higher_is_better=False)
+        thresholds, sector_specific = carbon_thresholds_for(sector)
+        scores["carbon"] = score_metric(carbon_intensity, thresholds, higher_is_better=False)
         details["carbon_intensity"] = round(carbon_intensity, 2)
+        details["carbon_grid_sector_specific"] = sector_specific
 
     # Scope completeness bonus
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
@@ -344,7 +379,8 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     revenue = request.company.revenue_eur
     lang = getattr(request, "language", "fr")
 
-    env_score, env_details = calculate_environmental_score(request.environmental, revenue)
+    env_score, env_details = calculate_environmental_score(
+        request.environmental, revenue, sector=request.company.sector)
     social_score, social_details = calculate_social_score(request.social)
     gov_score, gov_details = calculate_governance_score(request.governance)
 

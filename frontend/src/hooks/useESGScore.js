@@ -29,6 +29,7 @@ export function useESGScore(form) {
     include_recommendations: f.include_recommendations,
     include_benchmarks: f.include_benchmarks,
     include_cover_image: f.include_cover_image ?? true,
+    custom_colors: f.custom_colors || null,
   })
 
   useEffect(() => {

@@ -25,6 +25,25 @@ const REPORT_TYPES = [
   { id: 'executive_summary_pdf', name: 'Synthese PDF', desc: 'Resume executif condense' },
 ]
 
+// Palette déterministe depuis le nom du client (même logique que le backend :
+// primaire sombre + accent vif, teintes dérivées d'un hash du nom).
+function autoBrand(name) {
+  let h = 0
+  for (const ch of (name || 'esg')) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  const hue = h % 360
+  const accentHue = (hue + 35 + ((h >> 8) % 50)) % 360
+  const hsl = (hh, s, l) => {
+    const a = s * Math.min(l, 1 - l)
+    const f = n => {
+      const k = (n + hh / 30) % 12
+      const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+      return Math.round(255 * c).toString(16).padStart(2, '0')
+    }
+    return `#${f(0)}${f(8)}${f(4)}`
+  }
+  return { primary: hsl(hue, 0.42, 0.20), accent: hsl(accentHue, 0.72, 0.55) }
+}
+
 function Swatch({ colors }) {
   return (
     <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
@@ -102,6 +121,42 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
               <OptionCard key={r.id} item={r} selected={form.report_type === r.id}
                 onClick={() => set('report_type')(r.id)} />
             ))}
+          </div>
+        </div>
+
+        <div className="output-section">
+          <div className="output-section-title">🎯 Couleurs du client</div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={!!form.custom_colors}
+                onChange={e => set('custom_colors')(e.target.checked
+                  ? autoBrand(form.company?.name || 'client')
+                  : null)} />
+              Décliner le thème aux couleurs du client
+            </label>
+            {form.custom_colors && (
+              <>
+                <label className="color-pick">
+                  Primaire
+                  <input type="color" value={form.custom_colors.primary}
+                    onChange={e => set('custom_colors')({ ...form.custom_colors, primary: e.target.value })} />
+                </label>
+                <label className="color-pick">
+                  Accent
+                  <input type="color" value={form.custom_colors.accent}
+                    onChange={e => set('custom_colors')({ ...form.custom_colors, accent: e.target.value })} />
+                </label>
+                <button type="button" className="btn btn-preview"
+                  title="Palette déterministe générée depuis le nom du client"
+                  onClick={() => set('custom_colors')(autoBrand(form.company?.name || 'client'))}>
+                  🎲 Depuis le nom
+                </button>
+              </>
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+            Chaque client obtient une identité visuelle distincte (couvertures, titres, graphiques).
+            Les couleurs des piliers E/S/G restent standard pour la lisibilité.
           </div>
         </div>
 
@@ -273,6 +328,14 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           background: rgba(34,211,238,0.1);
           border-color: rgba(34,211,238,0.35);
           color: var(--neon);
+        }
+        .color-pick {
+          display: inline-flex; align-items: center; gap: 8px;
+          font-size: 12px; color: var(--text); font-weight: 600;
+        }
+        .color-pick input[type=color] {
+          width: 42px; height: 28px; border: 1px solid var(--glass-border);
+          border-radius: 6px; background: none; cursor: pointer; padding: 1px;
         }
         .checkbox-label {
           display: flex; align-items: center; gap: 8px;

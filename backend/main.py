@@ -281,30 +281,31 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
                                  carbon_trajectory_chart, taxonomy_chart, benchmark_chart)
     theme = request.aesthetic_theme
     lang = request.language
+    brand = getattr(request, 'custom_colors', None)
     out = {}
     try:
         out["materiality"] = materiality_matrix(
-            materiality_topics(request, scores, lang), theme, light_bg=light_bg, lang=lang)
+            materiality_topics(request, scores, lang), theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Materiality chart error: {e}")
     try:
         tg = esg_targets(request, scores, lang)
-        out["targets"] = targets_chart(tg["pillars"], theme, light_bg=light_bg, lang=lang)
+        out["targets"] = targets_chart(tg["pillars"], theme, light_bg=light_bg, lang=lang, brand=brand)
         if tg["carbon"]:
-            out["carbon_trajectory"] = carbon_trajectory_chart(tg["carbon"], theme, light_bg=light_bg, lang=lang)
+            out["carbon_trajectory"] = carbon_trajectory_chart(tg["carbon"], theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Targets chart error: {e}")
     try:
         tx = taxonomy_summary(request)
         if tx:
-            out["taxonomy"] = taxonomy_chart(tx, theme, light_bg=light_bg, lang=lang)
+            out["taxonomy"] = taxonomy_chart(tx, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Taxonomy chart error: {e}")
     try:
         bm = sector_benchmark(request, scores)
         comp = {"env": scores.environmental_score, "social": scores.social_score,
                 "gov": scores.governance_score, "global": scores.total_esg_score}
-        out["benchmark"] = benchmark_chart(comp, bm["avg"], theme, light_bg=light_bg, lang=lang)
+        out["benchmark"] = benchmark_chart(comp, bm["avg"], theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Benchmark chart error: {e}")
     try:
@@ -312,7 +313,7 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
         from chart_generator import priority_matrix_chart
         recs = enriched_recommendations(request, scores)
         if recs:
-            out["priority"] = priority_matrix_chart(recs, theme, light_bg=light_bg, lang=lang)
+            out["priority"] = priority_matrix_chart(recs, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Priority chart error: {e}")
     return out
@@ -329,11 +330,11 @@ def generate_presentation(request: ESGRequest):
     if art:
         chart_images["cover_art"] = art
     try:
-        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme, lang=request.language)
+        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme, lang=request.language, brand=getattr(request, "custom_colors", None))
     except Exception as e:
         print(f"Radar chart error: {e}")
     try:
-        chart_images["bars"] = score_bars_chart(scores, request.aesthetic_theme, lang=request.language)
+        chart_images["bars"] = score_bars_chart(scores, request.aesthetic_theme, lang=request.language, brand=getattr(request, "custom_colors", None))
     except Exception as e:
         print(f"Bars chart error: {e}")
 
@@ -342,7 +343,8 @@ def generate_presentation(request: ESGRequest):
         try:
             chart_images["emissions_pie"] = emissions_breakdown_chart(
                 env.scope1_emissions, env.scope2_emissions, env.scope3_emissions,
-                request.aesthetic_theme, lang=request.language
+                request.aesthetic_theme, lang=request.language,
+                brand=getattr(request, "custom_colors", None)
             )
         except Exception as e:
             print(f"Pie chart error: {e}")
@@ -370,7 +372,8 @@ def generate_report(request: ESGRequest):
     if art:
         chart_images["cover_art"] = art
     try:
-        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme, light_bg=True, lang=request.language)
+        chart_images["radar"] = radar_chart(scores, request.aesthetic_theme, light_bg=True, lang=request.language,
+                                            brand=getattr(request, "custom_colors", None))
     except Exception as e:
         print(f"Radar chart error: {e}")
 
@@ -379,7 +382,8 @@ def generate_report(request: ESGRequest):
         try:
             chart_images["emissions_pie"] = emissions_breakdown_chart(
                 env.scope1_emissions, env.scope2_emissions, env.scope3_emissions,
-                request.aesthetic_theme, light_bg=True, lang=request.language
+                request.aesthetic_theme, light_bg=True, lang=request.language,
+                brand=getattr(request, "custom_colors", None)
             )
         except Exception as e:
             print(f"Pie chart error: {e}")

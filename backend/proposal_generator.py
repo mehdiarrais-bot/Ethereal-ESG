@@ -32,6 +32,9 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     from content_generator import compliance_assessment, maturity_text, roadmap_12m
     en = request.language == "en"
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
+    if getattr(request, "custom_colors", None):
+        from branding import brand_docx_hex
+        colors = brand_docx_hex(colors, request.custom_colors)
     TR = L(request.language)
     name = request.company.name
     year = request.company.reporting_year

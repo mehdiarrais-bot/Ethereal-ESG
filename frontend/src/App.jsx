@@ -48,6 +48,7 @@ const EMPTY_FORM = {
   include_recommendations: true,
   include_benchmarks: true,
   include_cover_image: true,
+  custom_colors: null,
 }
 
 // Réhydrate un formulaire sauvegardé (null → '' pour les champs de saisie),

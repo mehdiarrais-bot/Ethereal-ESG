@@ -23,6 +23,9 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
 
     en = request.language == "en"
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
+    if getattr(request, "custom_colors", None):
+        from branding import brand_pdf_palette
+        pal = brand_pdf_palette(pal, request.custom_colors)
     ts = PDF_STYLES.get(request.aesthetic_theme, PDF_STYLES[AestheticTheme.CORPORATE_BLUE])
     f, fb, fi = resolve_family(ts["family"]) if ts.get("family") else \
         (ts["font"], ts["font_bold"], ts["font_italic"])

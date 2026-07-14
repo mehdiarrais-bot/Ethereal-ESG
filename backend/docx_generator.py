@@ -181,6 +181,9 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                          logo_bytes: bytes = None, cover_art: bytes = None,
                          charts: dict = None) -> bytes:
     colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
+    if getattr(request, "custom_colors", None):
+        from branding import brand_docx_hex
+        colors = brand_docx_hex(colors, request.custom_colors)
     style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
     TR = L(request.language)
 

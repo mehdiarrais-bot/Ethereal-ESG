@@ -241,6 +241,26 @@ class ESGRequest(BaseModel):
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True
+    # Couleurs de marque du client : {primary: '#RRGGBB', accent: '#RRGGBB'}.
+    # Décline le thème choisi aux couleurs du client (PPTX, PDF, graphiques).
+    custom_colors: Optional[dict] = None
+
+    @field_validator('custom_colors', mode='before')
+    @classmethod
+    def check_custom_colors(cls, v):
+        if not v:
+            return None
+        import re as _re
+        hx = _re.compile(r'^#?[0-9a-fA-F]{6}$')
+        try:
+            p, a = str(v.get("primary", "")), str(v.get("accent", ""))
+            if hx.match(p) and hx.match(a):
+                return {"primary": p if p.startswith('#') else '#' + p,
+                        "accent": a if a.startswith('#') else '#' + a}
+        except AttributeError:
+            pass
+        return None  # couleurs invalides : thème standard
+
     # Scores de l'exercice précédent (issus de l'historique du dossier client)
     # pour afficher l'évolution année sur année dans les livrables.
     # Forme : {year, env, social, gov, total}
