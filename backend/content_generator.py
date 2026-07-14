@@ -594,7 +594,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                    if not en else (f" The following datapoints remain to be consolidated: {listed}."))
     if en:
         content["methodology"] = (
-            f"Reporting scope and methodology. The indicators cover the {year} financial year on an "
+            f"Reporting scope and methodology. Target framework: "
+            f"{'VSME (EFRAG voluntary SME standard)' if getattr(request, 'reporting_framework', 'csrd') == 'vsme' else 'CSRD / ESRS'}. "
+            f"The indicators cover the {year} financial year on an "
             f"operational-control basis. Greenhouse-gas emissions are computed according to the GHG "
             f"Protocol (Scopes 1, 2 and 3); social indicators follow ESRS S1 definitions; governance "
             f"indicators are documented from corporate records. Pillar scores (0-100) aggregate each "
@@ -610,7 +612,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         )
     else:
         content["methodology"] = (
-            f"Périmètre et méthodologie du reporting. Les indicateurs couvrent l'exercice {year} selon "
+            f"Périmètre et méthodologie du reporting. Référentiel visé : "
+            f"{'VSME (norme volontaire PME, EFRAG)' if getattr(request, 'reporting_framework', 'csrd') == 'vsme' else 'CSRD / ESRS'}. "
+            f"Les indicateurs couvrent l'exercice {year} selon "
             f"l'approche du contrôle opérationnel. Les émissions de gaz à effet de serre sont calculées "
             f"selon le GHG Protocol (Scopes 1, 2 et 3) ; les indicateurs sociaux suivent les définitions "
             f"de la norme ESRS S1 ; les indicateurs de gouvernance sont documentés à partir des registres "
@@ -1858,11 +1862,24 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     """Analyse des écarts vs exigences CSRD/réglementaires (données déclarées).
     Chaque ligne : {req, ref, status: 'ok'|'partial'|'no'|'na', note}. FR/EN."""
     en = getattr(request, "language", "fr") == "en"
+    vsme = getattr(request, "reporting_framework", "csrd") == "vsme"
     env, soc, gov = request.environmental, request.social, request.governance
     tx = request.taxonomy
     rows = []
 
-    def R(req_fr, req_en, ref, status, note_fr, note_en):
+    # En VSME (norme volontaire PME, EFRAG), certaines exigences CSRD
+    # deviennent optionnelles (module complet) : un manquement est signalé
+    # comme optionnel, pas comme non-conformité.
+    _VSME_OPTIONAL_FR = "Optionnel en VSME (module complet)"
+    _VSME_OPTIONAL_EN = "Optional under VSME (comprehensive module)"
+
+    def R(req_fr, req_en, ref, status, note_fr, note_en, vsme_optional=False):
+        if vsme and vsme_optional and status in ("no", "partial"):
+            status = "na"
+            note_fr, note_en = _VSME_OPTIONAL_FR, _VSME_OPTIONAL_EN
+        if vsme:
+            ref = ref.replace("CSRD (assurance limitée)", "VSME (volontaire)").replace(
+                "ESRS", "VSME/ESRS")
         rows.append({"req": req_en if en else req_fr, "ref": ref, "status": status,
                      "note": note_en if en else note_fr})
 
@@ -1879,13 +1896,15 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     R("Émissions de la chaîne de valeur (Scope 3)", "Value-chain emissions (Scope 3)", "ESRS E1-6",
       "ok" if env.scope3_emissions is not None else "no",
       "Scope 3 mesuré et publié" if env.scope3_emissions is not None else "Scope 3 non mesuré — priorité CSRD",
-      "Scope 3 measured and disclosed" if env.scope3_emissions is not None else "Scope 3 not measured — CSRD priority")
+      "Scope 3 measured and disclosed" if env.scope3_emissions is not None else "Scope 3 not measured — CSRD priority",
+      vsme_optional=True)
 
     # Vérification tierce
     R("Vérification du reporting par un tiers", "Third-party assurance of reporting", "CSRD (assurance limitée)",
       "ok" if gov.esg_audit_conducted else "no",
       "Audit ESG indépendant réalisé" if gov.esg_audit_conducted else "Aucune assurance externe à date",
-      "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date")
+      "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date",
+      vsme_optional=True)
 
     # Gouvernance durabilité
     R("Supervision de la durabilité par la gouvernance", "Sustainability oversight by governance", "ESRS 2 GOV-1",
@@ -1913,7 +1932,8 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     R("Publication des indicateurs Taxonomie UE", "EU Taxonomy KPI disclosure", "Règlement (UE) 2020/852",
       "ok" if has_tx else "no",
       "Parts alignées publiées (CA/CapEx/OpEx)" if has_tx else "Éligibilité et alignement à évaluer",
-      "Aligned shares disclosed (turnover/CapEx/OpEx)" if has_tx else "Eligibility and alignment to be assessed")
+      "Aligned shares disclosed (turnover/CapEx/OpEx)" if has_tx else "Eligibility and alignment to be assessed",
+      vsme_optional=True)
 
     # Trajectoire climat
     R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",

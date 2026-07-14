@@ -64,7 +64,8 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
     txt(M, H - 2.15 * cm, request.company.name, fb, 22, colors.white)
     txt(M, H - 2.8 * cm, f"{request.company.sector}  |  "
         + (f"FY {request.company.reporting_year}" if en else f"Exercice {request.company.reporting_year}")
-        + f"  |  {TR['cover_refs']}", f, 9, colors.HexColor("#C6CFDE"))
+        + "  |  " + (TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" else TR["cover_refs"]),
+        f, 9, colors.HexColor("#C6CFDE"))
     # Maturité
     _mat_lbl = TR.get("mat_" + mat.get("key", "structured"), "")
     txt(M, H - 3.75 * cm, (("ESG maturity: " if en else "Maturité ESG : ") + f"{_mat_lbl} ({mat['stage']}/5)"),

@@ -238,6 +238,9 @@ class ESGRequest(BaseModel):
     aesthetic_theme: AestheticTheme = AestheticTheme.CORPORATE_BLUE
     report_type: ReportType = ReportType.FULL_REPORT
     language: str = Field("fr", pattern=r'^(fr|en)$')
+    # Référentiel visé : CSRD complet ou VSME (norme volontaire PME, EFRAG).
+    # Ajuste l'analyse des écarts (exigences optionnelles vs requises).
+    reporting_framework: str = Field("csrd", pattern=r'^(csrd|vsme)$')
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True

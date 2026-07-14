@@ -244,7 +244,9 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
         canvas.drawString(M, 3.15 * cm, meta)
         # Référentiels de reporting (attendu d'un rapport professionnel)
         canvas.setFont(fb, 9); canvas.setFillColor(pal["accent"])
-        canvas.drawString(M, 1.7 * cm, pdf_txt(TR["cover_refs"]))
+        canvas.drawString(M, 1.7 * cm, pdf_txt(
+            TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme"
+            else TR["cover_refs"]))
         if request.company.presenter_name:
             pl = f"{TR['presented_by']} {request.company.presenter_name}"
             if request.company.presenter_title:

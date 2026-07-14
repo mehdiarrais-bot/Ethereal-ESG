@@ -46,6 +46,7 @@ const EMPTY_FORM = {
   aesthetic_theme: 'corporate_blue',
   report_type: 'full_report',
   language: 'fr',
+  reporting_framework: 'csrd',
   include_recommendations: true,
   include_benchmarks: true,
   include_cover_image: true,

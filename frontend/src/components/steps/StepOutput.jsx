@@ -206,6 +206,26 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         )}
 
         <div className="output-section">
+          <div className="output-section-title">📐 Référentiel visé</div>
+          <div className="lang-toggle">
+            <button type="button" className={`lang-btn ${(form.reporting_framework || 'csrd') === 'csrd' ? 'active' : ''}`}
+              onClick={() => set('reporting_framework')('csrd')}
+              title="Exigences complètes CSRD / ESRS — entreprises soumises ou en préparation">
+              CSRD / ESRS
+            </button>
+            <button type="button" className={`lang-btn ${form.reporting_framework === 'vsme' ? 'active' : ''}`}
+              onClick={() => set('reporting_framework')('vsme')}
+              title="Norme volontaire PME (EFRAG) — Scope 3, assurance tierce et Taxonomie deviennent optionnels dans l'analyse des écarts">
+              VSME (PME)
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+            En VSME, les exigences optionnelles (Scope 3, assurance tierce, Taxonomie) sont signalées
+            comme telles au lieu d\u2019être marquées non conformes.
+          </div>
+        </div>
+
+        <div className="output-section">
           <div className="output-section-title">🌍 Langue des livrables</div>
           <div className="lang-toggle">
             <button type="button" className={`lang-btn ${(form.language || 'fr') === 'fr' ? 'active' : ''}`}

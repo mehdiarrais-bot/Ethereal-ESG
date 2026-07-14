@@ -26,6 +26,7 @@ export function useESGScore(form) {
     aesthetic_theme: f.aesthetic_theme,
     report_type: f.report_type,
     language: f.language,
+    reporting_framework: f.reporting_framework || 'csrd',
     include_recommendations: f.include_recommendations,
     include_benchmarks: f.include_benchmarks,
     include_cover_image: f.include_cover_image ?? true,
