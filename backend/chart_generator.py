@@ -312,6 +312,58 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
     return buf.read()
 
 
+def score_trend_chart(history: list, theme: AestheticTheme, light_bg: bool = False,
+                      lang: str = 'fr', brand: dict = None) -> bytes:
+    """Trajectoire pluriannuelle du score (global + piliers).
+
+    `history` : [{year, env, social, gov, total}, ...] trié, ≥ 2 points —
+    l'exercice courant inclus. Global en trait épais accent, piliers fins.
+    """
+    colors = get_colors(theme, light_bg, brand)
+    LB = L(lang)
+    bg = colors["bg"]
+
+    years = [h["year"] for h in history]
+    fig, ax = plt.subplots(figsize=(9, 4.6), facecolor=bg)
+    ax.set_facecolor(bg)
+
+    series = [
+        ("total", LB["chart_global"], colors["accent"], 3.2, 1.0),
+        ("env", LB["chart_env"], colors["env"], 1.6, 0.75),
+        ("social", LB["chart_soc"], colors["social"], 1.6, 0.75),
+        ("gov", LB["chart_gov"], colors["gov"], 1.6, 0.75),
+    ]
+    for key, label, col, lw, alpha in series:
+        vals = [h[key] for h in history]
+        ax.plot(years, vals, "o-", color=col, linewidth=lw, alpha=alpha,
+                markersize=7 if key == "total" else 5, label=label,
+                zorder=4 if key == "total" else 3)
+        # étiquette de la dernière valeur (lecture directe)
+        ax.annotate(f"{vals[-1]:.0f}", (years[-1], vals[-1]),
+                    textcoords="offset points", xytext=(10, -3),
+                    fontsize=10 if key == "total" else 8.5, fontweight="bold", color=col)
+
+    ax.set_xticks(years)
+    ax.set_xticklabels([str(y) for y in years], fontsize=10, color=colors["text"])
+    ax.set_ylim(0, 100)
+    ax.set_yticks([0, 25, 50, 75, 100])
+    ax.tick_params(colors=colors["secondary"], labelsize=8.5)
+    ax.grid(axis="y", color=colors["secondary"], alpha=0.2, linewidth=0.8)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color(colors["secondary"]); ax.spines[spine].set_alpha(0.4)
+    leg = ax.legend(loc="lower right", fontsize=8.5, frameon=False, ncol=4)
+    for t in leg.get_texts():
+        t.set_color(colors["text"])
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
+    plt.close()
+    buf.seek(0)
+    return buf.read()
+
+
 def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
     """Matrice de priorisation effort/impact des recommandations (2×2 conseil).
 

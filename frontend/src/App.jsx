@@ -205,13 +205,18 @@ export default function App() {
     startProgress()
     try {
       const endpoints = { pptx: '/api/generate/pptx', pdf: '/api/generate/pdf', docx: '/api/generate/docx',
-                          proposal: '/api/generate/proposal', onepager: '/api/generate/onepager' }
+                          proposal: '/api/generate/proposal', onepager: '/api/generate/onepager',
+                          pack: '/api/generate/pack' }
       const payload = buildPayload(form)
       // Évolution N-1 : dernier exercice de l'historique antérieur à l'exercice courant
       const year = Number(form.company?.reporting_year) || 0
       const prev = (clientHistory || []).filter(h => h.year < year).pop()
       if (prev) {
         payload.previous_scores = { year: prev.year, ...prev.scores }
+      }
+      // Trajectoire pluriannuelle : historique complet du dossier
+      if (clientHistory?.length) {
+        payload.score_history = clientHistory.map(h => ({ year: h.year, ...h.scores }))
       }
       const res = await fetch(endpoints[type], {
         method: 'POST',

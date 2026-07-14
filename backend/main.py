@@ -316,6 +316,19 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
             out["priority"] = priority_matrix_chart(recs, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Priority chart error: {e}")
+    try:
+        # Trajectoire pluriannuelle : exercices passés + exercice courant recalculé
+        hist = getattr(request, "score_history", None) or []
+        year = request.company.reporting_year
+        pts = [h for h in hist if h["year"] < year]
+        pts.append({"year": year, "env": scores.environmental_score,
+                    "social": scores.social_score, "gov": scores.governance_score,
+                    "total": scores.total_esg_score})
+        if len(pts) >= 2:
+            from chart_generator import score_trend_chart
+            out["trend"] = score_trend_chart(pts, theme, light_bg=light_bg, lang=lang, brand=brand)
+    except Exception as e:
+        print(f"Trend chart error: {e}")
     return out
 
 
@@ -441,6 +454,56 @@ def generate_word(request: ESGRequest):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+
+@app.post("/api/generate/pack")
+def generate_pack(request: ESGRequest):
+    """Pack complet : tous les livrables de la mission dans un zip."""
+    import zipfile
+    from onepager_generator import generate_onepager_pdf
+    from proposal_generator import generate_proposal_docx
+    scores = calculate_esg_scores(request)
+    content = generate_esg_content(request, scores)
+    logo_bytes, art = build_extras(request)
+    charts_dark = {}
+    if art:
+        charts_dark["cover_art"] = art
+    brand = getattr(request, "custom_colors", None)
+    try:
+        charts_dark["radar"] = radar_chart(scores, request.aesthetic_theme, lang=request.language, brand=brand)
+        charts_dark["bars"] = score_bars_chart(scores, request.aesthetic_theme, lang=request.language, brand=brand)
+        env = request.environmental
+        if any(v is not None for v in (env.scope1_emissions, env.scope2_emissions, env.scope3_emissions)):
+            charts_dark["emissions_pie"] = emissions_breakdown_chart(
+                env.scope1_emissions, env.scope2_emissions, env.scope3_emissions,
+                request.aesthetic_theme, lang=request.language, brand=brand)
+    except Exception as e:
+        print(f"Pack charts error: {e}")
+    charts_dark.update(build_advanced_charts(request, scores, light_bg=False))
+    charts_light = {k: v for k, v in charts_dark.items() if k == "cover_art"}
+    try:
+        charts_light["radar"] = radar_chart(scores, request.aesthetic_theme, light_bg=True,
+                                            lang=request.language, brand=brand)
+    except Exception:
+        pass
+    charts_light.update(build_advanced_charts(request, scores, light_bg=True))
+
+    base = f"{safe_name(request.company.name)}_{request.company.reporting_year}"
+    files = {}
+    files[f"Presentation_{base}.pptx"] = generate_pptx(request, scores, content, charts_dark, logo_bytes=logo_bytes)
+    files[f"Rapport_ESG_{base}.pdf"] = generate_pdf_report(request, scores, content, charts_light, logo_bytes=logo_bytes)
+    files[f"Rapport_ESG_{base}.docx"] = generate_word_report(request, scores, content, logo_bytes=logo_bytes)
+    files[f"Synthese_1page_{base}.pdf"] = generate_onepager_pdf(request, scores)
+    files[f"Lettre_de_mission_{base}.docx"] = generate_proposal_docx(request, scores)
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for fn, data in files.items():
+            z.writestr(fn, data)
+    buf.seek(0)
+    return StreamingResponse(
+        buf, media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="Pack_ESG_{base}.zip"'})
 
 
 @app.post("/api/generate/onepager")

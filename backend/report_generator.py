@@ -943,6 +943,18 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.3 * cm))
     insight_callout(story, _bv["insight"], pal["accent"], pal, ts)
 
+    # Trajectoire pluriannuelle (dossier client avec historique)
+    if "trend" in chart_images:
+        try:
+            timg = Image(io.BytesIO(chart_images["trend"]), width=16.5 * cm, height=8.4 * cm)
+            timg.hAlign = 'CENTER'
+            story.append(Paragraph(TR["trend_title"], styles["h2"]))
+            story.append(timg)
+            story.append(Paragraph(TR["cap_trend"], styles["caption"]))
+            story.append(Spacer(1, 0.3 * cm))
+        except Exception as e:
+            print(f"Trend image error: {e}")
+
     _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
     story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : <b>{esc(_mat_lbl)}</b> '
                            f'({_mt["stage"]}/5)', styles["h2"]))

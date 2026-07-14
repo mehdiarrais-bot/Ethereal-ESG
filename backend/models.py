@@ -265,6 +265,25 @@ class ESGRequest(BaseModel):
     # pour afficher l'évolution année sur année dans les livrables.
     # Forme : {year, env, social, gov, total}
     previous_scores: Optional[dict] = None
+    # Historique complet des exercices du dossier client (trajectoire
+    # pluriannuelle) : [{year, env, social, gov, total}, ...]
+    score_history: Optional[list] = None
+
+    @field_validator('score_history', mode='before')
+    @classmethod
+    def check_history(cls, v):
+        if not v:
+            return None
+        out = []
+        for h in v:
+            try:
+                out.append({"year": int(h["year"]), "env": float(h["env"]),
+                            "social": float(h["social"]), "gov": float(h["gov"]),
+                            "total": float(h["total"])})
+            except (KeyError, TypeError, ValueError):
+                continue  # entrée incomplète ignorée
+        out.sort(key=lambda h: h["year"])
+        return out[:15] or None
 
     @field_validator('previous_scores', mode='before')
     @classmethod

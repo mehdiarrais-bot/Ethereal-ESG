@@ -223,6 +223,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
                     title="Lettre de mission commerciale basée sur le pré-diagnostic (écarts, maturité, phases)">
               🖋 Lettre de mission
             </button>
+            <button className="btn btn-pptx" onClick={() => onDownload('pack')} disabled={busy || !scores}
+                    title="Tous les livrables de la mission en un zip : PPTX, PDF, Word, synthèse 1 page, lettre de mission">
+              📦 Pack complet
+            </button>
           </div>
 
           <ProgressBar progress={progress} loading={loading} />

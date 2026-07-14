@@ -753,6 +753,15 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_text(slide, t["bench_note"], Inches(0.4), Inches(6.95), Inches(7.5), Inches(0.35),
                  font_size=9, italic=True, color=theme["muted"], font=fb)
 
+    # ── SLIDE 2b1: Trajectoire pluriannuelle (si historique client) ──────
+    if "trend" in chart_images:
+        slide = content_slide(prs, blank_layout, theme, style,
+                              t["trend_title"], header_color, kicker=t["trend_kicker"])
+        add_image_from_bytes(slide, chart_images["trend"],
+                             Inches(1.3), Inches(1.6), width=Inches(10.7))
+        add_text(slide, t["cap_trend"], Inches(1.3), Inches(6.9), Inches(10.7), Inches(0.35),
+                 font_size=10, italic=True, color=theme["muted"], font=fb)
+
     # ── SLIDE 2b2: Analyse des écarts réglementaires ─────────────────────
     from content_generator import compliance_assessment
     _ga = compliance_assessment(request, scores)
