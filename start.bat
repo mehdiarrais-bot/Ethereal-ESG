@@ -1,9 +1,9 @@
 @echo off
 REM ---------------------------------------------------------
-REM  ESG Platform - Lancement rapide
+REM  Ethereal ESG - Lancement rapide
 REM  (lancer install.bat d'abord si premiere utilisation)
 REM ---------------------------------------------------------
-title ESG Platform
+title Ethereal ESG
 
 set SCRIPT_DIR=%~dp0
 
@@ -28,7 +28,7 @@ if errorlevel 1 (
 
 REM ── Lancement ─────────────────────────────────────────────
 echo.
-echo   ESG Platform - Demarrage...
+echo   Ethereal ESG - Demarrage...
 echo   URL : http://localhost:8000
 echo.
 echo   Ctrl+C pour arreter.

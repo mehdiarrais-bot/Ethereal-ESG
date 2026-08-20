@@ -86,7 +86,7 @@ class SecurityMiddleware:
             await self.app(scope, receive, send)
 
 
-app = FastAPI(title="ESG Platform API", version="1.0.0")
+app = FastAPI(title="Ethereal ESG API", version="1.0.0")
 
 
 @app.on_event("startup")
@@ -129,7 +129,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "ESG Platform"}
+    return {"status": "ok", "service": "Ethereal ESG"}
 
 
 @app.get("/api/warmup")

@@ -1,11 +1,11 @@
 @echo off
 REM ---------------------------------------------------------
-REM  ESG Platform - Installation (a faire UNE SEULE FOIS)
+REM  Ethereal ESG - Installation (a faire UNE SEULE FOIS)
 REM ---------------------------------------------------------
-title ESG Platform - Installation
+title Ethereal ESG - Installation
 
 echo.
-echo   ESG Platform - Installation initiale
+echo   Ethereal ESG - Installation initiale
 echo   =====================================
 echo.
 

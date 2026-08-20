@@ -7,14 +7,23 @@ const STATUSES = {
   archived: { label: 'Archivé', color: '#94a3b8' },
 }
 
-/** Sparkline SVG de la trajectoire du score (0-100). */
+/**
+ * Sparkline SVG de la trajectoire du score.
+ * L'échelle s'ajuste à la plage réelle des données (avec marge) : sur 0-100
+ * fixe, des écarts de quelques points seraient invisibles.
+ */
 function Sparkline({ history }) {
   if (!history || history.length < 2) return <div className="spark-empty">—</div>
   const W = 140, H = 36, P = 4
+  const vals = history.map(h => h.total || 0)
+  const lo = Math.min(...vals), hi = Math.max(...vals)
+  const span = Math.max(hi - lo, 4)        // évite une courbe plate sur données identiques
+  const pad = span * 0.25
+  const min = lo - pad, max = hi + pad
   const xs = history.map((_, i) => P + (i * (W - 2 * P)) / (history.length - 1))
-  const ys = history.map(h => H - P - ((h.total || 0) / 100) * (H - 2 * P))
+  const ys = vals.map(v => H - P - ((v - min) / (max - min)) * (H - 2 * P))
   const d = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
-  const up = history[history.length - 1].total >= history[0].total
+  const up = vals[vals.length - 1] >= vals[0]
   const col = up ? '#34d399' : '#f87171'
   return (
     <svg width={W} height={H} className="spark">

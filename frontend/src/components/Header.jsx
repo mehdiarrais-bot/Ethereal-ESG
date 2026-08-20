@@ -3,10 +3,10 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
     <header className="header">
       <div className="header-inner">
         <div className="header-brand">
-          <div className="header-logo">ESG</div>
+          <div className="header-logo">Eth</div>
           <div>
-            <div className="header-title">Plateforme ESG / RSE</div>
-            <div className="header-sub">Génération automatique de rapports & présentations</div>
+            <div className="header-title">Ethereal ESG</div>
+            <div className="header-sub">Diagnostic & reporting extra-financier — 100 % local</div>
           </div>
         </div>
         <div className="header-right">

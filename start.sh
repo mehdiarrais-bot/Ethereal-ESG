@@ -1,6 +1,6 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────
-#  ESG Platform — Démarrage local (Mac / Linux)
+#  Ethereal ESG — Démarrage local (Mac / Linux)
 #  Lancer une seule fois : bash start.sh
 # ─────────────────────────────────────────────────────────
 

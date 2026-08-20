@@ -10,3 +10,6 @@ frontend/node_modules/
 
 # Dossiers clients locaux (données de travail, jamais versionnées)
 backend/data/
+
+# Antisèche entretien — document personnel, jamais publié
+NOTES-ENTRETIEN.md
