@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/img/cover.png" alt="Ethereal ESG" width="100%">
+
 # Ethereal ESG
 
 **Plateforme de diagnostic et de reporting extra-financier — 100 % locale.**
@@ -13,6 +15,8 @@ Aucune API externe, aucun compte, aucune donnée qui sort de la machine.
 </div>
 
 ![Interface de configuration des livrables](docs/img/02-livrables.png)
+
+*L'interface : sept thèmes, déclinaison aux couleurs du client, score calculé en direct.*
 
 ---
 
