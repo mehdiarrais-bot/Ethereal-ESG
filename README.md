@@ -177,6 +177,7 @@ backend/
 ├── client_store.py         Dossiers clients (JSON local, écriture atomique)
 └── tests/                  Suite pytest
 frontend/src/               Interface React (Vite)
+scripts/make_examples.py    Régénère les livrables d'exemple
 ```
 
 ---
@@ -196,6 +197,8 @@ première exécution. Prérequis : Python 3.10+ et Node.js 18+.
 # Tests
 cd backend && pip install -r requirements-dev.txt && python -m pytest tests/ -q
 ```
+
+Les livrables d'exemple de `examples/` sont reproductibles — `python scripts/make_examples.py`.
 
 Les dossiers clients sont stockés dans `backend/data/clients/` (jamais versionnés).
 
