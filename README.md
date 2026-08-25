@@ -7,7 +7,8 @@
 **Plateforme de diagnostic et de reporting extra-financier — 100 % locale.**
 
 Transforme les données ESG d'une PME/ETI en livrables de niveau cabinet de conseil :
-rapport PDF, présentation de direction, rapport Word, synthèse une page et lettre de mission.
+rapport PDF, présentation de direction, rapport Word, synthèse une page, lettre de mission
+et questionnaire de collecte.
 Aucune API externe, aucun compte, aucune donnée qui sort de la machine.
 
 `Python` · `FastAPI` · `React` · `python-pptx` · `ReportLab` · `python-docx` · `matplotlib`
@@ -47,7 +48,7 @@ et déclinables en 7 thèmes graphiques.
 
 | Livrable | Contenu |
 |---|---|
-| **Rapport PDF** (~17 p.) | Structure en trois actes : Situation · Diagnostic · Plan d'action |
+| **Rapport PDF** (~18 p.) | Structure en trois actes : Situation · Diagnostic · Plan d'action |
 | **Présentation** (21-23 slides) | Deck de comité de direction, titres porteurs de conclusion |
 | **Rapport Word** | Même contenu, éditable par le client |
 | **Synthèse une page** | Le document que le dirigeant transfère à son conseil |
@@ -102,6 +103,8 @@ affiché comme tel.
 - **Plan d'action** priorisé par matrice effort/impact, avec objectif chiffré, fonction
   responsable et échéance.
 - **Trajectoire pluriannuelle** dès qu'un client a deux exercices d'historique.
+- **Glossaire** en annexe, filtré sur ce que le rapport contient réellement — le lecteur
+  non spécialiste n'a pas besoin d'un dictionnaire.
 
 Le scoring différencie les **grilles d'intensité carbone par famille sectorielle** : une même
 intensité vaut 40/100 dans les services, 60 dans l'industrie, 70 dans l'énergie. La notation
@@ -127,7 +130,7 @@ de conseil indépendante.
 | **Prospection** | Saisie rapide ou import CSV/Excel → score instantané → lettre de mission personnalisée |
 | **Collecte** | Envoi du questionnaire HTML au client → il le remplit hors ligne → le CSV renvoyé s'importe directement |
 | **Mission** | Dossier client sauvegardé, statut (prospect · signé · livré · archivé) |
-| **Restitution** | Pack complet : les cinq livrables dans une archive |
+| **Restitution** | Pack complet : les cinq documents de restitution dans une archive |
 | **Suivi** | Les actions réalisées sont cochées et apparaissent comme acquis dans le rapport suivant |
 | **Renouvellement** | Chaque exercice enrichit l'historique : évolution N-1 et trajectoire pluriannuelle |
 | **Sécurité** | Export/import de tous les dossiers en une archive |
