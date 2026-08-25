@@ -634,6 +634,21 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         mr.font.color.rgb = hex_to_rgb("5A6572")
         shade_paragraph(mp, colors.get("light", "F0F2F5"))
 
+    # ── Glossaire ─────────────────────────────────────────────────────────
+    from glossary import glossary_entries
+    _gloss = glossary_entries(request, scores)
+    if _gloss:
+        add_heading(doc, TR["pdf_glossary"], 2, colors["secondary"], style=style)
+        gt = doc.add_table(rows=len(_gloss), cols=2)
+        gt.style = "Table Grid"
+        for ri, e in enumerate(_gloss):
+            tr_ = gt.rows[ri].cells[0].paragraphs[0].add_run(e["term"])
+            tr_.bold = True
+            tr_.font.size = Pt(8.5)
+            tr_.font.color.rgb = hex_to_rgb(colors["primary"])
+            dr = gt.rows[ri].cells[1].paragraphs[0].add_run(e["definition"])
+            dr.font.size = Pt(8.5)
+
     doc.add_paragraph()
     footer_p = doc.add_paragraph(
         f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]

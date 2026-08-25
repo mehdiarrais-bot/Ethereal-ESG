@@ -42,7 +42,7 @@ commercial du consultant qui l'utilise (« vos données ne quittent pas ma machi
 
 ## Ce que ça produit
 
-Cinq livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
+Six livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
 et déclinables en 7 thèmes graphiques.
 
 | Livrable | Contenu |
@@ -52,6 +52,7 @@ et déclinables en 7 thèmes graphiques.
 | **Rapport Word** | Même contenu, éditable par le client |
 | **Synthèse une page** | Le document que le dirigeant transfère à son conseil |
 | **Lettre de mission** | Proposition commerciale bâtie sur le pré-diagnostic réel du prospect |
+| **Questionnaire de collecte** | Fichier HTML autonome envoyé au client : il le remplit hors ligne, renvoie un CSV réimporté sans ressaisie |
 
 📂 **[Voir les livrables générés →](examples/)** *(PDF, PPTX, DOCX réels, données fictives)*
 
@@ -124,6 +125,7 @@ de conseil indépendante.
 | Étape | Dans l'application |
 |---|---|
 | **Prospection** | Saisie rapide ou import CSV/Excel → score instantané → lettre de mission personnalisée |
+| **Collecte** | Envoi du questionnaire HTML au client → il le remplit hors ligne → le CSV renvoyé s'importe directement |
 | **Mission** | Dossier client sauvegardé, statut (prospect · signé · livré · archivé) |
 | **Restitution** | Pack complet : les cinq livrables dans une archive |
 | **Suivi** | Les actions réalisées sont cochées et apparaissent comme acquis dans le rapport suivant |
@@ -169,6 +171,8 @@ backend/
 ├── ppt_generator.py        PowerPoint · report_generator.py  Rapport PDF
 ├── docx_generator.py       Word · onepager_generator.py  Synthèse 1 page
 ├── proposal_generator.py   Lettre de mission
+├── questionnaire_generator.py  Questionnaire de collecte autonome
+├── glossary.py             Glossaire CSRD/ESRS filtré selon le rapport
 ├── branding.py             Déclinaison aux couleurs du client
 ├── client_store.py         Dossiers clients (JSON local, écriture atomique)
 └── tests/                  Suite pytest

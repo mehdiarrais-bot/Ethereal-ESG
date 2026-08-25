@@ -230,7 +230,8 @@ export default function App() {
     try {
       const endpoints = { pptx: '/api/generate/pptx', pdf: '/api/generate/pdf', docx: '/api/generate/docx',
                           proposal: '/api/generate/proposal', onepager: '/api/generate/onepager',
-                          pack: '/api/generate/pack' }
+                          pack: '/api/generate/pack',
+                          questionnaire: '/api/generate/questionnaire' }
       const payload = buildPayload(form)
       // Évolution N-1 : dernier exercice de l'historique antérieur à l'exercice courant
       const year = Number(form.company?.reporting_year) || 0

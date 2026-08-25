@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collecte ESG — Acme Industries</title>
+<style>
+  :root { --primary: #1B3A6B; --accent: #F39C12; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f4f6f9; color: #1f2937;
+         font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { background: var(--primary); color: #fff; padding: 30px 24px 26px; }
+  .hwrap { max-width: 880px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header .sub { opacity: .85; font-size: 14px; }
+  header .by { margin-top: 12px; font-size: 12.5px; opacity: .7; }
+  .bar { height: 5px; background: var(--accent); }
+  main { max-width: 880px; margin: 0 auto; padding: 22px 20px 130px; }
+  .notice { background: #fff; border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0;
+             padding: 14px 18px; font-size: 13.5px; line-height: 1.55; margin-bottom: 22px; }
+  .card { background: #fff; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+  .card h2 { margin: 0 0 4px; font-size: 18px; color: var(--primary); }
+  .intro { margin: 0 0 18px; font-size: 13px; color: #6b7280; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 13px; font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
+  .hint { font-weight: 400; font-size: 11.5px; color: #6b7280; line-height: 1.4; }
+  .inputwrap { display: flex; align-items: center; gap: 8px; }
+  input[type=text], input[type=number] {
+    flex: 1; width: 100%; padding: 9px 11px; font-size: 14px;
+    border: 1px solid #d1d5db; border-radius: 8px; background: #fff; }
+  input:focus { outline: none; border-color: var(--primary);
+                 box-shadow: 0 0 0 3px rgba(0,0,0,.05); }
+  .unit { font-size: 12px; color: #6b7280; min-width: 46px; }
+  .yn { display: flex; gap: 6px; flex-wrap: wrap; }
+  .yn-btn { padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db;
+             background: #fff; border-radius: 8px; cursor: pointer; }
+  .yn-btn.ghost { color: #6b7280; font-size: 12px; }
+  .yn-btn.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+            border-top: 1px solid #e5e7eb; padding: 14px 20px; }
+  .fwrap { max-width: 880px; margin: 0 auto; display: flex; align-items: center;
+            gap: 16px; flex-wrap: wrap; }
+  .prog { flex: 1; min-width: 160px; }
+  .prog-bg { height: 7px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+  .prog-fill { height: 100%; background: var(--accent); width: 0%; transition: width .25s; }
+  .prog-lab { font-size: 12px; color: #6b7280; margin-top: 5px; }
+  .btn { padding: 11px 20px; font-size: 14px; font-weight: 700; border-radius: 8px;
+          border: none; cursor: pointer; background: var(--primary); color: #fff; }
+  .btn.sec { background: #fff; color: #6b7280; border: 1px solid #d1d5db; font-weight: 600; }
+  .saved { font-size: 12px; color: #059669; }
+  @media (max-width: 700px) { .fields { grid-template-columns: 1fr; } }
+  @media print { footer, .notice { display: none; } }
+</style></head>
+<body>
+<header><div class="hwrap">
+  <h1>Collecte ESG — Acme Industries</h1>
+  <div class="sub">Exercice 2025 · Questionnaire de collecte ESG / RSE</div>
+  <div class="by">Questionnaire préparé par J. Martin</div>
+</div></header>
+<div class="bar"></div>
+
+<main>
+  <div class="notice">
+    <strong>Comment procéder.</strong> Renseignez ce que vous connaissez et laissez vide le reste —
+    une donnée absente sera signalée comme « non renseignée » dans le rapport, ce qui est une
+    information utile en soi. <strong>Ne devinez pas un chiffre.</strong> Votre saisie est
+    enregistrée automatiquement dans ce navigateur : vous pouvez fermer et reprendre plus tard.
+    Quand vous avez terminé, cliquez sur « Télécharger le fichier » en bas et renvoyez le fichier obtenu.
+    <br><br>
+    Ce document fonctionne <strong>entièrement hors ligne</strong> : rien n'est envoyé sur Internet.
+  </div>
+  <section class="card" data-section="company"><h2>Votre entreprise</h2><p class="intro">Informations générales et identité du rapport.</p><div class="fields"><div class="field"><label for="f_name">Nom de l&#x27;entreprise<span class="hint">Raison sociale telle qu&#x27;elle doit apparaître sur le rapport.</span></label><div class="inputwrap"><input type="text" id="f_name" data-key="name" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_sector">Secteur d&#x27;activité<span class="hint">Ex. : Industrie manufacturière, Services, Transport, Agroalimentaire.</span></label><div class="inputwrap"><input type="text" id="f_sector" data-key="sector" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_country">Pays</label><div class="inputwrap"><input type="text" id="f_country" data-key="country" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_revenue_eur">Chiffre d&#x27;affaires<span class="hint">Sur l&#x27;exercice reporté. Sert à calculer les intensités.</span></label><div class="inputwrap"><input type="number" step="any" id="f_revenue_eur" data-key="revenue_eur" autocomplete="off" placeholder="—"><span class="unit">€</span></div></div><div class="field"><label for="f_reporting_year">Exercice reporté<span class="hint">L&#x27;année sur laquelle portent les données.</span></label><div class="inputwrap"><input type="number" id="f_reporting_year" data-key="reporting_year" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_target_year">Horizon des objectifs<span class="hint">Année cible de votre trajectoire, souvent 2030.</span></label><div class="inputwrap"><input type="number" id="f_target_year" data-key="target_year" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_presenter_name">Personne référente<span class="hint">Qui présentera le rapport en interne.</span></label><div class="inputwrap"><input type="text" id="f_presenter_name" data-key="presenter_name" autocomplete="off" placeholder="—"></div></div><div class="field"><label for="f_presenter_title">Sa fonction</label><div class="inputwrap"><input type="text" id="f_presenter_title" data-key="presenter_title" autocomplete="off" placeholder="—"></div></div></div></section><section class="card" data-section="environmental"><h2>Environnement</h2><p class="intro">Énergie, émissions, eau et déchets sur l&#x27;exercice.</p><div class="fields"><div class="field"><label for="f_co2_emissions_tonnes">Émissions de CO₂ totales<span class="hint">Total tous scopes confondus si vous le connaissez.</span></label><div class="inputwrap"><input type="number" step="any" id="f_co2_emissions_tonnes" data-key="co2_emissions_tonnes" autocomplete="off" placeholder="—"><span class="unit">t CO₂e</span></div></div><div class="field"><label for="f_energy_consumption_mwh">Consommation d&#x27;énergie<span class="hint">Toutes énergies : électricité, gaz, carburants.</span></label><div class="inputwrap"><input type="number" step="any" id="f_energy_consumption_mwh" data-key="energy_consumption_mwh" autocomplete="off" placeholder="—"><span class="unit">MWh</span></div></div><div class="field"><label for="f_renewable_energy_percent">Part d&#x27;énergie renouvelable<span class="hint">Dans votre mix énergétique total.</span></label><div class="inputwrap"><input type="number" step="any" id="f_renewable_energy_percent" data-key="renewable_energy_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_water_consumption_m3">Consommation d&#x27;eau<span class="hint">Volume prélevé sur l&#x27;exercice.</span></label><div class="inputwrap"><input type="number" step="any" id="f_water_consumption_m3" data-key="water_consumption_m3" autocomplete="off" placeholder="—"><span class="unit">m³</span></div></div><div class="field"><label for="f_waste_generated_tonnes">Déchets générés</label><div class="inputwrap"><input type="number" step="any" id="f_waste_generated_tonnes" data-key="waste_generated_tonnes" autocomplete="off" placeholder="—"><span class="unit">t</span></div></div><div class="field"><label for="f_waste_recycled_percent">Taux de recyclage des déchets</label><div class="inputwrap"><input type="number" step="any" id="f_waste_recycled_percent" data-key="waste_recycled_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_biodiversity_initiatives">Initiatives biodiversité<span class="hint">Actions concrètes menées : plantations, zones protégées, etc.</span></label><div class="inputwrap"><input type="number" id="f_biodiversity_initiatives" data-key="biodiversity_initiatives" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_scope1_emissions">Émissions Scope 1<span class="hint">Émissions directes : vos chaudières, votre flotte de véhicules.</span></label><div class="inputwrap"><input type="number" step="any" id="f_scope1_emissions" data-key="scope1_emissions" autocomplete="off" placeholder="—"><span class="unit">t CO₂e</span></div></div><div class="field"><label for="f_scope2_emissions">Émissions Scope 2<span class="hint">Liées à l&#x27;énergie que vous achetez, principalement l&#x27;électricité.</span></label><div class="inputwrap"><input type="number" step="any" id="f_scope2_emissions" data-key="scope2_emissions" autocomplete="off" placeholder="—"><span class="unit">t CO₂e</span></div></div><div class="field"><label for="f_scope3_emissions">Émissions Scope 3<span class="hint">Chaîne de valeur : achats, transport, usage des produits vendus.</span></label><div class="inputwrap"><input type="number" step="any" id="f_scope3_emissions" data-key="scope3_emissions" autocomplete="off" placeholder="—"><span class="unit">t CO₂e</span></div></div></div></section><section class="card" data-section="social"><h2>Social</h2><p class="intro">Effectifs, formation, sécurité et relations parties prenantes.</p><div class="fields"><div class="field"><label for="f_total_employees">Effectif total<span class="hint">En équivalent temps plein à la clôture.</span></label><div class="inputwrap"><input type="number" id="f_total_employees" data-key="total_employees" autocomplete="off" placeholder="—"><span class="unit">personnes</span></div></div><div class="field"><label for="f_female_employees_percent">Part de femmes dans l&#x27;effectif</label><div class="inputwrap"><input type="number" step="any" id="f_female_employees_percent" data-key="female_employees_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_employee_turnover_percent">Taux de rotation du personnel<span class="hint">Départs rapportés à l&#x27;effectif moyen.</span></label><div class="inputwrap"><input type="number" step="any" id="f_employee_turnover_percent" data-key="employee_turnover_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_training_hours_per_employee">Formation par salarié<span class="hint">Nombre moyen d&#x27;heures de formation par personne.</span></label><div class="inputwrap"><input type="number" step="any" id="f_training_hours_per_employee" data-key="training_hours_per_employee" autocomplete="off" placeholder="—"><span class="unit">h/an</span></div></div><div class="field"><label for="f_work_accidents">Accidents du travail<span class="hint">Avec arrêt, sur l&#x27;exercice.</span></label><div class="inputwrap"><input type="number" id="f_work_accidents" data-key="work_accidents" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_accident_frequency_rate">Taux de fréquence des accidents<span class="hint">Accidents avec arrêt × 1 000 000 / heures travaillées.</span></label><div class="inputwrap"><input type="number" step="any" id="f_accident_frequency_rate" data-key="accident_frequency_rate" autocomplete="off" placeholder="—"><span class="unit">TF</span></div></div><div class="field"><label for="f_community_investment_eur">Investissement territorial<span class="hint">Mécénat, partenariats locaux, fondation.</span></label><div class="inputwrap"><input type="number" step="any" id="f_community_investment_eur" data-key="community_investment_eur" autocomplete="off" placeholder="—"><span class="unit">€</span></div></div><div class="field"><label for="f_local_suppliers_percent">Part de fournisseurs locaux</label><div class="inputwrap"><input type="number" step="any" id="f_local_suppliers_percent" data-key="local_suppliers_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_customer_satisfaction_score">Satisfaction client</label><div class="inputwrap"><input type="number" step="any" id="f_customer_satisfaction_score" data-key="customer_satisfaction_score" autocomplete="off" placeholder="—"><span class="unit">/10</span></div></div><div class="field"><label for="f_disabled_employees_percent">Salariés en situation de handicap</label><div class="inputwrap"><input type="number" step="any" id="f_disabled_employees_percent" data-key="disabled_employees_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div></div></section><section class="card" data-section="governance"><h2>Gouvernance</h2><p class="intro">Conseil, éthique, contrôle et supervision ESG.</p><div class="fields"><div class="field"><label for="f_board_members">Membres du conseil<span class="hint">Conseil d&#x27;administration ou de surveillance.</span></label><div class="inputwrap"><input type="number" id="f_board_members" data-key="board_members" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_female_board_percent">Femmes au conseil<span class="hint">Seuil légal de référence : 40 %.</span></label><div class="inputwrap"><input type="number" step="any" id="f_female_board_percent" data-key="female_board_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_independent_board_percent">Administrateurs indépendants<span class="hint">Référence AFEP-MEDEF : 50 %.</span></label><div class="inputwrap"><input type="number" step="any" id="f_independent_board_percent" data-key="independent_board_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_ethics_violations">Manquements éthiques constatés<span class="hint">Sur l&#x27;exercice. Zéro est une réponse valable.</span></label><div class="inputwrap"><input type="number" id="f_ethics_violations" data-key="ethics_violations" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_corruption_cases">Cas de corruption</label><div class="inputwrap"><input type="number" id="f_corruption_cases" data-key="corruption_cases" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_data_breaches">Incidents de cybersécurité<span class="hint">Violations de données déclarées.</span></label><div class="inputwrap"><input type="number" id="f_data_breaches" data-key="data_breaches" autocomplete="off" placeholder="—"><span class="unit">nombre</span></div></div><div class="field"><label for="f_csr_budget_eur">Budget RSE<span class="hint">Moyens dédiés à la démarche.</span></label><div class="inputwrap"><input type="number" step="any" id="f_csr_budget_eur" data-key="csr_budget_eur" autocomplete="off" placeholder="—"><span class="unit">€</span></div></div><div class="field"><label for="f_esg_audit_conducted">Reporting vérifié par un tiers<span class="hint">Un organisme indépendant a-t-il audité vos données ESG ?</span></label><div class="yn" role="group"><button type="button" class="yn-btn" data-for="f_esg_audit_conducted" data-val="Oui">Oui</button><button type="button" class="yn-btn" data-for="f_esg_audit_conducted" data-val="Non">Non</button><button type="button" class="yn-btn ghost" data-for="f_esg_audit_conducted" data-val="">Je ne sais pas</button><input type="hidden" id="f_esg_audit_conducted" data-key="esg_audit_conducted"></div></div><div class="field"><label for="f_sustainability_committee">Comité de durabilité<span class="hint">Une instance dédiée existe-t-elle au niveau du conseil ?</span></label><div class="yn" role="group"><button type="button" class="yn-btn" data-for="f_sustainability_committee" data-val="Oui">Oui</button><button type="button" class="yn-btn" data-for="f_sustainability_committee" data-val="Non">Non</button><button type="button" class="yn-btn ghost" data-for="f_sustainability_committee" data-val="">Je ne sais pas</button><input type="hidden" id="f_sustainability_committee" data-key="sustainability_committee"></div></div></div></section><section class="card" data-section="taxonomy"><h2>Taxonomie européenne</h2><p class="intro">Part des activités durables — laissez vide si non évaluée.</p><div class="fields"><div class="field"><label for="f_turnover_aligned_percent">Chiffre d&#x27;affaires aligné Taxonomie</label><div class="inputwrap"><input type="number" step="any" id="f_turnover_aligned_percent" data-key="turnover_aligned_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_capex_aligned_percent">Investissements (CapEx) alignés</label><div class="inputwrap"><input type="number" step="any" id="f_capex_aligned_percent" data-key="capex_aligned_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div><div class="field"><label for="f_opex_aligned_percent">Dépenses (OpEx) alignées</label><div class="inputwrap"><input type="number" step="any" id="f_opex_aligned_percent" data-key="opex_aligned_percent" autocomplete="off" placeholder="—"><span class="unit">%</span></div></div></div></section>
+</main>
+
+<footer><div class="fwrap">
+  <div class="prog">
+    <div class="prog-bg"><div class="prog-fill" id="pf"></div></div>
+    <div class="prog-lab"><span id="pl">0 champ renseigné</span> · <span class="saved" id="sv"></span></div>
+  </div>
+  <button class="btn sec" id="clear" type="button">Tout effacer</button>
+  <button class="btn" id="dl" type="button">⬇ Télécharger le fichier</button>
+</div></footer>
+
+<script>
+const SCHEMA = [{"section": "company", "fields": [{"csv": "Nom", "key": "name", "type": "str"}, {"csv": "Secteur", "key": "sector", "type": "str"}, {"csv": "Pays", "key": "country", "type": "str"}, {"csv": "Chiffre d'affaires", "key": "revenue_eur", "type": "num"}, {"csv": "Annee de reporting", "key": "reporting_year", "type": "int"}, {"csv": "Horizon des objectifs", "key": "target_year", "type": "int"}, {"csv": "Nom du presentateur", "key": "presenter_name", "type": "str"}, {"csv": "Fonction du presentateur", "key": "presenter_title", "type": "str"}]}, {"section": "environmental", "fields": [{"csv": "Emissions co2 totales", "key": "co2_emissions_tonnes", "type": "num"}, {"csv": "Consommation energie", "key": "energy_consumption_mwh", "type": "num"}, {"csv": "Energie renouvelable", "key": "renewable_energy_percent", "type": "num"}, {"csv": "Consommation eau", "key": "water_consumption_m3", "type": "num"}, {"csv": "Dechets generes", "key": "waste_generated_tonnes", "type": "num"}, {"csv": "Taux de recyclage", "key": "waste_recycled_percent", "type": "num"}, {"csv": "Initiatives biodiversite", "key": "biodiversity_initiatives", "type": "int"}, {"csv": "Scope 1", "key": "scope1_emissions", "type": "num"}, {"csv": "Scope 2", "key": "scope2_emissions", "type": "num"}, {"csv": "Scope 3", "key": "scope3_emissions", "type": "num"}]}, {"section": "social", "fields": [{"csv": "Effectif total", "key": "total_employees", "type": "int"}, {"csv": "Femmes dans l'effectif", "key": "female_employees_percent", "type": "num"}, {"csv": "Turnover", "key": "employee_turnover_percent", "type": "num"}, {"csv": "Formation", "key": "training_hours_per_employee", "type": "num"}, {"csv": "Accidents de travail", "key": "work_accidents", "type": "int"}, {"csv": "Taux de frequence", "key": "accident_frequency_rate", "type": "num"}, {"csv": "Investissement communaute", "key": "community_investment_eur", "type": "num"}, {"csv": "Fournisseurs locaux", "key": "local_suppliers_percent", "type": "num"}, {"csv": "Satisfaction client", "key": "customer_satisfaction_score", "type": "num"}, {"csv": "Salaries handicapes", "key": "disabled_employees_percent", "type": "num"}]}, {"section": "governance", "fields": [{"csv": "Membres du ca", "key": "board_members", "type": "int"}, {"csv": "Femmes au ca", "key": "female_board_percent", "type": "num"}, {"csv": "Administrateurs independants", "key": "independent_board_percent", "type": "num"}, {"csv": "Violations ethiques", "key": "ethics_violations", "type": "int"}, {"csv": "Cas de corruption", "key": "corruption_cases", "type": "int"}, {"csv": "Violations de donnees", "key": "data_breaches", "type": "int"}, {"csv": "Budget rse", "key": "csr_budget_eur", "type": "num"}, {"csv": "Audit esg", "key": "esg_audit_conducted", "type": "bool"}, {"csv": "Comite de durabilite", "key": "sustainability_committee", "type": "bool"}]}, {"section": "taxonomy", "fields": [{"csv": "Ca aligne taxonomie", "key": "turnover_aligned_percent", "type": "num"}, {"csv": "Capex aligne taxonomie", "key": "capex_aligned_percent", "type": "num"}, {"csv": "Opex aligne taxonomie", "key": "opex_aligned_percent", "type": "num"}]}];
+const STORE = "esg_collecte_Acme_Industries";
+const all = () => Array.from(document.querySelectorAll("[data-key]"));
+
+function save() {
+  const d = {};
+  all().forEach(el => { if (el.value !== "") d[el.dataset.key] = el.value; });
+  try { localStorage.setItem(STORE, JSON.stringify(d)); } catch (e) {}
+  const n = Object.keys(d).length, tot = all().length;
+  document.getElementById("pf").style.width = (100 * n / tot) + "%";
+  document.getElementById("pl").textContent =
+    n + (n > 1 ? " champs renseignés" : " champ renseigné") + " sur " + tot;
+  const sv = document.getElementById("sv");
+  sv.textContent = "enregistré";
+  clearTimeout(window._t); window._t = setTimeout(() => sv.textContent = "", 1600);
+}
+
+function restore() {
+  let d = {};
+  try { d = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) {}
+  all().forEach(el => { if (d[el.dataset.key] !== undefined) el.value = d[el.dataset.key]; });
+  document.querySelectorAll(".yn-btn").forEach(b => {
+    const hidden = document.getElementById(b.dataset.for);
+    if (hidden && hidden.value === b.dataset.val && b.dataset.val !== "") b.classList.add("on");
+  });
+  save();
+}
+
+document.addEventListener("input", e => { if (e.target.dataset.key) save(); });
+document.querySelectorAll(".yn-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const hidden = document.getElementById(btn.dataset.for);
+    document.querySelectorAll('.yn-btn[data-for="' + btn.dataset.for + '"]')
+      .forEach(b => b.classList.remove("on"));
+    if (btn.dataset.val !== "") btn.classList.add("on");
+    hidden.value = btn.dataset.val;
+    save();
+  });
+});
+
+document.getElementById("clear").addEventListener("click", () => {
+  if (!confirm("Effacer toutes les réponses saisies ?")) return;
+  all().forEach(el => el.value = "");
+  document.querySelectorAll(".yn-btn").forEach(b => b.classList.remove("on"));
+  try { localStorage.removeItem(STORE); } catch (e) {}
+  save();
+});
+
+document.getElementById("dl").addEventListener("click", () => {
+  const vals = {};
+  all().forEach(el => vals[el.dataset.key] = el.value);
+  // Format « Champ;Valeur » — celui que la plateforme sait réimporter
+  const rows = [["Champ", "Valeur"]];
+  SCHEMA.forEach(sec => sec.fields.forEach(f => rows.push([f.csv, vals[f.key] || ""])));
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(";")).join("\r\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "donnees_esg_Acme_Industries.csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
+});
+
+restore();
+</script>
+</body></html>

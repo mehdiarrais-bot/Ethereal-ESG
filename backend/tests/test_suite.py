@@ -285,3 +285,80 @@ def test_pack_contains_five_deliverables(client):
     assert len(names) == 5
     exts = sorted(n.rsplit(".", 1)[1] for n in names)
     assert exts == ["docx", "docx", "pdf", "pdf", "pptx"]
+
+
+# ── Glossaire ─────────────────────────────────────────────────────────────
+
+def test_glossary_filters_to_report_content():
+    from glossary import glossary_entries
+    full = glossary_entries(make_request())
+    terms = [e["term"] for e in full]
+    assert "CSRD" in terms and "Scopes 1, 2 et 3" in terms
+    assert all(e["definition"] for e in full)
+    # Rapport minimal : les termes sans objet disparaissent
+    minimal = ESGRequest(
+        company=CompanyInfo(name="B", sector="Services", country="France", reporting_year=2025),
+        environmental=EnvironmentalData(), social=SocialData(), governance=GovernanceData(),
+        reporting_framework="vsme")
+    mt = [e["term"] for e in glossary_entries(minimal)]
+    assert "VSME" in mt and "CSRD" not in mt          # référentiel visé seulement
+    assert "Taxonomie européenne" not in mt           # aucun indicateur aligné
+    assert len(mt) < len(terms)
+
+
+def test_glossary_rendered_in_pdf():
+    import fitz
+    from report_generator import generate_pdf_report
+    from main import build_advanced_charts
+    r = make_request()
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    full = "".join(doc[i].get_text() for i in range(doc.page_count))
+    assert "Glossaire" in full
+    assert "Double matérialité" in full
+
+
+# ── Questionnaire de collecte ─────────────────────────────────────────────
+
+def test_questionnaire_is_offline_and_complete():
+    from questionnaire_generator import generate_questionnaire_html
+    from import_data import FIELD_SPECS
+    doc = generate_questionnaire_html("Acme", 2025, "J. Martin")
+    # Autonomie : aucune ressource distante
+    assert "http://" not in doc and "https://" not in doc
+    assert "<script" in doc and "localStorage" in doc
+    # Tout champ importable doit être collectable
+    for _section, key, _typ, _labels in FIELD_SPECS:
+        assert f'data-key="{key}"' in doc, f"champ absent du questionnaire : {key}"
+
+
+def test_questionnaire_endpoint(client):
+    r = client.post("/api/generate/questionnaire", json=FORM)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    assert "Collecte_ESG_Acme" in r.headers["content-disposition"]
+    assert b"<!doctype html>" in r.content[:40].lower()
+
+
+def test_questionnaire_csv_reimports(client):
+    """Le CSV que produit le questionnaire doit repasser par l'import."""
+    from questionnaire_generator import _fields_by_section
+    rows = ["Champ;Valeur"]
+    sample = {"name": "Acme", "sector": "Industrie", "revenue_eur": "48000000",
+              "reporting_year": "2025", "scope3_emissions": "4900",
+              "esg_audit_conducted": "Non", "sustainability_committee": "Oui"}
+    for _sec, fields in _fields_by_section():
+        for csv_label, key, _typ, _meta in fields:
+            rows.append(f"{csv_label};{sample.get(key, '')}")
+    csv_bytes = ("﻿" + "\r\n".join(rows)).encode("utf-8")
+    r = client.post("/api/import", files={"file": ("c.csv", csv_bytes, "text/csv")})
+    assert r.status_code == 200
+    sec = r.json()["sections"]
+    assert sec["company"]["revenue_eur"] == 48000000
+    assert sec["company"]["reporting_year"] == 2025
+    assert sec["environmental"]["scope3_emissions"] == 4900
+    assert sec["governance"]["esg_audit_conducted"] is False
+    assert sec["governance"]["sustainability_committee"] is True
+    assert r.json()["unmatched"] == []

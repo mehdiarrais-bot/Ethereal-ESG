@@ -521,6 +521,26 @@ def generate_pack(request: ESGRequest):
         headers={"Content-Disposition": f'attachment; filename="Pack_ESG_{base}.zip"'})
 
 
+@app.post("/api/generate/questionnaire")
+def generate_questionnaire(request: ESGRequest):
+    """Questionnaire de collecte autonome (HTML hors ligne) à envoyer au client.
+
+    Le client le remplit dans son navigateur et renvoie un CSV directement
+    réimportable par /api/import — la boucle de collecte est fermée.
+    """
+    from questionnaire_generator import generate_questionnaire_html
+    doc = generate_questionnaire_html(
+        company_name=request.company.name,
+        year=request.company.reporting_year,
+        consultant=request.company.presenter_name or "",
+        custom_colors=getattr(request, "custom_colors", None),
+    )
+    filename = f"Collecte_ESG_{safe_name(request.company.name)}_{request.company.reporting_year}.html"
+    return StreamingResponse(
+        io.BytesIO(doc.encode("utf-8")), media_type="text/html; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
 @app.post("/api/generate/onepager")
 def generate_onepager(request: ESGRequest):
     """Synthèse ESG une page (PDF) — le document que le dirigeant transfère."""

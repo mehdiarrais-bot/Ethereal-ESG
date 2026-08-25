@@ -288,6 +288,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
                     title="Lettre de mission commerciale basée sur le pré-diagnostic (écarts, maturité, phases)">
               🖋 Lettre de mission
             </button>
+            <button className="btn btn-preview" onClick={() => onDownload('questionnaire')} disabled={busy}
+                    title="Fichier HTML autonome à envoyer au client : il le remplit hors ligne et vous renvoie un CSV réimportable">
+              📋 Questionnaire client
+            </button>
             <button className="btn btn-pptx" onClick={() => onDownload('pack')} disabled={busy || !scores}
                     title="Tous les livrables de la mission en un zip : PPTX, PDF, Word, synthèse 1 page, lettre de mission">
               📦 Pack complet

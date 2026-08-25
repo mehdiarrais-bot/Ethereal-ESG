@@ -1270,6 +1270,30 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         ]))
         story.append(meth)
 
+    # ── Glossaire (annexe : le rapport doit être lisible sans dictionnaire) ─
+    from glossary import glossary_entries
+    _gloss = glossary_entries(request, scores)
+    if _gloss:
+        story.append(Spacer(1, 0.6 * cm))
+        story.append(Paragraph(TR["pdf_glossary"], styles["h2"]))
+        _gt = ParagraphStyle("gt", fontSize=8.5, fontName=ts["font_bold"],
+                             textColor=pal["primary"], leading=11.5)
+        _gd = ParagraphStyle("gd", fontSize=8.5, fontName=ts["font"],
+                             textColor=pal["text"], leading=11.5)
+        gloss_rows = [[Paragraph(esc(e["term"]), _gt), Paragraph(esc(e["definition"]), _gd)]
+                      for e in _gloss]
+        gloss_tbl = Table(gloss_rows, colWidths=[3.4 * cm, 13.1 * cm])
+        gloss_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [pal["light_bg"], colors.white]),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('LINEBEFORE', (0, 0), (0, -1), 2.5, pal["accent"]),
+        ]))
+        story.append(gloss_tbl)
+
     story.append(Spacer(1, 1 * cm))
     story.append(HRFlowable(width="100%", thickness=1, color=pal["secondary"]))
     story.append(Paragraph(
