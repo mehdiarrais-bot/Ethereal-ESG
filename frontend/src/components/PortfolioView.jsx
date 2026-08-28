@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { computeSparklinePoints, groupByStatus, averageScore } from '../lib/portfolioMath.mjs'
 
 const STATUSES = {
   prospect: { label: 'Prospect', color: '#38bdf8' },
@@ -7,28 +8,16 @@ const STATUSES = {
   archived: { label: 'Archivé', color: '#94a3b8' },
 }
 
-/**
- * Sparkline SVG de la trajectoire du score.
- * L'échelle s'ajuste à la plage réelle des données (avec marge) : sur 0-100
- * fixe, des écarts de quelques points seraient invisibles.
- */
+/** Sparkline SVG de la trajectoire du score. Le calcul des points est dans
+ * lib/portfolioMath.mjs (testé indépendamment du rendu). */
 function Sparkline({ history }) {
-  if (!history || history.length < 2) return <div className="spark-empty">—</div>
-  const W = 140, H = 36, P = 4
-  const vals = history.map(h => h.total || 0)
-  const lo = Math.min(...vals), hi = Math.max(...vals)
-  const span = Math.max(hi - lo, 4)        // évite une courbe plate sur données identiques
-  const pad = span * 0.25
-  const min = lo - pad, max = hi + pad
-  const xs = history.map((_, i) => P + (i * (W - 2 * P)) / (history.length - 1))
-  const ys = vals.map(v => H - P - ((v - min) / (max - min)) * (H - 2 * P))
-  const d = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
-  const up = vals[vals.length - 1] >= vals[0]
-  const col = up ? '#34d399' : '#f87171'
+  const pts = computeSparklinePoints(history)
+  if (!pts) return <div className="spark-empty">—</div>
+  const col = pts.up ? '#34d399' : '#f87171'
   return (
-    <svg width={W} height={H} className="spark">
-      <path d={d} fill="none" stroke={col} strokeWidth="2" strokeLinecap="round" />
-      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r="3" fill={col} />
+    <svg width={pts.W} height={pts.H} className="spark">
+      <path d={pts.path} fill="none" stroke={col} strokeWidth="2" strokeLinecap="round" />
+      <circle cx={pts.lastX} cy={pts.lastY} r="3" fill={col} />
     </svg>
   )
 }
@@ -44,15 +33,8 @@ export default function PortfolioView({ onClose, onLoad }) {
     fetch('/api/clients').then(r => r.json()).then(setClients).catch(() => setClients([]))
   }, [])
 
-  const byStatus = (clients || []).reduce((acc, c) => {
-    const k = c.status || 'prospect'
-    acc[k] = (acc[k] || 0) + 1
-    return acc
-  }, {})
-  const scored = (clients || []).filter(c => c.last_score != null)
-  const avg = scored.length
-    ? (scored.reduce((s, c) => s + c.last_score, 0) / scored.length)
-    : null
+  const byStatus = groupByStatus(clients)
+  const avg = averageScore(clients)
 
   return (
     <div className="pf-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
