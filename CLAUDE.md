@@ -2,12 +2,15 @@
 
 Application web 100 % locale pour cabinets de conseil ESG : pré-diagnostic scoré, génération de livrables (PDF/PPTX/Word), dossiers clients pluriannuels. Backend FastAPI (`backend/`), frontend React/Vite (`frontend/src/`).
 
-## Design — deux surfaces distinctes
+## Design — état réel du dépôt
 
-- **Interface (`frontend/src/`)** : système "Encre & Ambre" — fond blanc, accent ambre unique (≤ 10 %), plat par défaut (filets 1px, ombres légères). Aucun glow, aucun dégradé décoratif, aucun backdrop-filter. Voir `PRODUCT.md` et `DESIGN.md`.
-- **Livrables PDF (`backend/report_generator.py`)** : système "Ethereal ESG" — mode hybride (couverture et pages de rupture en sombre #121314, corps en clair #F4F3F1), Playfair Display + Inter, accent sage dédoublé (#8FA391 aplats / #3F5A44 traits et textes). Les glows atmosphériques sont limités aux pages sombres du PDF, jamais à l'interface.
-- L'ancien thème "Galaxy" est supprimé. Interdit sur les deux surfaces.
-- `DESIGN.md` est régénéré automatiquement (`/impeccable document`) : ne pas l'éditer à la main. Ce fichier CLAUDE.md fait autorité.
+Ce bloc décrit ce que contient le code, pas une cible. Toute évolution du design se
+décide explicitement et met ce bloc à jour.
+
+- **Interface (`frontend/src/`)** : thème "Galaxy", en vigueur. Fond sombre `#05010f`, violet `#7c3aed`, néon cyan `#22d3ee`, surfaces "glass" semi-transparentes, couleurs de piliers `--env` `#34d399`, `--social` `#38bdf8`, `--gov` `#c084fc`. Les glows (`--glow-violet`, `--glow-neon`, animation `glowPulse`), les `backdrop-filter` (18 occurrences dans 11 fichiers) et les dégradés décoratifs font partie intégrante du système et sont assumés.
+- **Livrables PDF (`backend/report_generator.py`)** : 7 thèmes paramétrables — `corporate_blue`, `green_nature`, `dark_premium`, `minimal_white`, `sunset_terracotta`, `ocean_deep`, `royal_purple`. Défaut `corporate_blue` : primaire `#1B3A6B`, accent orange `#F39C12`, fond clair `#EBF2FB`. Pas de mode hybride sombre/clair : chaque thème porte sa propre logique et la couverture reprend la primaire du thème retenu.
+- **Polices PDF** : le code demande `SegoeUI` (corporate_blue, green_nature, minimal_white, ocean_deep) ou `Georgia` (dark_premium, sunset_terracotta, royal_purple). Ces TTF ne sont pas installées sur la machine de développement, donc `resolve_family()` retombe sur les polices base-14 : les PDF produits ici sont effectivement composés en **Helvetica** et **Times-Roman**. Fait connu et accepté en l'état — ce n'est pas un bug à corriger dans l'immédiat, mais une différence à garder en tête en jugeant un rendu.
+- **PPTX et Word** : Calibri, Trebuchet MS, Georgia, Segoe UI, Cambria selon le thème.
 
 ## Hiérarchie des objectifs
 
