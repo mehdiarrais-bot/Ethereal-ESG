@@ -215,13 +215,14 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
             </button>
             <button type="button" className={`lang-btn ${form.reporting_framework === 'vsme' ? 'active' : ''}`}
               onClick={() => set('reporting_framework')('vsme')}
-              title="Norme volontaire PME (EFRAG) — Scope 3, assurance tierce et Taxonomie deviennent optionnels dans l'analyse des écarts">
+              title="Norme volontaire PME (EFRAG) — Scope 3, assurance tierce et Taxonomie sortent du périmètre évalué">
               VSME (PME)
             </button>
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            En VSME, les exigences optionnelles (Scope 3, assurance tierce, Taxonomie) sont signalées
-            comme telles au lieu d\u2019être marquées non conformes.
+            En VSME, trois exigences (Scope 3, assurance tierce, Taxonomie) sont marquées
+            « hors périmètre » plutôt que non conformes. Leur rattachement exact aux modules
+            de la norme reste à valider contre le texte EFRAG.
           </div>
         </div>
 

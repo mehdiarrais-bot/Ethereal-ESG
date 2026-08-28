@@ -187,10 +187,71 @@ def test_compliance_assessment_statuses():
     rows = compliance_assessment(r, calculate_esg_scores(r))
     assert len(rows) >= 6
     statuses = {row["status"] for row in rows}
-    assert statuses <= {"ok", "partial", "no", "na"}
+    assert statuses <= {"ok", "partial", "no", "na", "oos"}
     # audit absent dans la fixture → non conforme attendu
     audit = next(row for row in rows if "tiers" in row["req"] or "assurance" in row["req"].lower())
     assert audit["status"] == "no"
+
+
+
+def _gap_rows(framework):
+    """Tableau d'écarts pour une entreprise dont l'audit et le Scope 3 manquent."""
+    from content_generator import compliance_assessment
+    r = ESGRequest(
+        company=CompanyInfo(name="X", sector="Industrie", country="France",
+                            revenue_eur=48e6, reporting_year=2025),
+        environmental=EnvironmentalData(co2_emissions_tonnes=8200, scope1_emissions=1200,
+                                        scope2_emissions=2100),   # Scope 3 absent
+        social=SocialData(female_employees_percent=34),
+        governance=GovernanceData(esg_audit_conducted=False,      # audit connu : non
+                                  sustainability_committee=True),
+        language="fr", reporting_framework=framework)
+    return {row["req"]: row for row in compliance_assessment(r, calculate_esg_scores(r))}
+
+
+def test_vsme_never_fabricates_reference_codes():
+    """Aucune référence ne doit être réécrite : « VSME/ESRS … » n'existe pas."""
+    csrd, vsme = _gap_rows("csrd"), _gap_rows("vsme")
+    for req, row in vsme.items():
+        assert "VSME/" not in row["ref"], f"référence fabriquée : {row['ref']}"
+        # La référence citée reste strictement celle du texte d'origine
+        assert row["ref"] == csrd[req]["ref"], f"référence réécrite pour « {req} »"
+
+
+def test_vsme_statuses_frozen():
+    """Gèle les reclassements VSME : seuls ces trois passent hors périmètre,
+    et uniquement quand l'exigence n'est pas satisfaite."""
+    csrd, vsme = _gap_rows("csrd"), _gap_rows("vsme")
+    hors_perimetre = {req for req, row in vsme.items() if row["status"] == "oos"}
+    assert hors_perimetre == {
+        "Émissions de la chaîne de valeur (Scope 3)",
+        "Vérification du reporting par un tiers",
+        "Publication des indicateurs Taxonomie UE",
+    }, hors_perimetre
+    # Toutes les autres lignes gardent exactement leur statut CSRD
+    for req, row in vsme.items():
+        if req not in hors_perimetre:
+            assert row["status"] == csrd[req]["status"], f"statut modifié pour « {req} »"
+
+
+def test_vsme_out_of_scope_is_not_not_reported():
+    """Une donnée connue mais non exigée ne doit pas s'afficher « Non renseigné »."""
+    from i18n import L
+    vsme = _gap_rows("vsme")
+    audit = vsme["Vérification du reporting par un tiers"]
+    assert audit["status"] == "oos" and audit["status"] != "na"
+    assert L("fr")["st_oos"] != L("fr")["st_na"]
+    # La note ne rattache l'exigence à aucun module de la norme
+    assert "module" not in audit["note"].lower()
+    assert "optionnel" not in audit["note"].lower()
+
+
+def test_vsme_out_of_scope_excluded_from_engagement_letter_gaps():
+    """Une exigence hors périmètre n'est pas un écart à vendre au prospect."""
+    vsme = _gap_rows("vsme")
+    gaps = [r for r in vsme.values() if r["status"] in ("no", "partial")]
+    assert all(r["status"] != "oos" for r in gaps)
+    assert "Vérification du reporting par un tiers" not in {r["req"] for r in gaps}
 
 
 def test_risks_have_ratings_sorted():

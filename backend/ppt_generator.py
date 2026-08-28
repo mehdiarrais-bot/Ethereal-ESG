@@ -786,8 +786,10 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                               t["gap_title"], header_color, kicker=t["benchmark_kicker"])
         _dk = style["dark_slides"]
         _stc = {"ok": RGBColor(0x2E, 0x7D, 0x32), "partial": RGBColor(0xD9, 0x77, 0x06),
-                "no": RGBColor(0xE7, 0x4C, 0x3C), "na": RGBColor(0x7F, 0x8C, 0x8D)}
-        _stl = {"ok": t["st_ok"], "partial": t["st_partial"], "no": t["st_no"], "na": t["st_na"]}
+                "no": RGBColor(0xE7, 0x4C, 0x3C), "na": RGBColor(0x7F, 0x8C, 0x8D),
+                "oos": RGBColor(0x5A, 0x65, 0x72)}
+        _stl = {"ok": t["st_ok"], "partial": t["st_partial"], "no": t["st_no"],
+                "na": t["st_na"], "oos": t["st_oos"]}
         row_h = Inches(0.68)
         for i, g in enumerate(_ga[:8]):
             gy = Inches(1.45) + i * row_h

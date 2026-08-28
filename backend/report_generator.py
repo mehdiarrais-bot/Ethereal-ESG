@@ -1001,8 +1001,10 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import compliance_assessment
     _gaps = compliance_assessment(request, scores)
     story.append(Paragraph(TR["gap_title"], styles["h2"]))
-    _st_col = {"ok": "#2E7D32", "partial": "#D97706", "no": "#E74C3C", "na": "#7F8C8D"}
-    _st_lbl = {"ok": TR["st_ok"], "partial": TR["st_partial"], "no": TR["st_no"], "na": TR["st_na"]}
+    _st_col = {"ok": "#2E7D32", "partial": "#D97706", "no": "#E74C3C",
+               "na": "#7F8C8D", "oos": "#5A6572"}
+    _st_lbl = {"ok": TR["st_ok"], "partial": TR["st_partial"], "no": TR["st_no"],
+               "na": TR["st_na"], "oos": TR["st_oos"]}
     _gh = ParagraphStyle("gh", fontSize=8.5, fontName=ts["font_bold"], textColor=colors.white)
     _gc = ParagraphStyle("gc", fontSize=8.5, fontName=ts["font"], textColor=pal["text"], leading=11)
     _gb = ParagraphStyle("gb", fontSize=8.5, fontName=ts["font_bold"], textColor=pal["primary"], leading=11)

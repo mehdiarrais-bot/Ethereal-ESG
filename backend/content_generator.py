@@ -1867,19 +1867,21 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     tx = request.taxonomy
     rows = []
 
-    # En VSME (norme volontaire PME, EFRAG), certaines exigences CSRD
-    # deviennent optionnelles (module complet) : un manquement est signalé
-    # comme optionnel, pas comme non-conformité.
-    _VSME_OPTIONAL_FR = "Optionnel en VSME (module complet)"
-    _VSME_OPTIONAL_EN = "Optional under VSME (comprehensive module)"
+    # Certaines exigences relèvent de la CSRD sans être reprises par le
+    # référentiel VSME retenu. On se contente alors de les sortir du périmètre
+    # d'évaluation — sans affirmer à quel module de la norme elles se
+    # rattacheraient, ce qui reste à valider contre le texte EFRAG.
+    # Le statut « hors périmètre » (connu mais non exigé) est distinct de
+    # « non renseigné » (donnée inconnue) : ne pas les confondre.
+    _VSME_OOS_FR = "Hors périmètre du référentiel VSME retenu"
+    _VSME_OOS_EN = "Outside the scope of the selected VSME framework"
 
-    def R(req_fr, req_en, ref, status, note_fr, note_en, vsme_optional=False):
-        if vsme and vsme_optional and status in ("no", "partial"):
-            status = "na"
-            note_fr, note_en = _VSME_OPTIONAL_FR, _VSME_OPTIONAL_EN
-        if vsme:
-            ref = ref.replace("CSRD (assurance limitée)", "VSME (volontaire)").replace(
-                "ESRS", "VSME/ESRS")
+    def R(req_fr, req_en, ref, status, note_fr, note_en, vsme_out_of_scope=False):
+        # La référence citée reste celle du texte dont l'exigence est issue :
+        # aucune réécriture, sous peine de fabriquer des codes inexistants.
+        if vsme and vsme_out_of_scope and status in ("no", "partial"):
+            status = "oos"
+            note_fr, note_en = _VSME_OOS_FR, _VSME_OOS_EN
         rows.append({"req": req_en if en else req_fr, "ref": ref, "status": status,
                      "note": note_en if en else note_fr})
 
@@ -1897,14 +1899,14 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
       "ok" if env.scope3_emissions is not None else "no",
       "Scope 3 mesuré et publié" if env.scope3_emissions is not None else "Scope 3 non mesuré — priorité CSRD",
       "Scope 3 measured and disclosed" if env.scope3_emissions is not None else "Scope 3 not measured — CSRD priority",
-      vsme_optional=True)
+      vsme_out_of_scope=True)
 
     # Vérification tierce
     R("Vérification du reporting par un tiers", "Third-party assurance of reporting", "CSRD (assurance limitée)",
       "ok" if gov.esg_audit_conducted else "no",
       "Audit ESG indépendant réalisé" if gov.esg_audit_conducted else "Aucune assurance externe à date",
       "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date",
-      vsme_optional=True)
+      vsme_out_of_scope=True)
 
     # Gouvernance durabilité
     R("Supervision de la durabilité par la gouvernance", "Sustainability oversight by governance", "ESRS 2 GOV-1",
@@ -1933,7 +1935,7 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
       "ok" if has_tx else "no",
       "Parts alignées publiées (CA/CapEx/OpEx)" if has_tx else "Éligibilité et alignement à évaluer",
       "Aligned shares disclosed (turnover/CapEx/OpEx)" if has_tx else "Eligibility and alignment to be assessed",
-      vsme_optional=True)
+      vsme_out_of_scope=True)
 
     # Trajectoire climat
     R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
