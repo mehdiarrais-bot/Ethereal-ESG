@@ -646,6 +646,56 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     return content
 
 
+def _environnement_par_clauses(request: ESGRequest, scores: ESGScores):
+    """POINT DE BASCULE vers le système de clauses conditionnelles.
+
+    Renvoie le paragraphe environnemental composé depuis bands.py +
+    clauses/fr.py, ou None si la section n'a pas (encore) été rédigée —
+    auquel cas l'appelant retombe sur l'ancien générateur. C'est ce repli
+    qui permet de migrer section par section : tant que
+    composer.sections_pretes() ne contient pas la section, rien ne change.
+
+    FRANÇAIS UNIQUEMENT : ce helper lit clauses/fr.py. Il n'existe pas
+    encore de clauses/en.py, donc _generate_en() reste intégralement sur
+    l'ancien générateur.
+    """
+    from composer import composer_paragraphe, sections_pretes
+    from clauses.fr import CLAUSES
+
+    if "environmental" not in sections_pretes(CLAUSES):
+        return None
+
+    env, company = request.environmental, request.company
+
+    # bands.classer() attend l'INTENSITÉ carbone (t CO₂e/M€ CA), pas la
+    # tonne brute : sans chiffre d'affaires, l'indicateur n'est pas
+    # classable et vaut None (aucune clause carbone, pas de crash).
+    intensite_carbone = None
+    if env.co2_emissions_tonnes and company.revenue_eur:
+        intensite_carbone = env.co2_emissions_tonnes / company.revenue_eur * 1e6
+
+    donnees = {
+        "co2_emissions_tonnes": intensite_carbone,
+        "renewable_energy_percent": env.renewable_energy_percent,
+        "waste_recycled_percent": env.waste_recycled_percent,
+        "biodiversity_initiatives": env.biodiversity_initiatives,
+        "energy_consumption_mwh": env.energy_consumption_mwh,
+        "water_consumption_m3": env.water_consumption_m3,
+        "waste_generated_tonnes": env.waste_generated_tonnes,
+        # Composite, pas un champ du modèle : les trois scopes renseignés.
+        "scope_completeness": (env.scope1_emissions is not None
+                               and env.scope2_emissions is not None
+                               and env.scope3_emissions is not None),
+    }
+    contexte = {
+        "n": company.name,
+        "score": f"{scores.environmental_score:.0f}",
+        "an": company.reporting_year,
+    }
+    return composer_paragraphe("environmental", donnees, CLAUSES,
+                               contexte=contexte, secteur=company.sector) or None
+
+
 def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     company = request.company
     env = request.environmental
@@ -683,6 +733,11 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     executive_summary = f"{opening} {score_ph} {pillar_ph}{sector_note}"
 
     # ── Environnement ──────────────────────────────────────────────────────
+    # Bascule : si la section a ses clauses, on compose ; sinon, l'ancien
+    # code ci-dessous reprend la main à l'identique (voir
+    # _environnement_par_clauses).
+    environmental = _environnement_par_clauses(request, scores)
+
     env_intro = _pick(s, 3, ENV_INTROS).format(n=name, sc=f"{scores.environmental_score:.0f}")
     env_items = []
 
@@ -727,7 +782,8 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         env_detail = _pick(s, 5, no_data_opts)
 
     env_outlook = _pick(s, 6, ENV_OUTLOOK).format(p=sector_priority)
-    environmental = f"{env_intro} {env_detail} {env_outlook}"
+    if environmental is None:  # section pas encore rédigée : ancien texte
+        environmental = f"{env_intro} {env_detail} {env_outlook}"
 
     # ── Social ─────────────────────────────────────────────────────────────
     trend = "en progression" if scores.social_score >= 60 else "avec des axes de renforcement prioritaires"

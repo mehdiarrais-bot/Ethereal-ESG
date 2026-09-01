@@ -169,9 +169,19 @@ def test_materiality_et_climate_risk_absentes_du_systeme_de_clauses():
     assert CLAUSES["climate_risk"] == {}
 
 
-def test_toutes_les_listes_du_squelette_sont_vides():
-    """Le socle ne doit contenir aucune clause rédigée à ce stade."""
+SECTIONS_REDIGEES = {"environmental"}
+
+
+def test_seules_les_sections_redigees_ont_des_clauses():
+    """Migration section par section : toute section NON listée dans
+    SECTIONS_REDIGEES doit rester entièrement vide, pour qu'elle continue
+    de tomber sur l'ancien générateur. Ce test attrape une injection
+    accidentelle ailleurs, et rappelle d'ajouter la section ici quand on la
+    rédige volontairement."""
     for cle, valeur in CLAUSES.items():
+        section = cle.split(":", 1)[1] if ":" in cle else cle
+        if section in SECTIONS_REDIGEES:
+            continue
         if isinstance(valeur, list):
             assert valeur == [], f"{cle} n'est pas vide"
         else:
@@ -180,10 +190,30 @@ def test_toutes_les_listes_du_squelette_sont_vides():
                     assert phrases == [], f"{cle}.{indicateur}.{tranche} n'est pas vide"
 
 
+def test_section_environmental_est_bien_remplie():
+    """Contrepartie du test précédent : environmental a bien basculé."""
+    assert CLAUSES["ouverture:environmental"]
+    assert CLAUSES["cloture:environmental"]
+    for indicateur, tranches in CLAUSES["environmental"].items():
+        assert any(tranches.values()), f"environmental.{indicateur} est vide"
+
+
 # ── 5. Repli : banque vide -> ensemble vide, paragraphe vide ───────────────
 
+# Banque volontairement vide, construite ici et indépendante de la vraie :
+# sert à vérifier le mécanisme de repli, qui doit rester valable pour les
+# sections pas encore rédigées.
+BANQUE_VIDE = {"ouverture:environmental": [], "environmental": {}, "cloture:environmental": []}
+
+
 def test_sections_pretes_vide_sur_banque_vide():
-    assert sections_pretes(CLAUSES) == set()
+    assert sections_pretes(BANQUE_VIDE) == set()
+
+
+def test_sections_pretes_reflete_les_sections_reellement_redigees():
+    """Sur la vraie banque : environmental a basculé sur le nouveau
+    système, les 8 autres sections restent sur l'ancien générateur."""
+    assert sections_pretes(CLAUSES) == SECTIONS_REDIGEES
 
 
 def test_composer_section_renvoie_chaine_vide_sur_banque_vide():
@@ -191,7 +221,7 @@ def test_composer_section_renvoie_chaine_vide_sur_banque_vide():
                "co2_emissions_tonnes": None, "biodiversity_initiatives": 0,
                "energy_consumption_mwh": None, "water_consumption_m3": None,
                "waste_generated_tonnes": None, "scope_completeness": None}
-    assert composer_section("environmental", donnees, CLAUSES) == ""
+    assert composer_section("environmental", donnees, BANQUE_VIDE) == ""
 
 
 def test_composer_section_sur_section_sans_indicateurs_renvoie_chaine_vide():
@@ -359,6 +389,22 @@ def test_brut_selectionne_par_ordre_de_declaration():
         {"energy_consumption_mwh": None, "water_consumption_m3": 45000.0},
         _clauses_env_de_test())
     assert resultat == "EAU 45,000 m3."
+
+
+def test_co2_grille_sectorielle_entre_bien_dans_le_classement():
+    """co2_emissions_tonnes est classé sur une grille SECTORIELLE
+    (bornes_par_secteur, pas bornes). Le filtre de
+    indicateurs_ranges_par_gravite() ne testait que "bornes" : le carbone
+    était écarté du classement et ses clauses étaient inatteignables, alors
+    que classer() savait le ranger. Ce test verrouille la cohérence entre
+    les deux filtres."""
+    from composer import indicateurs_ranges_par_gravite
+    intensite = 8200 / 48_000_000 * 1e6  # 170.8 t/M€ CA
+    classes = indicateurs_ranges_par_gravite(
+        "environmental", {"co2_emissions_tonnes": intensite},
+        secteur="Industrie manufacturière")
+    assert [c[0] for c in classes] == ["co2_emissions_tonnes"]
+    assert classes[0][1] == "satisfaisant"
 
 
 def test_ordre_du_paragraphe_classe_puis_brut_puis_categoriel():

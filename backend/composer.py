@@ -119,7 +119,13 @@ def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = N
         if indicateur in CATEGORIES:
             continue  # pas de gravité comparable ; traité à part par l'appelant
         entry = SEUILS.get(indicateur)
-        if not entry or "bornes" not in entry:
+        # "bornes_par_secteur" compte autant que "bornes" : co2_emissions_tonnes
+        # est classé sur une grille SECTORIELLE et n'a donc pas de clé
+        # "bornes". Sans ce second test il était écarté du classement alors
+        # que classer() sait parfaitement le ranger — ses clauses devenaient
+        # inatteignables. Même critère que la détection des "brut" plus bas :
+        # les deux filtres doivent rester cohérents.
+        if not entry or ("bornes" not in entry and "bornes_par_secteur" not in entry):
             continue  # narratif brut, pas de tranche
         valeur = _valeur_indicateur(indicateur, donnees)
         if valeur is None:
@@ -213,6 +219,41 @@ def composer_section(section: str, donnees: dict, clauses_lang: dict,
                 banque[0], {**contexte, "value": _formater_valeur(valeur)}))
 
     return " ".join(phrases)
+
+
+def composer_paragraphe(section: str, donnees: dict, clauses_lang: dict,
+                        contexte: dict = None, secteur: str = None) -> str:
+    """Paragraphe complet d'une section : phrase d'ouverture, corps
+    (composer_section), phrase de clôture.
+
+    Fonction distincte de composer_section() à dessein : celle-ci ne
+    s'occupe QUE des indicateurs, celle-là de l'assemblage éditorial. Les
+    séparer garde chaque responsabilité testable seule.
+
+    Sélection déterministe de la première clause disponible, comme partout
+    ailleurs dans ce module. Conséquence assumée à ce stade : deux clients
+    dont les données tombent dans les mêmes tranches reçoivent le même
+    texte. L'ancien générateur faisait varier les formulations avec un
+    tirage indexé sur le nom (_pick/_seed) ; réintroduire cette variété
+    dans le composer est un choix éditorial à part entière, à décider
+    explicitement, pas à glisser ici en passant."""
+    contexte = contexte or {}
+    morceaux = []
+
+    ouverture = clauses_lang.get(f"ouverture:{section}", [])
+    if ouverture:
+        morceaux.append(_substituer(ouverture[0], contexte))
+
+    corps = composer_section(section, donnees, clauses_lang,
+                             contexte=contexte, secteur=secteur)
+    if corps:
+        morceaux.append(corps)
+
+    cloture = clauses_lang.get(f"cloture:{section}", [])
+    if cloture:
+        morceaux.append(_substituer(cloture[0], contexte))
+
+    return " ".join(morceaux)
 
 
 def sections_pretes(clauses_lang: dict) -> set:

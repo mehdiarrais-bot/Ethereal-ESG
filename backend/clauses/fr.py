@@ -57,3 +57,151 @@ for _section in INDICATEURS_PAR_SECTION:
     CLAUSES[_section] = _squelette_section(_section)
     CLAUSES[f"cloture:{_section}"] = []
 del _section
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Section ENVIRONMENTAL — rédigée et validée.
+# Les clés remplies ci-dessous doivent correspondre exactement au squelette
+# généré au-dessus ; c'est vérifié par les tests anti-divergence
+# (tests/test_bands.py). Aucune clause ne cite un seuil chiffré en dur :
+# les bornes vivent dans bands.py, une seule fois.
+# ══════════════════════════════════════════════════════════════════════════
+
+CLAUSES["ouverture:environmental"] = [
+    "Le pilier Environnement de {n} obtient {score}/100 sur l'exercice {an}.",
+    "Sur le volet environnemental, {n} atteint {score}/100 au titre de l'exercice {an}.",
+    "La performance environnementale de {n} s'établit à {score}/100 pour l'exercice {an}.",
+]
+
+CLAUSES["environmental"] = {
+    # Pas de {value} ici : la tranche vient de l'INTENSITÉ carbone comparée
+    # à une grille SECTORIELLE (bornes différentes selon le secteur), il n'y
+    # a donc pas de seuil unique à citer dans la phrase.
+    "co2_emissions_tonnes": {
+        "exemplaire": [
+            "L'intensité carbone se situe parmi les meilleures de son secteur, un atout rare dans un contexte de renchérissement du prix du carbone.",
+            "Rapportées au chiffre d'affaires, les émissions placent {n} en tête de son secteur sur l'efficacité carbone.",
+        ],
+        "solide": [
+            "L'intensité carbone est nettement inférieure à la référence de son secteur, signe d'un modèle déjà sobre en émissions.",
+            "Les émissions rapportées au chiffre d'affaires situent {n} au-dessus de la moyenne sectorielle en matière d'efficacité carbone.",
+        ],
+        "satisfaisant": [
+            "L'intensité carbone est conforme à ce qu'on observe dans son secteur, sans avantage ni retard marqué.",
+            "Rapportées au chiffre d'affaires, les émissions de {n} se situent dans la moyenne de son secteur.",
+        ],
+        "fragile": [
+            "L'intensité carbone dépasse la référence sectorielle : l'exposition au coût du carbone constitue un point de vigilance.",
+            "Les émissions rapportées au chiffre d'affaires sont supérieures à la moyenne du secteur, ce qui expose {n} au renchérissement du carbone.",
+        ],
+        "critique": [
+            "L'intensité carbone est très supérieure à la référence sectorielle, une exposition majeure au prix du carbone à traiter en priorité.",
+            "Rapportées au chiffre d'affaires, les émissions placent {n} loin derrière son secteur : la décarbonation est l'enjeu environnemental central.",
+        ],
+    },
+    "renewable_energy_percent": {
+        "exemplaire": [
+            "La part d'énergie renouvelable atteint {value} %, un niveau qui ancre durablement la transition énergétique de {n}.",
+            "Avec {value} % d'énergie renouvelable, {n} a très largement engagé la bascule de son mix énergétique.",
+        ],
+        "solide": [
+            "La part d'énergie renouvelable s'élève à {value} %, une trajectoire de transition bien engagée.",
+            "À {value} % d'énergie renouvelable, {n} affiche un mix déjà nettement décarboné.",
+        ],
+        "satisfaisant": [
+            "La part d'énergie renouvelable atteint {value} %, une base correcte que la trajectoire de transition doit consolider.",
+            "Avec {value} % d'énergie renouvelable, {n} a amorcé la transition de son mix sans l'avoir encore approfondie.",
+        ],
+        "fragile": [
+            "La part d'énergie renouvelable reste limitée à {value} %, un levier de progrès prioritaire pour l'objectif de transition énergétique.",
+            "À {value} % d'énergie renouvelable, le mix énergétique de {n} reste largement dépendant des sources conventionnelles.",
+        ],
+        "critique": [
+            "La part d'énergie renouvelable n'atteint que {value} %, un retard marqué au regard de l'objectif de transition énergétique.",
+            "Avec seulement {value} % d'énergie renouvelable, la décarbonation du mix énergétique de {n} reste à construire.",
+        ],
+    },
+    "waste_recycled_percent": {
+        "exemplaire": [
+            "Le taux de recyclage atteint {value} %, une performance d'économie circulaire remarquable.",
+            "Avec {value} % de déchets recyclés, {n} inscrit pleinement son activité dans une logique circulaire.",
+        ],
+        "solide": [
+            "Le taux de recyclage s'élève à {value} %, une gestion des déchets nettement au-dessus de la moyenne.",
+            "À {value} % de déchets recyclés, {n} affiche une valorisation matière solide.",
+        ],
+        "satisfaisant": [
+            "Le taux de recyclage atteint {value} %, un niveau correct qui laisse une marge de valorisation.",
+            "Avec {value} % de déchets recyclés, {n} valorise une part significative de ses déchets sans épuiser le potentiel circulaire.",
+        ],
+        "fragile": [
+            "Le taux de recyclage reste limité à {value} %, un axe de progrès en matière d'économie circulaire.",
+            "À {value} % de déchets recyclés, la valorisation matière de {n} reste en deçà des pratiques du secteur.",
+        ],
+        "critique": [
+            "Le taux de recyclage n'atteint que {value} %, une gestion des déchets à repenser en priorité.",
+            "Avec seulement {value} % de déchets recyclés, la valorisation matière de {n} reste largement à développer.",
+        ],
+    },
+    "biodiversity_initiatives": {
+        "exemplaire": [
+            "{n} porte {value} initiatives en faveur de la biodiversité, un engagement soutenu sur ce volet encore peu structuré réglementairement.",
+            "Avec {value} initiatives biodiversité, {n} anticipe des exigences qui restent aujourd'hui largement qualitatives.",
+        ],
+        "solide": [
+            "{n} conduit {value} initiatives en faveur de la biodiversité, un engagement tangible sur le sujet.",
+            "Avec {value} initiatives biodiversité, {n} traite ce volet de manière active.",
+        ],
+        "satisfaisant": [
+            "{n} recense {value} initiatives en faveur de la biodiversité, un premier socle à étoffer.",
+            "Avec {value} initiatives biodiversité, {n} a engagé le sujet sans encore le structurer pleinement.",
+        ],
+        # Pluriel assumé, "deux" en toutes lettres : la borne fragile de
+        # biodiversity_initiatives est [2, 3), donc value vaut TOUJOURS 2 à
+        # cette tranche. Pas de "(s)" de publipostage (interdit, verrouillé
+        # par test_no_mail_merge_plurals), et pas de "2.0" si la donnée
+        # arrivait en flottant.
+        "fragile": [
+            "{n} ne recense que deux initiatives en faveur de la biodiversité, un volet à développer.",
+            "Avec deux initiatives biodiversité seulement, l'engagement de {n} sur ce sujet reste embryonnaire.",
+        ],
+        "critique": [
+            "Aucune ou presque initiative en faveur de la biodiversité n'est recensée, un angle mort à ouvrir.",
+            "Le volet biodiversité n'est pas encore investi par {n}, un sujet à mettre à l'agenda.",
+        ],
+    },
+    "energy_consumption_mwh": {
+        "brut": [
+            "La consommation énergétique déclarée s'élève à {value} MWh sur l'exercice.",
+            "{n} déclare une consommation de {value} MWh au titre de l'exercice {an}.",
+        ],
+    },
+    "water_consumption_m3": {
+        "brut": [
+            "Les prélèvements d'eau déclarés atteignent {value} m³ sur l'exercice.",
+            "{n} déclare {value} m³ d'eau prélevée au titre de l'exercice {an}.",
+        ],
+    },
+    "waste_generated_tonnes": {
+        "brut": [
+            "Le volume de déchets produits s'établit à {value} tonnes sur l'exercice.",
+            "{n} déclare {value} tonnes de déchets générés au titre de l'exercice {an}.",
+        ],
+    },
+    "scope_completeness": {
+        "vrai": [
+            "Le bilan carbone couvre les trois scopes d'émissions (1, 2 et 3), une complétude qui renforce la crédibilité du reporting.",
+            "Les trois scopes d'émissions sont renseignés, ce qui donne au bilan carbone une portée complète.",
+        ],
+        "faux": [
+            "Le bilan carbone est incomplet : tous les scopes d'émissions ne sont pas renseignés, ce qui limite la portée du reporting climatique.",
+            "Certains scopes d'émissions ne sont pas renseignés, une lacune qui restreint la portée du bilan carbone.",
+        ],
+    },
+}
+
+CLAUSES["cloture:environmental"] = [
+    "L'empreinte environnementale constitue le principal levier de création de valeur durable pour {n}.",
+    "La trajectoire environnementale de {n} se joue sur la décarbonation et la sobriété des ressources.",
+    "Ces indicateurs environnementaux orientent les priorités du plan d'action de {n}.",
+]
