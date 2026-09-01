@@ -38,7 +38,7 @@ INDICATEURS_PAR_SECTION = {
         "energy_consumption_mwh",    # narratif brut, aucun seuil — content_generator.py:707-708
         "water_consumption_m3",      # narratif brut, aucun seuil — content_generator.py:709-710
         "waste_generated_tonnes",    # collecté, jamais utilisé dans le narratif actuel
-        "scope_completeness",        # composite scope1+2+3 renseignés — esg_calculator.py:83-86
+        "scope_completeness",        # booléen (CATEGORIES) — composite scope1+2+3 renseignés, esg_calculator.py:83-86
     ],
     "social": [
         "female_employees_percent",     # esg_calculator.py:113-115
@@ -228,6 +228,22 @@ CATEGORIES = {
         "type": "booleen",
         "score_si_vrai": 100, "score_si_faux": 20,
         "source": "esg_calculator.py:187-190",
+    },
+    "scope_completeness": {
+        # Ex-narratif "brut" (voir historique du fichier) : deux états
+        # opposés (complet / incomplet) ne peuvent pas partager une même
+        # liste "brut" sélectionnée par index fixe (composer.py prenait
+        # toujours l'élément 0, donc toujours le même état quelle que soit
+        # la donnée réelle — piège révélé en rédigeant les clauses
+        # environmental). Reclassé booléen : la clause suit la donnée.
+        "type": "booleen",
+        # PAS un gate 100/20 comme les deux booléens ci-dessus : c'est un
+        # composite (scope1+2+3 tous renseignés ou non), pas un champ direct
+        # du modèle ; l'appelant doit le calculer avant de le passer à
+        # composer_section(). Le score réel associé (esg_calculator.py:83-86)
+        # est 80 si complet, 60 si seul co2_emissions_tonnes est renseigné —
+        # pas un gate binaire 100/20, donc pas de score_si_vrai/faux ici.
+        "source": "esg_calculator.py:83-86",
     },
 }
 
