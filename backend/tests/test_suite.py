@@ -190,13 +190,15 @@ def _completed_actions_pdf_text(actions):
 
 
 def test_completed_action_renders_callout_and_sentence():
-    """Une action cochée -> encart "Actions réalisées" + phrase de synthèse
+    """Une action cochée -> encart "Actions engagées" + phrase de synthèse
     présents, et le mot "preuve" n'apparaît nulle part (verrouille qu'il ne
     soit pas réintroduit — décision explicite du 2026-09-01 : l'outil
-    reporte une déclaration du cabinet, il ne prouve rien)."""
+    reporte une déclaration du cabinet, il ne prouve rien). Le titre de
+    l'encart a été harmonisé le même jour pour ne plus affirmer une
+    réalisation ("Actions réalisées") que la phrase en dessous nuance déjà."""
     full = _completed_actions_pdf_text(
         [{"title": "Créer un comité de durabilité au conseil", "year": 2024}])
-    assert "ACTIONS RÉALISÉES" in full.upper()
+    assert "ACTIONS ENGAGÉES" in full.upper()
     assert "déclarée engagée" in full
     assert "Créer un comité de durabilité au conseil" in full
     assert "preuve" not in full.lower()
@@ -205,7 +207,7 @@ def test_completed_action_renders_callout_and_sentence():
 def test_no_completed_action_omits_callout_and_sentence():
     """Aucune action cochée -> ni encart, ni phrase de synthèse."""
     full = _completed_actions_pdf_text([])
-    assert "ACTIONS RÉALISÉES" not in full.upper()
+    assert "ACTIONS ENGAGÉES" not in full.upper()
     assert "déclarée" not in full and "déclarées" not in full
     assert "preuve" not in full.lower()
 
