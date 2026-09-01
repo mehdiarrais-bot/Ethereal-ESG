@@ -170,6 +170,76 @@ def test_consultant_notes_rendered_and_absent():
     assert not any("ANALYSE DU CONSULTANT" in doc2[i].get_text() for i in range(doc2.page_count))
 
 
+def _completed_actions_pdf_text(actions):
+    """Texte du PDF, espaces normalisés. ReportLab coupe les paragraphes en
+    fin de ligne selon la largeur disponible (dépend du thème/de la police) ;
+    PyMuPDF restitue ces coupures comme de vrais retours à la ligne. On les
+    aplatit ici pour tester le contenu tel qu'il se lit, pas la position du
+    retour à la ligne — sinon le test devient fragile au thème utilisé."""
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from main import build_advanced_charts
+    r = make_request(completed_actions=actions)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    raw = "".join(doc[i].get_text() for i in range(doc.page_count))
+    return re.sub(r"\s+", " ", raw)
+
+
+def test_completed_action_renders_callout_and_sentence():
+    """Une action cochée -> encart "Actions réalisées" + phrase de synthèse
+    présents, et le mot "preuve" n'apparaît nulle part (verrouille qu'il ne
+    soit pas réintroduit — décision explicite du 2026-09-01 : l'outil
+    reporte une déclaration du cabinet, il ne prouve rien)."""
+    full = _completed_actions_pdf_text(
+        [{"title": "Créer un comité de durabilité au conseil", "year": 2024}])
+    assert "ACTIONS RÉALISÉES" in full.upper()
+    assert "déclarée engagée" in full
+    assert "Créer un comité de durabilité au conseil" in full
+    assert "preuve" not in full.lower()
+
+
+def test_no_completed_action_omits_callout_and_sentence():
+    """Aucune action cochée -> ni encart, ni phrase de synthèse."""
+    full = _completed_actions_pdf_text([])
+    assert "ACTIONS RÉALISÉES" not in full.upper()
+    assert "déclarée" not in full and "déclarées" not in full
+    assert "preuve" not in full.lower()
+
+
+def test_completed_actions_singular_plural_agreement():
+    """« une action … engagée » au singulier, « N actions … engagées » au
+    pluriel — pas de « (s) » de publipostage, pas de désaccord."""
+    one = {"title": "Créer un comité de durabilité au conseil", "year": 2024}
+    two = [one, {"title": "Porter la formation à 20h/employé/an minimum", "year": 2024}]
+
+    r1 = make_request(completed_actions=[one])
+    s1 = calculate_esg_scores(r1)
+    exec1 = generate_esg_content(r1, s1)["executive_summary"]
+    assert "une action est déclarée engagée : « Créer un comité de durabilité au conseil »." in exec1
+    assert "(s)" not in exec1
+
+    r2 = make_request(completed_actions=two)
+    s2 = calculate_esg_scores(r2)
+    exec2 = generate_esg_content(r2, s2)["executive_summary"]
+    assert ("deux actions sont déclarées engagées, dont "
+            "« Créer un comité de durabilité au conseil » "
+            "et « Porter la formation à 20h/employé/an minimum ».") in exec2
+    assert "(s)" not in exec2
+
+    # Anglais : même exigence d'accord, formulation retenue
+    r3 = make_request(lang="en", completed_actions=two)
+    s3 = calculate_esg_scores(r3)
+    exec3 = generate_esg_content(r3, s3)["executive_summary"]
+    assert ('two actions are reported as underway, including '
+            '"Créer un comité de durabilité au conseil" '
+            'and "Porter la formation à 20h/employé/an minimum".') in exec3
+    assert "proof" not in exec3.lower() and "(s)" not in exec3
+
+
 # ── Scoring sectoriel & diagnostic ────────────────────────────────────────
 
 def test_sector_carbon_grids_differ():

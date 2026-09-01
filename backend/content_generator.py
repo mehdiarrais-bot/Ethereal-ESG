@@ -550,21 +550,34 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 f" Par rapport à l'exercice {prev['year']}, le score global {move} "
                 f"(environnement {sg(de)}, social {sg(ds)}, gouvernance {sg(dg)}).")
 
-    # ── 4quater. Suivi du plan d'action (actions réalisées) ──────────────
+    # ── 4quater. Suivi du plan d'action (actions déclarées engagées) ─────
+    # Formulation volontairement en retrait : l'outil reporte une case cochée
+    # par le cabinet, il ne vérifie ni ne prouve que l'action a été menée.
+    # Ne jamais réintroduire "preuve"/"proof" ici (verrouillé par un test).
     done = getattr(request, "completed_actions", None) or []
     if done:
+        n = len(done)
         titles = [d["title"] for d in done[:2]]
-        listed = (" and ".join(f"“{t}”" for t in titles) if en
-                  else " et ".join(f"« {t} »" for t in titles))
         if en:
-            content["executive_summary"] += (
-                f" Since the previous action plan, {_nb(len(done), en=True)} "
-                f"action{'s have' if len(done) > 1 else ' has'} been completed, including {listed} — "
-                f"tangible proof that the roadmap is being executed.")
+            if n == 1:
+                content["executive_summary"] += (
+                    f' Since the previous action plan, one action is reported '
+                    f'as underway: "{titles[0]}".')
+            else:
+                listed = " and ".join(f'"{t}"' for t in titles)
+                content["executive_summary"] += (
+                    f" Since the previous action plan, {_nb(n, en=True)} actions "
+                    f"are reported as underway, including {listed}.")
         else:
-            content["executive_summary"] += (
-                f" Depuis le précédent plan d'action, {_agree(len(done), 'action a été menée à bien', 'actions ont été menées à bien', fem=True)}, "
-                f"dont {listed} — preuve tangible que la feuille de route est exécutée.")
+            if n == 1:
+                content["executive_summary"] += (
+                    f" Depuis le précédent plan d'action, {_nb(1, fem=True)} action "
+                    f"est déclarée engagée : « {titles[0]} ».")
+            else:
+                listed = " et ".join(f"« {t} »" for t in titles)
+                content["executive_summary"] += (
+                    f" Depuis le précédent plan d'action, {_nb(n, fem=True)} actions "
+                    f"sont déclarées engagées, dont {listed}.")
 
     # ── 4bis. Initiatives internes : ancrage dans la réalité de l'entreprise ─
     ki_raw = getattr(request.company, "key_initiatives", None)
