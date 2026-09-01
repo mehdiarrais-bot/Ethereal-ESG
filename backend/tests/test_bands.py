@@ -18,7 +18,7 @@ from bands import (
     TRANCHE_100, TRANCHE_80, TRANCHE_60, TRANCHE_40, TRANCHE_20,
     PLUS_HAUT_MIEUX,
 )
-from composer import sections_pretes, composer_section
+from composer import sections_pretes, composer_section, _substituer, _tranche_categorielle
 from clauses.fr import CLAUSES, TRANCHES_NUMERIQUES
 
 
@@ -194,3 +194,69 @@ def test_composer_section_renvoie_chaine_vide_sur_banque_vide():
 
 def test_composer_section_sur_section_sans_indicateurs_renvoie_chaine_vide():
     assert composer_section("materiality", {}, CLAUSES) == ""
+
+
+# ── 6. Substitution de placeholders : tolérante, jamais d'exception ────────
+
+def test_substitution_placeholder_connu():
+    assert _substituer("Bonjour {n}, score {score}.", {"n": "Acme", "score": 65}) == \
+        "Bonjour Acme, score 65."
+
+
+def test_substitution_placeholder_manquant_ne_casse_pas():
+    """Exigence non négociable : un placeholder absent du contexte ne lève
+    jamais d'exception, il ressort tel quel entre accolades (marqueur
+    visible au test/à la relecture), et la génération continue."""
+    resultat = _substituer("Bonjour {n}, année {an}, indicateur {xyz_inconnu}.", {"n": "Acme"})
+    assert resultat == "Bonjour Acme, année {an}, indicateur {xyz_inconnu}."
+
+
+def test_composer_section_ne_leve_jamais_sur_contexte_incomplet():
+    """Bout en bout : une clause avec des placeholders et un contexte
+    incomplet ne doit jamais faire planter composer_section()."""
+    import copy
+    test_clauses = copy.deepcopy(CLAUSES)
+    test_clauses["environmental"]["renewable_energy_percent"]["critique"] = [
+        "{n} atteint {value}% en {an}, un score de {score}/100."]
+    donnees = {"renewable_energy_percent": 5}
+    resultat = composer_section("environmental", donnees, test_clauses, contexte={"n": "Acme"})
+    assert resultat == "Acme atteint 5% en {an}, un score de {score}/100."
+
+
+# ── 7. scope_completeness : catégoriel booléen, jamais un index fixe ───────
+
+def test_scope_completeness_est_categoriel_booleen():
+    assert CATEGORIES["scope_completeness"]["type"] == "booleen"
+    assert "scope_completeness" not in SEUILS
+
+
+def test_tranche_categorielle_booleen_suit_la_valeur_reelle():
+    assert _tranche_categorielle("scope_completeness", True) == "vrai"
+    assert _tranche_categorielle("scope_completeness", False) == "faux"
+    assert _tranche_categorielle("scope_completeness", None) is None
+
+
+def test_composer_section_scope_completeness_choisit_selon_la_donnee():
+    """Le piège trouvé en rédigeant les clauses environmental : avant, une
+    liste à deux états opposés sous "brut" renvoyait toujours l'élément 0,
+    donc toujours le même état quelle que soit la donnée réelle. Vérifie
+    que ce n'est plus le cas : faux -> clause faux, jamais vrai, et
+    inversement."""
+    import copy
+    test_clauses = copy.deepcopy(CLAUSES)
+    test_clauses["environmental"]["scope_completeness"]["vrai"] = ["Bilan complet (scope 1+2+3)."]
+    test_clauses["environmental"]["scope_completeness"]["faux"] = ["Bilan incomplet."]
+
+    resultat_faux = composer_section("environmental", {"scope_completeness": False}, test_clauses)
+    assert resultat_faux == "Bilan incomplet."
+
+    resultat_vrai = composer_section("environmental", {"scope_completeness": True}, test_clauses)
+    assert resultat_vrai == "Bilan complet (scope 1+2+3)."
+
+    resultat_absent = composer_section("environmental", {"scope_completeness": None}, test_clauses)
+    assert resultat_absent == ""
+
+
+def test_clauses_fr_scope_completeness_a_les_cles_vrai_faux():
+    """Régénéré depuis bands.py : plus de clé "brut" pour cet indicateur."""
+    assert set(CLAUSES["environmental"]["scope_completeness"].keys()) == {"vrai", "faux"}
