@@ -11,6 +11,8 @@ Lancer depuis backend/ :  python -m pytest tests/ -q
 import sys
 import os
 
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bands import (
@@ -18,8 +20,8 @@ from bands import (
     TRANCHE_100, TRANCHE_80, TRANCHE_60, TRANCHE_40, TRANCHE_20,
     PLUS_HAUT_MIEUX,
 )
-from composer import (sections_pretes, composer_section, _substituer,
-                      _tranche_categorielle, _formater_valeur,
+from composer import (sections_pretes, composer_section, composer_paragraphe,
+                      _substituer, _tranche_categorielle, _formater_valeur,
                       NB_BRUTS_PAR_PARAGRAPHE)
 from clauses.fr import CLAUSES, TRANCHES_NUMERIQUES
 
@@ -190,12 +192,18 @@ def test_seules_les_sections_redigees_ont_des_clauses():
                     assert phrases == [], f"{cle}.{indicateur}.{tranche} n'est pas vide"
 
 
-def test_section_environmental_est_bien_remplie():
-    """Contrepartie du test précédent : environmental a bien basculé."""
-    assert CLAUSES["ouverture:environmental"]
-    assert CLAUSES["cloture:environmental"]
-    for indicateur, tranches in CLAUSES["environmental"].items():
-        assert any(tranches.values()), f"environmental.{indicateur} est vide"
+def test_toute_section_declaree_redigee_a_bien_des_clauses():
+    """Contrepartie du test précédent, BOUCLÉE sur SECTIONS_REDIGEES et non
+    codée en dur sur une section : sans ça, l'allowlist deviendrait une
+    échappatoire — ajouter une section à SECTIONS_REDIGEES sans écrire ses
+    clauses la dispenserait du test "doit être vide" sans rien exiger en
+    retour, et le trou passerait en silence."""
+    for section in SECTIONS_REDIGEES:
+        assert CLAUSES[f"ouverture:{section}"], f"ouverture:{section} est vide"
+        assert CLAUSES[f"cloture:{section}"], f"cloture:{section} est vide"
+        assert CLAUSES[section], f"{section} n'a aucun indicateur"
+        for indicateur, tranches in CLAUSES[section].items():
+            assert any(tranches.values()), f"{section}.{indicateur} est vide"
 
 
 # ── 5. Repli : banque vide -> ensemble vide, paragraphe vide ───────────────
@@ -226,6 +234,30 @@ def test_composer_section_renvoie_chaine_vide_sur_banque_vide():
 
 def test_composer_section_sur_section_sans_indicateurs_renvoie_chaine_vide():
     assert composer_section("materiality", {}, CLAUSES) == ""
+
+
+@pytest.mark.parametrize("section,donnees", [
+    ("social", {"female_employees_percent": 34.0, "training_hours_per_employee": 22.0,
+                "accident_frequency_rate": 6.2, "employee_turnover_percent": 12.0,
+                "customer_satisfaction_score": 7.8, "total_employees": 320}),
+    ("governance", {"female_board_percent": 25.0, "independent_board_percent": 45.0,
+                    "ethics_violations": 0, "data_breaches": 1, "corruption_cases": 0,
+                    "esg_audit_conducted": False, "sustainability_committee": True,
+                    "csr_budget_eur": 120000.0}),
+])
+def test_section_non_redigee_ne_produit_rien_sur_la_vraie_banque(section, donnees):
+    """LE test de repli qui compte vraiment : une section pas encore
+    rédigée, avec de VRAIES données qui classent et déclenchent des
+    catégoriels, sur la VRAIE banque CLAUSES — doit rendre "" pour que la
+    section retombe proprement sur l'ancien générateur.
+
+    Le vérifier sur une banque stub ne prouve pas ce scénario : c'est
+    précisément la vraie banque, avec environmental rempli à côté, qui doit
+    rester muette sur les 8 sections restantes."""
+    assert section not in SECTIONS_REDIGEES  # sinon le test ne teste plus rien
+    assert composer_section(section, donnees, CLAUSES) == ""
+    assert composer_paragraphe(section, donnees, CLAUSES,
+                               contexte={"n": "Acme", "score": "55", "an": 2025}) == ""
 
 
 # ── 6. Substitution de placeholders : tolérante, jamais d'exception ────────
