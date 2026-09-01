@@ -55,6 +55,21 @@ la rédaction des clauses elles-mêmes.
 - **Décision pour ce chantier** : `backend/bands.py` n'inscrit **aucune**
   entrée `CIBLES` pour `female_employees_percent`.
 
+## 5. Séparateur de milliers anglais dans un texte français
+
+- **Où** : `backend/content_generator.py` (ancien générateur, format `,`
+  — ex. ligne 708 : `f"{env.energy_consumption_mwh:,.0f} MWh consommés"`)
+  et, par alignement volontaire, `backend/composer.py._formater_valeur()`.
+- **Constat** : les nombres sortent en `12,000` (séparateur anglais) dans
+  un texte français, où l'usage est `12 000`.
+- **Décision pour ce chantier** : le composer **reproduit sciemment** le
+  format de l'ancien générateur. Corriger seulement le composer ferait
+  cohabiter `12 000` (sections déjà migrées) et `12,000` (sections encore
+  sur l'ancien générateur) dans un même rapport, ce qui se verrait.
+- **À faire** : passer tout le système en `12 000` **d'un seul coup**,
+  ancien générateur + composer, avec un test de non-régression sur le
+  rendu. Ne pas le faire section par section.
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une

@@ -29,6 +29,14 @@ GRAVITE = {"critique": 0, "fragile": 1, "satisfaisant": 2, "solide": 3, "exempla
 
 NB_INDICATEURS_PAR_PARAGRAPHE = 3
 
+# Un seul fait chiffré "brut" par paragraphe : le paragraphe porte déjà
+# jusqu'à NB_INDICATEURS_PAR_PARAGRAPHE phrases analytiques plus les
+# clauses catégorielles. Au-delà d'un chiffre brut, le paragraphe redevient
+# une énumération ("X MWh. Y m³. Z tonnes."), le défaut mécanique que le
+# système de clauses vise justement à supprimer. Constante nommée : la
+# passer à 2 ne demande aucune modification de logique.
+NB_BRUTS_PAR_PARAGRAPHE = 1
+
 
 class _ContexteTolerant(dict):
     """dict de substitution qui ne lève jamais de KeyError : un placeholder
@@ -45,6 +53,32 @@ def _substituer(gabarit: str, contexte: dict) -> str:
     par les valeurs du contexte fourni. Tolérant : jamais d'exception sur
     une clé manquante (voir _ContexteTolerant)."""
     return gabarit.format_map(_ContexteTolerant(contexte))
+
+
+def _formater_valeur(v):
+    """Met en forme une valeur numérique pour insertion dans une clause.
+
+    Pydantic type la plupart des champs en float : sans mise en forme,
+    {value} rendrait "42.0 %" ou "12000.0 MWh". Règle retenue : un
+    flottant de valeur entière perd sa décimale, un flottant non entier
+    la garde (6.2 reste 6.2, c'est une décimale porteuse de sens).
+
+    Le séparateur de milliers reproduit VOLONTAIREMENT celui de l'ancien
+    générateur (format ",", donc "12,000" — séparateur anglais dans un
+    texte français). C'est un défaut préexistant, consigné dans DETTE.md :
+    il doit être corrigé sur tout le système d'un seul coup (ancien
+    générateur + composer), pas section par section, sinon un même rapport
+    mélangerait "12 000" et "12,000" selon la section pendant la migration.
+
+    Les booléens sont laissés tels quels : bool est une sous-classe de int
+    en Python, sans ce garde-fou True serait rendu "1"."""
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, float) and v.is_integer():
+        return f"{v:,.0f}"
+    if isinstance(v, (int, float)):
+        return f"{v:,}"
+    return v
 
 
 def _valeur_indicateur(indicateur: str, donnees: dict):
@@ -100,14 +134,18 @@ def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = N
 
 def composer_section(section: str, donnees: dict, clauses_lang: dict,
                       contexte: dict = None, secteur: str = None) -> str:
-    """Compose le paragraphe d'une section :
-    - les 2-3 indicateurs à grille (SEUILS) les plus graves ;
-    - PLUS tous les indicateurs catégoriels (CATEGORIES) de la section qui
-      ont une valeur et une clause disponible pour leur état réel — ils ne
-      concourent pas sur la "gravité" (pas comparable à une grille à 5
-      tranches, voir indicateurs_ranges_par_gravite) donc ne sont pas
-      soumis à NB_INDICATEURS_PAR_PARAGRAPHE ; à revisiter si un jour une
-      section catégorielle en compte beaucoup (gouvernance, plus tard).
+    """Compose le paragraphe d'une section, dans cet ordre :
+    1. les 2-3 indicateurs à grille (SEUILS) les plus graves — l'analyse ;
+    2. au plus NB_BRUTS_PAR_PARAGRAPHE indicateur "brut" — l'ancrage
+       chiffré, choisi par ordre de déclaration dans
+       bands.INDICATEURS_PAR_SECTION ;
+    3. les indicateurs catégoriels (CATEGORIES) de la section qui ont une
+       valeur et une clause pour leur état réel — commentaire méta, en fin
+       de paragraphe. Ils ne concourent pas sur la "gravité" (pas
+       comparable à une grille à 5 tranches, voir
+       indicateurs_ranges_par_gravite) donc ne sont pas soumis à
+       NB_INDICATEURS_PAR_PARAGRAPHE ; à revisiter si une section
+       catégorielle en compte beaucoup un jour (gouvernance, plus tard).
 
     `contexte` porte les placeholders indépendants de l'indicateur (ex.
     {"n": nom_entreprise, "score": score_du_pilier, "an": annee}). Le
@@ -122,12 +160,46 @@ def composer_section(section: str, donnees: dict, clauses_lang: dict,
     contexte = contexte or {}
     phrases = []
 
+    # 1. Indicateurs classés : l'analyse, du plus grave au moins grave.
     ranked = indicateurs_ranges_par_gravite(section, donnees, secteur=secteur)
     for indicateur, tranche, _gravite in ranked[:NB_INDICATEURS_PAR_PARAGRAPHE]:
         banque = clauses_lang.get(section, {}).get(indicateur, {}).get(tranche, [])
         if banque:
-            phrases.append(_substituer(banque[0], {**contexte, "value": donnees.get(indicateur)}))
+            phrases.append(_substituer(
+                banque[0], {**contexte, "value": _formater_valeur(donnees.get(indicateur))}))
 
+    # 2. Indicateurs "brut" : l'ancrage chiffré, plafonné (voir
+    #    NB_BRUTS_PAR_PARAGRAPHE). Sélection par ORDRE DE DÉCLARATION dans
+    #    bands.INDICATEURS_PAR_SECTION : cet ordre est une décision
+    #    éditoriale visible dans la source de vérité, changer la priorité
+    #    revient à réordonner la liste, sans toucher au code.
+    bruts_retenus = 0
+    for indicateur in INDICATEURS_PAR_SECTION.get(section, []):
+        if bruts_retenus >= NB_BRUTS_PAR_PARAGRAPHE:
+            break
+        if indicateur in CATEGORIES:
+            continue
+        entry = SEUILS.get(indicateur)
+        if entry and ("bornes" in entry or "bornes_par_secteur" in entry):
+            continue  # indicateur classé, déjà traité en 1.
+        valeur = _valeur_indicateur(indicateur, donnees)
+        # ASYMÉTRIE VOLONTAIRE, NE PAS "HARMONISER" : pour un brut, on
+        # exclut les valeurs falsy (None ET 0) — une consommation déclarée
+        # à 0 MWh est un artefact de saisie, pas un fait à citer (même
+        # règle que l'ancien générateur, content_generator.py:707). Pour un
+        # indicateur CLASSÉ au contraire, 0 est une valeur pleine de sens
+        # (0 % de renouvelable = tranche "critique", un vrai constat) et
+        # seul None est écarté, par classer().
+        if not valeur:
+            continue
+        banque = clauses_lang.get(section, {}).get(indicateur, {}).get("brut", [])
+        if banque:
+            phrases.append(_substituer(
+                banque[0], {**contexte, "value": _formater_valeur(valeur)}))
+            bruts_retenus += 1
+
+    # 3. Indicateurs catégoriels : commentaire méta (complétude du
+    #    reporting, existence d'un audit...), en fin de paragraphe.
     for indicateur in INDICATEURS_PAR_SECTION.get(section, []):
         if indicateur not in CATEGORIES:
             continue
@@ -137,7 +209,8 @@ def composer_section(section: str, donnees: dict, clauses_lang: dict,
             continue
         banque = clauses_lang.get(section, {}).get(indicateur, {}).get(cle, [])
         if banque:
-            phrases.append(_substituer(banque[0], {**contexte, "value": valeur}))
+            phrases.append(_substituer(
+                banque[0], {**contexte, "value": _formater_valeur(valeur)}))
 
     return " ".join(phrases)
 

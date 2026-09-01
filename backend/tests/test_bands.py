@@ -18,7 +18,9 @@ from bands import (
     TRANCHE_100, TRANCHE_80, TRANCHE_60, TRANCHE_40, TRANCHE_20,
     PLUS_HAUT_MIEUX,
 )
-from composer import sections_pretes, composer_section, _substituer, _tranche_categorielle
+from composer import (sections_pretes, composer_section, _substituer,
+                      _tranche_categorielle, _formater_valeur,
+                      NB_BRUTS_PAR_PARAGRAPHE)
 from clauses.fr import CLAUSES, TRANCHES_NUMERIQUES
 
 
@@ -260,3 +262,111 @@ def test_composer_section_scope_completeness_choisit_selon_la_donnee():
 def test_clauses_fr_scope_completeness_a_les_cles_vrai_faux():
     """Régénéré depuis bands.py : plus de clé "brut" pour cet indicateur."""
     assert set(CLAUSES["environmental"]["scope_completeness"].keys()) == {"vrai", "faux"}
+
+
+# ── 8. Mise en forme des nombres injectés dans les clauses ─────────────────
+
+def test_formatage_flottant_entier_perd_sa_decimale():
+    """Pydantic type la plupart des champs en float : sans mise en forme,
+    {value} rendrait "42.0 %". Un flottant de valeur entière doit perdre
+    sa décimale."""
+    assert _formater_valeur(42.0) == "42"
+    assert _formater_valeur(320.0) == "320"
+
+
+def test_formatage_flottant_non_entier_garde_sa_decimale():
+    """6.2 (taux de fréquence accidents) doit rester 6.2 : la décimale est
+    porteuse de sens, elle ne s'arrondit pas."""
+    assert _formater_valeur(6.2) == "6.2"
+    assert _formater_valeur(1234.5) == "1,234.5"
+
+
+def test_formatage_reproduit_le_separateur_de_lancien_generateur():
+    """Séparateur anglais volontaire pendant la migration, pour ne pas
+    mélanger "12 000" et "12,000" dans un même rapport selon la section.
+    Défaut préexistant consigné dans DETTE.md, à corriger sur tout le
+    système d'un seul coup — ce test verrouille le choix en attendant."""
+    assert _formater_valeur(12000.0) == "12,000"
+
+
+def test_formatage_laisse_les_booleens_intacts():
+    """bool est une sous-classe de int : sans garde-fou, True serait rendu
+    "1" dans une clause."""
+    assert _formater_valeur(True) is True
+    assert _formater_valeur(False) is False
+
+
+def test_formatage_laisse_none_et_texte_intacts():
+    assert _formater_valeur(None) is None
+    assert _formater_valeur("Acme") == "Acme"
+
+
+# ── 9. Indicateurs "brut" : ancrage chiffré, plafonné, jamais sur du vide ──
+
+def _clauses_env_de_test():
+    """Banque minimale : un classé, deux bruts, un catégoriel — de quoi
+    observer l'ordre, le plafond et les exclusions."""
+    import copy
+    t = copy.deepcopy(CLAUSES)
+    t["environmental"]["renewable_energy_percent"]["critique"] = ["RENOUV {value}%."]
+    t["environmental"]["energy_consumption_mwh"]["brut"] = ["ENERGIE {value} MWh."]
+    t["environmental"]["water_consumption_m3"]["brut"] = ["EAU {value} m3."]
+    t["environmental"]["scope_completeness"]["faux"] = ["SCOPE incomplet."]
+    return t
+
+
+def test_brut_sans_valeur_ne_produit_aucune_clause():
+    """Jamais de "None MWh consommés"."""
+    resultat = composer_section(
+        "environmental", {"energy_consumption_mwh": None}, _clauses_env_de_test())
+    assert resultat == ""
+
+
+def test_brut_a_zero_ne_produit_aucune_clause():
+    """0 MWh déclaré est un artefact de saisie, pas un fait à citer — même
+    règle que l'ancien générateur (content_generator.py:707)."""
+    resultat = composer_section(
+        "environmental", {"energy_consumption_mwh": 0}, _clauses_env_de_test())
+    assert resultat == ""
+
+
+def test_indicateur_classe_a_zero_sort_bien_lui():
+    """ASYMÉTRIE VOLONTAIRE avec les bruts : 0 % de renouvelable est un
+    vrai constat (tranche critique), pas une donnée absente. Ce test
+    verrouille la distinction pour qu'on ne l'"harmonise" pas par erreur."""
+    resultat = composer_section(
+        "environmental", {"renewable_energy_percent": 0}, _clauses_env_de_test())
+    assert resultat == "RENOUV 0%."
+
+
+def test_plafond_des_bruts_respecte():
+    """Deux bruts renseignés, un seul cité (NB_BRUTS_PAR_PARAGRAPHE) : le
+    paragraphe ne doit pas redevenir une énumération."""
+    assert NB_BRUTS_PAR_PARAGRAPHE == 1
+    resultat = composer_section(
+        "environmental",
+        {"energy_consumption_mwh": 12000.0, "water_consumption_m3": 45000.0},
+        _clauses_env_de_test())
+    assert resultat == "ENERGIE 12,000 MWh."
+    assert "EAU" not in resultat
+
+
+def test_brut_selectionne_par_ordre_de_declaration():
+    """L'ordre de bands.INDICATEURS_PAR_SECTION fait la priorité : si
+    l'énergie est absente, l'eau prend la place libérée."""
+    resultat = composer_section(
+        "environmental",
+        {"energy_consumption_mwh": None, "water_consumption_m3": 45000.0},
+        _clauses_env_de_test())
+    assert resultat == "EAU 45,000 m3."
+
+
+def test_ordre_du_paragraphe_classe_puis_brut_puis_categoriel():
+    """Position validée : analyse (classés) -> ancrage chiffré (brut) ->
+    commentaire méta sur le reporting (catégoriel), avant la clôture."""
+    resultat = composer_section(
+        "environmental",
+        {"renewable_energy_percent": 0.0, "energy_consumption_mwh": 12000.0,
+         "scope_completeness": False},
+        _clauses_env_de_test())
+    assert resultat == "RENOUV 0%. ENERGIE 12,000 MWh. SCOPE incomplet."
