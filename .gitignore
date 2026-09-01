@@ -11,5 +11,13 @@ frontend/node_modules/
 # Dossiers clients locaux (données de travail, jamais versionnées)
 backend/data/
 
+# Livrables générés à la volée pour inspection (démos, vérifications de
+# rendu). Les exemples canoniques du dépôt vivent dans examples/ et sont
+# produits par scripts/make_examples.py — eux sont versionnés.
+/Rapport-*.pdf
+/Rapport-*.docx
+/Presentation-*.pptx
+/Synthese-*.pdf
+
 # Antisèche entretien — document personnel, jamais publié
 NOTES-ENTRETIEN.md
