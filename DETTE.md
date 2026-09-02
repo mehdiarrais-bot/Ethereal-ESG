@@ -34,6 +34,29 @@ la rédaction des clauses elles-mêmes.
   score/texte le jour où on corrige. La correction devra toucher les DEUX
   endroits **dans le même commit** : `esg_calculator.py` et `bands.py`.
 
+## 1bis. `SECTOR_CARBON_THRESHOLDS` — grille sectorielle non sourcée
+
+- **Où** : `backend/esg_calculator.py:21-40` — 15 familles sectorielles ×
+  5 seuils d'intensité carbone (t CO₂e / M€ CA), écrits à la main. Seul
+  « sourçage » : le commentaire « une industrie lourde n'est pas jugée sur
+  la grille des services ».
+- **DISTINCTION IMPORTANTE avec le benchmark ESG supprimé le 2026-09-02** :
+  la variation sectorielle de l'intensité carbone est un **vrai fait
+  métier**, contrairement à une « moyenne ESG par secteur » qui, elle,
+  n'avait aucun fondement. Cette grille ne rend donc pas le rapport faux,
+  seulement **imprécis**.
+- **Ce qui rend le sujet sérieux malgré tout** : (i) les valeurs ne sont
+  adossées à aucune source publiée ; (ii) cette grille pilote le **SCORE**,
+  pas seulement le texte — elle influence la note lettrée du livrable ;
+  (iii) depuis le chantier clauses, une clause affirme « L'intensité
+  carbone est conforme à ce qu'on observe dans son secteur », ce qui
+  transforme la grille en affirmation de comparaison sectorielle.
+- **À faire** : adosser les seuils à une source réelle et citable (ADEME /
+  Base Carbone, intensités sectorielles publiées, ou équivalent), et citer
+  cette source dans la note méthodologique. **Même niveau de priorité que
+  le TF1 (point 1)** : à traiter dans le chantier « exactitude du scoring »,
+  avec le barème accidents et `corruption_cases`.
+
 ## 2. `corruption_cases` — absent du score
 
 - **Où** : `backend/esg_calculator.py`, fonction `calculate_governance_score`

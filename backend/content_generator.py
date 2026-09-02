@@ -40,6 +40,54 @@ def _pts(v):
     n = abs(int(round(v)))
     return f"{n} pt" if n == 1 else f"{n} pts"
 
+
+# ── Élision devant la raison sociale ──────────────────────────────────────
+# « le point fort de EcoGroup » se lit mal : il faut « d'EcoGroup ». Comme
+# le nom du client est une donnée d'entrée, l'élision ne peut pas être écrite
+# dans les gabarits — elle est appliquée après substitution, en ciblant
+# EXACTEMENT ce nom-là (jamais une transformation aveugle du texte).
+#
+# Ni « h » ni « y » ne déclenchent l'élision, volontairement :
+#  - h : distinguer h muet (« d'Hermès ») de h aspiré (« de Honda ») est
+#    lexical, pas algorithmique, et les raisons sociales sont souvent des
+#    noms étrangers ;
+#  - y : « d'Yves Rocher » serait juste, « d'Yaourts du Nord » serait faux.
+# Dans les deux cas on préfère l'élision MANQUANTE (maladroite mais lisible)
+# à l'élision FAUSSE (choquante). Une liste d'exceptions explicite est la
+# seule façon fiable de traiter ces noms, si le besoin se présente.
+_VOYELLES_ELISION = set("aeiouàâäéèêëîïôöùûüœæ")
+
+
+def _initiale_significative(nom: str) -> str:
+    """Premier caractère utile du nom — le PREMIER, pas la première lettre :
+    un nom commençant par un chiffre ne s'élide pas (« de 1Energie »)."""
+    for ch in (nom or "").strip().lstrip("«»\"'‘’“”( ·-"):
+        if not ch.isspace():
+            return ch.lower()
+    return ""
+
+
+def besoin_elision(nom: str) -> bool:
+    return _initiale_significative(nom) in _VOYELLES_ELISION
+
+
+def elider(texte: str, nom: str) -> str:
+    """« de <Nom> » → « d'<Nom> », « que <Nom> » → « qu'<Nom> ».
+
+    Ne touche au texte qu'aux endroits où le nom du client suit directement
+    « de » ou « que » : aucun autre mot n'est modifié."""
+    if not texte or not nom or not besoin_elision(nom):
+        return texte
+    import re as _re
+
+    def _remplacer(m):
+        mot = m.group(1)
+        if mot.lower() == "de":
+            return ("D'" if mot[0] == "D" else "d'") + nom
+        return ("Qu'" if mot[0] == "Q" else "qu'") + nom
+
+    return _re.sub(r"\b([Dd]e|[Qq]ue)\s+" + _re.escape(nom), _remplacer, texte)
+
 SECTOR_CTX = {
     "Énergie": ("le secteur énergétique, exposé aux enjeux de transition bas-carbone", "la décarbonation de ses actifs"),
     "Finance": ("le secteur financier, vecteur du financement durable", "l'intégration ESG dans ses critères d'investissement"),
@@ -261,9 +309,15 @@ def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
     """Dispatche vers le générateur FR ou EN selon request.language."""
     if getattr(request, "language", "fr") == "en":
         content = _generate_en(request, scores)
-    else:
-        content = _generate_fr(request, scores)
-    return deepen_content(request, scores, content)
+        return deepen_content(request, scores, content)
+
+    content = deepen_content(request, scores, _generate_fr(request, scores))
+    # Élision en dernier : le nom du client est une donnée d'entrée, les
+    # gabarits écrivent « de {n} » sans savoir s'il commence par une voyelle.
+    # Passe unique sur tous les paragraphes produits, ancien générateur ET
+    # système de clauses (l'anglais n'élide pas).
+    nom = request.company.name
+    return {k: (elider(v, nom) if isinstance(v, str) else v) for k, v in content.items()}
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1789,6 +1843,8 @@ def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
                      "delta": pil[cle] - meilleur,   # 0 pour le meilleur pilier
                      "reading": lect[role], "role": role})
     rows.sort(key=lambda r: -r["score"])
+    if not en:                       # l'anglais n'élide pas
+        title, insight = elider(title, name), elider(insight, name)
     return {"title": title, "insight": insight, "rows": rows,
             "lead": lead, "lag": lag, "gap": ecart}
 

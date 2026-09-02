@@ -422,6 +422,71 @@ def test_pack_contains_five_deliverables(client):
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
 
+# ── Élision devant la raison sociale ──────────────────────────────────────
+
+@pytest.mark.parametrize("nom,attendu", [
+    ("EcoGroup", True), ("Air Liquide", True), ("Orange", True),
+    ("Élan Conseil", True), ("Œnologie SAS", True), ("Ubisoft", True),
+    ("Total", False), ("Michelin", False), ("Société Générale", False),
+    # h : jamais elide, faute de pouvoir distinguer h muet et h aspire
+    ("Hermès", False), ("Honda", False),
+    # y : jamais elide non plus ("d'Yves" serait juste, "d'Yaourts" faux)
+    ("Yves Rocher", False), ("Yaourts du Nord", False),
+    # un nom commencant par un chiffre ne s'elide pas
+    ("1Energie", False), ("3M France", False),
+])
+def test_detection_elision(nom, attendu):
+    from content_generator import besoin_elision
+    assert besoin_elision(nom) is attendu, f"{nom!r} mal detecte"
+
+
+def test_elider_ne_touche_que_le_nom_du_client():
+    """La transformation cible le nom du client apres « de »/« que », et
+    rien d'autre : aucun autre mot du texte ne doit bouger."""
+    from content_generator import elider
+    txt = ("Le point fort de EcoGroup est la gouvernance. Les emissions de "
+           "EcoGroup baissent. La demarche de transition et le plan de "
+           "Total restent inchanges.")
+    out = elider(txt, "EcoGroup")
+    assert "d'EcoGroup est la gouvernance" in out
+    assert "emissions d'EcoGroup baissent" in out
+    assert "de EcoGroup" not in out
+    # intact : « de transition » (mot commun) et « de Total » (autre nom)
+    assert "demarche de transition" in out
+    assert "plan de Total" in out
+
+
+def test_elider_ne_fait_rien_sur_un_nom_a_consonne():
+    from content_generator import elider
+    txt = "Le point fort de Total est la gouvernance."
+    assert elider(txt, "Total") == txt
+
+
+@pytest.mark.parametrize("nom,attendu_dans,absent_du_texte", [
+    ("EcoGroup", "d'EcoGroup", "de EcoGroup"),
+    ("Total", "de Total", "d'Total"),
+])
+def test_elision_dans_le_texte_genere(nom, attendu_dans, absent_du_texte):
+    """Bout en bout sur le contenu genere : les paragraphes (ancien
+    generateur ET systeme de clauses) passent par l'elision."""
+    r = make_request()
+    r.company.name = nom
+    s = calculate_esg_scores(r)
+    blob = " ".join(str(v) for v in generate_esg_content(r, s).values() if v)
+    assert attendu_dans in blob
+    assert absent_du_texte not in blob
+
+
+def test_elision_du_titre_de_la_section_positionnement():
+    """Le titre « le point fort de X » est visible sur les trois formats."""
+    from content_generator import benchmark_verdict
+    r = make_request()
+    r.company.name = "EcoGroup"
+    s = calculate_esg_scores(r)
+    titre = benchmark_verdict(r, s)["title"]
+    assert "d'EcoGroup" in titre and "de EcoGroup" not in titre
+
+
 # ── Aucune comparaison à un secteur inventé, aucune couverture ESRS affirmée ─
 
 # La table SECTOR_BENCHMARKS (15 triplets ecrits a la main, sans source) a ete
