@@ -2,17 +2,14 @@
 Analyses ESG avancées, alignées sur les référentiels CSRD/ESRS, TCFD et SBTi.
 Tout est dérivé localement des données saisies — aucune donnée externe.
 
-- Double matérialité : positionnement des enjeux (impact vs. financier)
+- Priorisation des enjeux : positionnement (exposition vs. sensibilité
+  économique), dérivé des indicateurs déclarés — PAS une double matérialité
+  au sens de l'ESRS 1 (ni consultation des parties prenantes, ni cotation
+  dédiée des impacts, risques et opportunités)
 - Objectifs & trajectoire : cibles par pilier + trajectoire carbone type SBTi
 - Taxonomie UE : synthèse CA / CapEx / OpEx alignés
 """
-import hashlib
 from models import ESGRequest, ESGScores
-
-
-def _seed(name: str) -> float:
-    """Petite variation déterministe par entreprise (0..1)."""
-    return (int(hashlib.md5(name.encode()).hexdigest(), 16) % 1000) / 1000.0
 
 
 def _clamp(v, lo=0.5, hi=9.5):
@@ -34,19 +31,25 @@ _PILLAR_LABELS = {
 
 
 def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr") -> list:
-    """Retourne les enjeux ESG positionnés sur la matrice de double matérialité.
+    """Positionne les enjeux ESG sur la cartographie de PRIORISATION.
+
+    Ce n'est PAS une analyse de double matérialité au sens de l'ESRS 1 :
+    il n'y a ni consultation de parties prenantes, ni cotation dédiée des
+    impacts/risques/opportunités. Les deux dimensions sont estimées à
+    partir des indicateurs déclarés et des scores par pilier — le texte
+    généré (content_generator.deepen_content) doit le dire explicitement.
 
     Chaque enjeu : {label, impact, financial, pillar}
-    - impact (0-10)   : importance de l'impact de l'entreprise sur la société/environnement
-    - financial (0-10): importance financière de l'enjeu pour l'entreprise
-    Un score faible sur le pilier => enjeu plus matériel (davantage à risque / à traiter).
+    - impact (0-10)   : exposition estimée de l'entreprise sur l'enjeu
+    - financial (0-10): sensibilité économique estimée de l'enjeu
+    Un score faible sur le pilier => enjeu plus prioritaire (davantage à
+    risque / à traiter).
     """
     env, soc, gov = request.environmental, request.social, request.governance
     ML = _MAT_LABELS.get(lang, _MAT_LABELS["fr"])
-    jit = (_seed(request.company.name) - 0.5) * 1.2  # +/- 0.6 de décalage
 
-    def inv(score):  # score bas -> matérialité haute
-        return _clamp(9.5 - (score / 100.0) * 6.0 + jit)
+    def inv(score):  # score bas -> priorité haute
+        return _clamp(9.5 - (score / 100.0) * 6.0)
 
     topics = []
 
@@ -54,38 +57,38 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     e = scores.environmental_score
     # Changement climatique (ESRS E1) : toujours financièrement très matériel
     climate_impact = 9.0 if (env.co2_emissions_tonnes or 0) > 0 else 7.5
-    topics.append({"label": ML[0], "impact": _clamp(climate_impact + jit),
-                   "financial": _clamp(8.7 + jit * 0.5), "pillar": "env"})
+    topics.append({"label": ML[0], "impact": _clamp(climate_impact),
+                   "financial": _clamp(8.7), "pillar": "env"})
     # Énergie
     topics.append({"label": ML[1],
                    "impact": inv(env.renewable_energy_percent if env.renewable_energy_percent is not None else e),
-                   "financial": _clamp(7.0 + jit), "pillar": "env"})
+                   "financial": _clamp(7.0), "pillar": "env"})
     # Eau & ressources / économie circulaire (ESRS E3/E5)
     topics.append({"label": ML[2],
                    "impact": inv(env.waste_recycled_percent if env.waste_recycled_percent is not None else e),
-                   "financial": _clamp(5.2 + jit), "pillar": "env"})
+                   "financial": _clamp(5.2), "pillar": "env"})
     # Biodiversité (ESRS E4)
-    topics.append({"label": ML[3], "impact": _clamp(5.5 + jit),
-                   "financial": _clamp(4.0 + jit), "pillar": "env"})
+    topics.append({"label": ML[3], "impact": _clamp(5.5),
+                   "financial": _clamp(4.0), "pillar": "env"})
 
     # ── Social ─────────────────────────────────────────────────────
     sc = scores.social_score
     topics.append({"label": ML[4], "impact": inv(sc),
-                   "financial": _clamp(7.2 + jit), "pillar": "social"})
+                   "financial": _clamp(7.2), "pillar": "social"})
     topics.append({"label": ML[5],
                    "impact": inv(100 - min(100, (soc.accident_frequency_rate or 3) * 10)),
-                   "financial": _clamp(6.4 + jit), "pillar": "social"})
+                   "financial": _clamp(6.4), "pillar": "social"})
     topics.append({"label": ML[6],
                    "impact": inv(soc.female_employees_percent if soc.female_employees_percent is not None else sc),
-                   "financial": _clamp(5.0 + jit), "pillar": "social"})
+                   "financial": _clamp(5.0), "pillar": "social"})
 
     # ── Gouvernance ────────────────────────────────────────────────
     g = scores.governance_score
     topics.append({"label": ML[7], "impact": inv(g),
-                   "financial": _clamp(7.8 + jit), "pillar": "gov"})
+                   "financial": _clamp(7.8), "pillar": "gov"})
     topics.append({"label": ML[8],
-                   "impact": _clamp(6.0 + (gov.data_breaches or 0) * 1.5 + jit),
-                   "financial": _clamp(7.5 + jit), "pillar": "gov"})
+                   "impact": _clamp(6.0 + (gov.data_breaches or 0) * 1.5),
+                   "financial": _clamp(7.5), "pillar": "gov"})
     return topics
 
 

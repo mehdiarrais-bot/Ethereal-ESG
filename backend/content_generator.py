@@ -267,7 +267,7 @@ def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# APPROFONDISSEMENT (niveau rapport CSRD : IRO, gap analysis, méthodologie)
+# APPROFONDISSEMENT (priorisation des enjeux, gap analysis, méthodologie)
 # ══════════════════════════════════════════════════════════════════════════
 
 # Risques climatiques physiques & de transition par famille sectorielle.
@@ -385,50 +385,37 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     en = getattr(request, "language", "fr") == "en"
     name = request.company.name
     env = request.environmental
-    from esg_advanced import materiality_topics, sector_benchmark, esg_maturity
+    from esg_advanced import sector_benchmark, esg_maturity
     bm = sector_benchmark(request, scores)
     mat = esg_maturity(request, scores)
-    topics = sorted(materiality_topics(request, scores, "en" if en else "fr"),
-                    key=lambda t: t["impact"] + t["financial"], reverse=True)
-    top3 = topics[:3]
-
-    def t3(fmt_fr, fmt_en):
-        f = fmt_en if en else fmt_fr
-        return " ; ".join(f.format(l=tp["label"], i=tp["impact"], fi=tp["financial"]) for tp in top3)
-
-    # ── 1. Double matérialité : processus IRO + résultats réels ──────────
+    # ── 1. Cartographie de priorisation des enjeux ───────────────────────
+    # NE PAS réintroduire de méthodologie ESRS ici (IRO-1, SBM-3, sévérité ×
+    # étendue × irrémédiabilité, validation par la gouvernance) : le code
+    # ne fait rien de tout cela. materiality_topics() dérive deux valeurs
+    # des scores et des indicateurs déclarés, sans consultation de parties
+    # prenantes ni cotation dédiée. Le texte doit décrire ce calcul et
+    # nommer explicitement ce qu'il n'est pas. Verrouillé par un test.
+    annee = request.company.reporting_year
     if en:
         content["materiality"] = (
-            f"In accordance with the CSRD and ESRS 1/ESRS 2 (IRO-1, SBM-3), {name} conducted a double "
-            f"materiality assessment covering its own operations and its upstream and downstream value "
-            f"chain. The process followed four steps: (i) mapping of impacts, risks and opportunities "
-            f"(IROs) per ESRS topic, based on the reported indicators; (ii) rating of impact materiality "
-            f"(severity × scope × irremediability, plus likelihood for potential impacts) and financial "
-            f"materiality (magnitude × likelihood of effects on cash flows, cost of capital and access "
-            f"to financing) on a 0-10 scale; (iii) consolidation into the materiality matrix; "
-            f"(iv) internal validation by ESG governance. "
-            f"The assessment identifies the following as the most material topics for {name}: "
-            + t3("", "{l} (impact {i:.1f}/10, financial {fi:.1f}/10)") + ". "
-            f"These topics determine the ESRS disclosure requirements applicable to the report and "
-            f"concentrate the action plan resources; topics assessed as non-material are documented "
-            f"and re-examined at each annual review."
+            f"{name} presents a prioritisation map of its sustainability topics, derived from the "
+            f"indicators reported for the {annee} financial year and the scores obtained by pillar. "
+            f"Each topic is positioned along two dimensions estimated from the submitted data: its "
+            f"exposure and its economic sensitivity. This map is intended to guide action-plan "
+            f"priorities; it does not constitute a double materiality assessment within the meaning "
+            f"of ESRS 1, which requires formal stakeholder consultation and a dedicated assessment "
+            f"of impacts, risks and opportunities. It may serve as a preparatory step."
         )
     else:
         content["materiality"] = (
-            f"Conformément à la CSRD et aux normes ESRS 1/ESRS 2 (IRO-1, SBM-3), {name} a conduit une "
-            f"analyse de double matérialité couvrant ses opérations propres ainsi que sa chaîne de "
-            f"valeur amont et aval. Le processus a suivi quatre étapes : (i) cartographie des impacts, "
-            f"risques et opportunités (IRO) par thématique ESRS, à partir des indicateurs déclarés ; "
-            f"(ii) cotation de la matérialité d'impact (sévérité × étendue × irrémédiabilité, pondérée "
-            f"par la probabilité pour les impacts potentiels) et de la matérialité financière "
-            f"(ampleur × probabilité des effets sur les flux de trésorerie, le coût du capital et "
-            f"l'accès au financement) sur une échelle de 0 à 10 ; (iii) consolidation dans la matrice "
-            f"de matérialité ; (iv) validation interne par la gouvernance ESG. "
-            f"L'analyse identifie comme enjeux les plus matériels pour {name} : "
-            + t3("{l} (impact {i:.1f}/10, financier {fi:.1f}/10)", "") + ". "
-            f"Ces enjeux déterminent les exigences de publication ESRS applicables au rapport et "
-            f"concentrent les moyens du plan d'action ; les enjeux jugés non matériels sont documentés "
-            f"et réexaminés à chaque revue annuelle."
+            f"{name} présente une cartographie de priorisation de ses enjeux de durabilité, dérivée "
+            f"des indicateurs déclarés au titre de l'exercice {annee} et des scores obtenus par "
+            f"pilier. Chaque enjeu est positionné selon deux dimensions estimées à partir des données "
+            f"saisies : son exposition et sa sensibilité économique. Cette cartographie vise à "
+            f"orienter les priorités du plan d'action ; elle ne se substitue pas à une analyse de "
+            f"double matérialité au sens de l'ESRS 1, laquelle requiert une consultation formelle des "
+            f"parties prenantes et une cotation dédiée des impacts, risques et opportunités. Elle "
+            f"peut en constituer une étape préparatoire."
         )
 
     # ── 2. Risques climatiques : sectorisés + horizons + résilience ──────
@@ -883,15 +870,20 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         f"L'organisation réaffirme son engagement envers un reporting transparent et rigoureux, {ref}"
     )
 
-    # ── Double matérialité (CSRD/ESRS) ─────────────────────────────────────
+    # ── Cartographie de priorisation des enjeux ────────────────────────────
+    # Même exigence que dans deepen_content() : ne décrire que ce que le
+    # code calcule, et nommer ce que ce n'est pas. Ce bloc est aujourd'hui
+    # écrasé par deepen_content(), mais il doit rester juste — un texte
+    # faux « dormant » réapparaît le jour où l'appel change.
     materiality = (
-        f"Conformément aux exigences de la directive CSRD et des normes ESRS, {name} a conduit "
-        f"une analyse de double matérialité. Celle-ci évalue chaque enjeu ESG sous deux angles : "
-        f"la matérialité d'impact (effets de l'organisation sur la société et l'environnement) et "
-        f"la matérialité financière (effets des enjeux de durabilité sur la performance et la "
-        f"situation de {name}). Les enjeux situés dans le quadrant supérieur droit — combinant "
-        f"impact et importance financière élevés — constituent les priorités stratégiques du "
-        f"reporting extra-financier et concentrent les efforts de pilotage."
+        f"{name} présente une cartographie de priorisation de ses enjeux de durabilité, dérivée "
+        f"des indicateurs déclarés au titre de l'exercice {year} et des scores obtenus par "
+        f"pilier. Chaque enjeu est positionné selon deux dimensions estimées à partir des données "
+        f"saisies : son exposition et sa sensibilité économique. Cette cartographie vise à "
+        f"orienter les priorités du plan d'action ; elle ne se substitue pas à une analyse de "
+        f"double matérialité au sens de l'ESRS 1, laquelle requiert une consultation formelle des "
+        f"parties prenantes et une cotation dédiée des impacts, risques et opportunités. Elle "
+        f"peut en constituer une étape préparatoire."
     )
 
     # ── Objectifs & trajectoire (SBTi) ─────────────────────────────────────
@@ -1263,13 +1255,17 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
 
     # CSRD sections
+    # Voir la note du bloc FR équivalent : décrire le calcul réel, nommer
+    # ce que ce n'est pas. Dormant (écrasé par deepen_content) mais tenu à
+    # jour.
     materiality = (
-        f"In line with the CSRD directive and the ESRS standards, {name} has conducted a double "
-        f"materiality assessment. It evaluates each ESG topic from two angles: impact materiality "
-        f"(the organisation's effects on society and the environment) and financial materiality "
-        f"(the effects of sustainability matters on the performance and position of {name}). Topics "
-        f"in the upper-right quadrant — combining high impact and high financial importance — are the "
-        f"strategic priorities of extra-financial reporting and concentrate management efforts."
+        f"{name} presents a prioritisation map of its sustainability topics, derived from the "
+        f"indicators reported for the {year} financial year and the scores obtained by pillar. "
+        f"Each topic is positioned along two dimensions estimated from the submitted data: its "
+        f"exposure and its economic sensitivity. This map is intended to guide action-plan "
+        f"priorities; it does not constitute a double materiality assessment within the meaning "
+        f"of ESRS 1, which requires formal stakeholder consultation and a dedicated assessment "
+        f"of impacts, risks and opportunities. It may serve as a preparatory step."
     )
     ty = max(company.target_year, year + 1)
     targets_txt = f"{name} embeds its ESG approach in a quantified path of progress towards {ty}."

@@ -242,7 +242,10 @@ def _pillar_hex(colors, pillar):
 
 
 def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
-    """Matrice de double matérialité — points numérotés + légende latérale.
+    """Cartographie de priorisation des enjeux — points numérotés + légende
+    latérale. Axes : exposition estimée / sensibilité économique estimée.
+    Ce n'est pas une matrice de double matérialité au sens de l'ESRS 1 (voir
+    esg_advanced.materiality_topics).
 
     Chaque enjeu porte un numéro dans sa bulle et est repris dans une légende
     groupée par pilier : plus aucun chevauchement de labels, lisible pour un

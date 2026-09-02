@@ -40,13 +40,6 @@ _TERMS = [
      "company's impact on society and the environment, or the financial effect of that "
      "topic on the company."),
 
-    ("iro", "IRO",
-     "Impacts, Risques et Opportunités. Méthode de recensement et de cotation des "
-     "enjeux qui structure l'analyse de double matérialité.",
-     "IRO",
-     "Impacts, Risks and Opportunities — the identification and rating method "
-     "underpinning the double materiality assessment."),
-
     ("scopes", "Scopes 1, 2 et 3",
      "Découpage des émissions de gaz à effet de serre : émissions directes (1), "
      "émissions liées à l'énergie achetée (2), et toutes les autres émissions de la "

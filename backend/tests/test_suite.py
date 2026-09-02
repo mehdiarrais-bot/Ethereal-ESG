@@ -422,6 +422,105 @@ def test_pack_contains_five_deliverables(client):
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
 
+# ── Priorisation des enjeux : aucune méthodologie ESRS inventée ───────────
+
+# Marqueurs d'une méthodologie de double matérialité que le code NE CONDUIT
+# PAS (ni consultation des parties prenantes, ni cotation dédiée des IRO).
+# Le texte les affirmait pourtant jusqu'au 2026-09-02 : materiality_topics()
+# se contente de dériver deux valeurs des scores et des indicateurs déclarés.
+MARQUEURS_METHODO_INVENTEE = [
+    "IRO-1", "SBM-3", "sévérité ×", "severity ×", "irrémédiab", "irremediab",
+    "validation interne par la gouvernance", "internal validation by ESG governance",
+]
+
+# À distinguer du précédent : l'expression « double matérialité » RESTE
+# légitime dans le livrable, mais UNIQUEMENT pour s'en démarquer ("ne se
+# substitue pas à..."). Ce sont les tournures affirmant l'avoir conduite qui
+# sont interdites.
+AFFIRMATIONS_INTERDITES = [
+    "a conduit une analyse de double matérialité",
+    "conducted a double materiality assessment",
+    "a conduit une double matérialité",
+    "analyse de double matérialité couvrant",
+]
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_materialite_ne_revendique_pas_de_methodologie_esrs(lang):
+    """Le texte de priorisation ne doit revendiquer ni processus IRO, ni
+    cotation sévérité × étendue × irrémédiabilité, ni validation par une
+    gouvernance — rien de tout cela n'est calculé."""
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    txt = generate_esg_content(r, s)["materiality"]
+    for marqueur in MARQUEURS_METHODO_INVENTEE:
+        assert marqueur.lower() not in txt.lower(), f"{marqueur!r} present dans le texte {lang}"
+    for affirmation in AFFIRMATIONS_INTERDITES:
+        assert affirmation.lower() not in txt.lower(), f"{affirmation!r} present dans le texte {lang}"
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_materialite_dit_explicitement_ce_qu_elle_n_est_pas(lang):
+    """La mise en garde est le coeur de la correction : sans elle, une
+    cartographie dérivée des scores se lit comme une analyse réglementaire."""
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    txt = generate_esg_content(r, s)["materiality"]
+    if lang == "fr":
+        assert "cartographie de priorisation" in txt.lower()
+        assert "ne se substitue pas" in txt.lower()
+        assert "esrs 1" in txt.lower()
+    else:
+        assert "prioritisation map" in txt.lower()
+        assert "does not constitute" in txt.lower()
+        assert "esrs 1" in txt.lower()
+
+
+def test_materialite_absente_des_livrables_generes():
+    """Bout en bout : les marqueurs ne doivent apparaître dans AUCUN des
+    trois formats (PDF, PPTX, Word), titres et légendes compris."""
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from ppt_generator import generate_pptx
+    from docx_generator import generate_word_report
+    from main import build_advanced_charts
+
+    r = make_request()
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+
+    pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    textes = {"pdf": re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))}
+
+    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
+                      ("docx", generate_word_report(r, s, c, build_advanced_charts(r, s, light_bg=True)))):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            textes[nom] = " ".join(
+                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
+
+    for nom, blob in textes.items():
+        for marqueur in MARQUEURS_METHODO_INVENTEE:
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+        for affirmation in AFFIRMATIONS_INTERDITES:
+            assert affirmation.lower() not in blob.lower(), f"{affirmation!r} present dans le {nom}"
+
+
+def test_priorisation_ne_depend_pas_du_nom_de_lentreprise():
+    """Le jit (decalage +/-0,6 derive du hash du nom) faisait varier toutes
+    les notes selon la raison sociale : deux entreprises aux donnees
+    identiques n'avaient pas la meme cartographie. Supprime."""
+    from esg_advanced import materiality_topics
+    a = make_request()
+    b = make_request()
+    b.company.name = "Zephyr Industries SAS"
+    ta = materiality_topics(a, calculate_esg_scores(a))
+    tb = materiality_topics(b, calculate_esg_scores(b))
+    assert [(t["impact"], t["financial"]) for t in ta] == \
+           [(t["impact"], t["financial"]) for t in tb]
+
+
 def test_glossary_filters_to_report_content():
     from glossary import glossary_entries
     full = glossary_entries(make_request())
