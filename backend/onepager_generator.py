@@ -19,7 +19,7 @@ from report_generator import PALETTE, PDF_STYLES, resolve_family, pdf_txt
 
 def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
     from content_generator import risks_opportunities, enriched_recommendations
-    from esg_advanced import sector_benchmark, esg_maturity
+    from esg_advanced import esg_maturity
 
     en = request.language == "en"
     pal = PALETTE.get(request.aesthetic_theme, PALETTE[AestheticTheme.CORPORATE_BLUE])
@@ -33,7 +33,6 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
     W, H = A4
     M = 1.4 * cm
 
-    bm = sector_benchmark(request, scores)
     mat = esg_maturity(request, scores)
     ro = risks_opportunities(request, scores)
     recs = enriched_recommendations(request, scores)[:3]
@@ -92,26 +91,21 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
 
     # ── Barres par pilier vs secteur ───────────────────────────────────────
     y0 = H - 5.4 * cm
-    txt(M, y0, ("PILLARS VS SECTOR" if en else "PILIERS VS SECTEUR"), fb, 9, pal["secondary"])
-    bars = [(TR["chart_env"], scores.environmental_score, bm["avg"]["env"], pal["env"]),
-            (TR["chart_soc"], scores.social_score, bm["avg"]["social"], pal["social"]),
-            (TR["chart_gov"], scores.governance_score, bm["avg"]["gov"], pal["gov"])]
+    # Repère sectoriel retiré : il pointait une moyenne inventée (cf. note
+    # dans esg_advanced.py). Restent les scores absolus, qui sont vrais.
+    txt(M, y0, ("PILLAR SCORES" if en else "SCORES PAR PILIER"), fb, 9, pal["secondary"])
+    bars = [(TR["chart_env"], scores.environmental_score, pal["env"]),
+            (TR["chart_soc"], scores.social_score, pal["social"]),
+            (TR["chart_gov"], scores.governance_score, pal["gov"])]
     bw = W - 2 * M - 4.2 * cm
-    for i, (lab, v, avg, col) in enumerate(bars):
+    for i, (lab, v, col) in enumerate(bars):
         by = y0 - 0.75 * cm - i * 0.85 * cm
         txt(M, by + 0.06 * cm, lab, fb, 9, pal["text"])
         bx = M + 3.2 * cm
         c.setFillColor(colors.HexColor("#E8EDF3")); c.roundRect(bx, by, bw, 0.32 * cm, 3, fill=1, stroke=0)
         c.setFillColor(col); c.roundRect(bx, by, bw * min(100, v) / 100, 0.32 * cm, 3, fill=1, stroke=0)
-        # tick secteur
-        tx = bx + bw * min(100, avg) / 100
-        c.setStrokeColor(pal["primary"]); c.setLineWidth(1.4)
-        c.line(tx, by - 0.08 * cm, tx, by + 0.4 * cm)
         c.setFont(fb, 9); c.setFillColor(col)
         c.drawString(bx + bw + 0.15 * cm, by + 0.04 * cm, f"{v:.0f}")
-    txt(M + 3.2 * cm, y0 - 0.75 * cm - 3 * 0.85 * cm + 0.25 * cm,
-        ("| sector reference" if en else "| repère : référence sectorielle interne"),
-        fi, 7.5, colors.HexColor("#7F8C8D"))
 
     # ── Digest 2×2 ────────────────────────────────────────────────────────
     gy = y0 - 4.35 * cm

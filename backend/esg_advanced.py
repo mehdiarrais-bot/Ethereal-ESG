@@ -153,60 +153,19 @@ def taxonomy_summary(request: ESGRequest):
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# BENCHMARK SECTORIEL & MATURITÉ ESG (diagnostic stratégique)
-# Base de référence interne — moyennes ESG typiques par secteur (marché ETI/PME).
+# MATURITÉ ESG (diagnostic stratégique)
+#
+# NOTE : il n'y a volontairement PLUS de benchmark sectoriel ici. Le code
+# portait une table SECTOR_BENCHMARKS de 15 triplets (E, S, G) écrits à la
+# main, sans échantillon, sans méthode, sans date, sans source — et le
+# livrable en imprimait des écarts chiffrés ("+13 pts au-dessus de la
+# référence sectorielle"). Un chiffre inventé assorti d'un avertissement
+# reste un chiffre inventé : la comparaison externe a été retirée, pas
+# requalifiée. Le positionnement affiché est désormais interne (comparaison
+# des trois piliers entre eux), ce qui est vrai sans référence externe.
+# Une comparaison sourcée reste possible à terme : l'entreprise à
+# elle-même, exercice après exercice (score_history) — cf. DETTE.md.
 # ══════════════════════════════════════════════════════════════════════════
-
-SECTOR_BENCHMARKS = {
-    "énergie": (48, 58, 62), "energy": (48, 58, 62),
-    "finance": (68, 62, 70), "assurance": (68, 62, 70),
-    "industrie": (52, 56, 58), "industry": (52, 56, 58),
-    "chimie": (46, 55, 60), "chemical": (46, 55, 60),
-    "btp": (50, 52, 54), "construction": (50, 52, 54),
-    "agroalimentaire": (54, 58, 56), "agri": (54, 58, 56),
-    "numérique": (60, 60, 62), "tech": (60, 60, 62),
-    "logistique": (47, 54, 55), "transport": (47, 54, 55),
-    "pharmaceutique": (58, 62, 66), "pharma": (58, 62, 66),
-    "commerce": (53, 56, 56), "distribution": (53, 56, 56), "retail": (53, 56, 56),
-    "immobilier": (55, 54, 58), "real estate": (55, 54, 58),
-    "automobile": (50, 56, 58),
-    "télécom": (58, 60, 63), "telecom": (58, 60, 63),
-    "services": (60, 60, 60),
-    "tourisme": (52, 58, 54), "hôtellerie": (52, 58, 54),
-}
-_DEFAULT_BENCH = (55, 56, 58)
-
-
-def sector_benchmark(request: ESGRequest, scores: ESGScores) -> dict:
-    """Compare l'entreprise à la moyenne de son secteur (référence interne)."""
-    sector = (request.company.sector or "").lower()
-    avg = _DEFAULT_BENCH
-    for k, v in SECTOR_BENCHMARKS.items():
-        if k in sector:
-            avg = v
-            break
-    env_a, soc_a, gov_a = avg
-    glob_a = round(env_a * 0.40 + soc_a * 0.35 + gov_a * 0.25, 1)
-    rows = [
-        ("env", scores.environmental_score, env_a),
-        ("social", scores.social_score, soc_a),
-        ("gov", scores.governance_score, gov_a),
-        ("global", scores.total_esg_score, glob_a),
-    ]
-    deltas = {k: round(c - a, 1) for k, c, a in rows}
-    # position globale
-    gd = deltas["global"]
-    if gd >= 8:
-        pos = "leader"
-    elif gd >= 2:
-        pos = "above"
-    elif gd >= -2:
-        pos = "inline"
-    else:
-        pos = "below"
-    return {"avg": {"env": env_a, "social": soc_a, "gov": gov_a, "global": glob_a},
-            "deltas": deltas, "position": pos, "sector": request.company.sector}
-
 
 _MATURITY = [
     (0, 45, "initiated"), (45, 58, "structuring"), (58, 70, "structured"),

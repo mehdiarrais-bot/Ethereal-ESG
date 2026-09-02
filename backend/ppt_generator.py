@@ -766,8 +766,6 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                  font_size=16, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=ft)
         add_text(slide, _mat["next_hint"], cx, Inches(5.95), cw, Inches(0.7),
                  font_size=12.5, color=theme["text_dark"], font=fb)
-        add_text(slide, t["bench_note"], Inches(0.4), Inches(6.95), Inches(7.5), Inches(0.35),
-                 font_size=9, italic=True, color=theme["muted"], font=fb)
 
     # ── SLIDE 2b1: Trajectoire pluriannuelle (si historique client) ──────
     if "trend" in chart_images:

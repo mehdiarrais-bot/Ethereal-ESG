@@ -422,6 +422,90 @@ def test_pack_contains_five_deliverables(client):
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
 
+# ── Aucune comparaison à un secteur inventé, aucune couverture ESRS affirmée ─
+
+# La table SECTOR_BENCHMARKS (15 triplets ecrits a la main, sans source) a ete
+# supprimee le 2026-09-02, avec tous les ecarts chiffres qu'elle imprimait.
+# S'y ajoutait une affirmation de couverture normative que rien ne verifie.
+MARQUEURS_BENCHMARK_INVENTE = [
+    "référence sectorielle", "internal sector reference", "sector reference",
+    "moyenne de votre secteur", "moyenne de son secteur", "sector average",
+    "devance la moyenne", "surperforme son secteur", "outperforms its sector",
+    "vs secteur", "vs sector", "Surperformance sectorielle",
+    "marché ETI/PME", "marché PME/ETI", "mid-market",
+]
+MARQUEURS_COUVERTURE_ESRS = [
+    "couvre les principales exigences",
+    "covers the main requirements",
+    "répond aux attendus des normes",
+    "addresses ESRS G1",
+    "s'inscrit dans le périmètre de la norme ESRS S1",
+    "falls within the scope of ESRS S1",
+]
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucune_comparaison_sectorielle_dans_le_texte(lang):
+    """Ni ecart chiffre vs un secteur invente, ni affirmation de couverture
+    normative — les deux etaient concatenees sur les trois piliers."""
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    blob = " ".join(str(v) for v in c.values() if v)
+    for marqueur in MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_COUVERTURE_ESRS:
+        assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
+
+
+def test_aucune_comparaison_sectorielle_dans_les_livrables():
+    """Bout en bout sur les cinq livrables : PDF, PPTX, Word, one-pager."""
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from ppt_generator import generate_pptx
+    from docx_generator import generate_word_report
+    from onepager_generator import generate_onepager_pdf
+    from main import build_advanced_charts
+
+    r = make_request()
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    ch_l = build_advanced_charts(r, s, light_bg=True)
+
+    textes = {}
+    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
+                      ("onepager", generate_onepager_pdf(r, s))):
+        doc = fitz.open(stream=data, filetype="pdf")
+        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
+                      ("docx", generate_word_report(r, s, c, ch_l))):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            textes[nom] = " ".join(
+                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
+
+    for nom, blob in textes.items():
+        for marqueur in MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_COUVERTURE_ESRS:
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+
+
+def test_positionnement_interne_est_vrai_et_coherent():
+    """Le remplacement doit dire vrai : le pilier note "point fort" est bien
+    le mieux note, celui note "priorite" le moins bien, et l'ecart affiche
+    correspond a la difference reelle."""
+    from content_generator import benchmark_verdict
+    r = make_request()
+    s = calculate_esg_scores(r)
+    bv = benchmark_verdict(r, s)
+    pil = {"env": s.environmental_score, "social": s.social_score, "gov": s.governance_score}
+    assert bv["lead"] == max(pil, key=lambda k: pil[k])
+    assert bv["lag"] == min(pil, key=lambda k: pil[k])
+    assert bv["gap"] == pil[bv["lead"]] - pil[bv["lag"]]
+    meilleur = pil[bv["lead"]]
+    for row in bv["rows"]:
+        assert row["delta"] == pil[row["key"]] - meilleur
+    assert [r_["score"] for r_ in bv["rows"]] == sorted((r_["score"] for r_ in bv["rows"]), reverse=True)
+    assert bv["rows"][0]["delta"] == 0        # le meilleur pilier a un ecart nul
+
+
 # ── Priorisation des enjeux : aucune méthodologie ESRS inventée ───────────
 
 # Marqueurs d'une méthodologie de double matérialité que le code NE CONDUIT

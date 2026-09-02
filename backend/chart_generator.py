@@ -596,8 +596,14 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def benchmark_chart(comp: dict, avg: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
-    """Barres groupées : entreprise vs. moyenne du secteur (E/S/G/Global)."""
+def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+    """Barres des trois piliers + score global, série unique.
+
+    La série « Secteur » a été retirée : elle s'appuyait sur une table de
+    moyennes sectorielles inventée (cf. note dans esg_advanced.py). Ce qui
+    reste est vrai sans référence externe — les scores de l'entreprise, et
+    l'écart de chaque pilier au meilleur des trois.
+    """
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
@@ -606,29 +612,28 @@ def benchmark_chart(comp: dict, avg: dict, theme: AestheticTheme, light_bg: bool
 
     cats = [LB["chart_env"], LB["chart_soc"], LB["chart_gov"], LB["chart_global"]]
     keys = ["env", "social", "gov", "global"]
-    you = [comp[k] for k in keys]
-    sect = [avg[k] for k in keys]
+    vals = [comp[k] for k in keys]
     ypos = list(range(len(cats)))
-    h = 0.34
-    you_label = "Vous" if lang != "en" else "You"
-    sect_label = "Secteur" if lang != "en" else "Sector"
     bar_cols = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
 
-    ax.barh([y + h/2 for y in ypos], you, height=h, color=bar_cols, zorder=3, label=you_label)
-    ax.barh([y - h/2 for y in ypos], sect, height=h, color=colors["secondary"], alpha=0.45, zorder=3, label=sect_label)
-    for y, (v, sv) in enumerate(zip(you, sect)):
-        ax.text(v + 1.5, y + h/2, f"{v:.0f}", va="center", fontsize=10, fontweight="bold", color=colors["text"])
-        ax.text(sv + 1.5, y - h/2, f"{sv:.0f}", va="center", fontsize=9, color=colors["secondary"])
-        d = v - sv
-        ax.text(107, y, f"{'+' if d>=0 else ''}{d:.0f}", va="center", ha="right", fontsize=10,
-                fontweight="bold", color=(colors["env"] if d >= 0 else "#E74C3C"))
+    ax.barh(ypos, vals, height=0.5, color=bar_cols, zorder=3)
+    meilleur = max(vals[:3])          # meilleur des trois piliers, hors global
+    for y, v in enumerate(vals):
+        ax.text(v + 1.5, y, f"{v:.0f}", va="center", fontsize=11,
+                fontweight="bold", color=colors["text"])
+        if y < 3:                     # écart interne : sur les piliers seulement
+            d = v - meilleur
+            ax.text(107, y, LB["bench_best"] if d == 0 else f"{d:.0f} pts",
+                    va="center", ha="right", fontsize=9.5,
+                    fontweight="bold" if d == 0 else "normal",
+                    color=colors["env"] if d == 0 else colors["secondary"])
 
     ax.set_yticks(ypos); ax.set_yticklabels(cats, color=colors["text"], fontsize=11)
-    ax.set_xlim(0, 112); ax.set_ylim(-0.6, len(cats)-0.4)
+    ax.set_xlim(0, 112); ax.set_ylim(-0.6, len(cats) - 0.4)
+    ax.set_xlabel(LB["chart_score_axis"], color=colors["text"], fontsize=10)
     ax.tick_params(colors=colors["text"])
     ax.spines[["top", "right"]].set_visible(False)
     ax.spines[["left", "bottom"]].set_color(colors["secondary"])
-    ax.legend(loc="lower right", fontsize=9, framealpha=0.15, labelcolor=colors["text"])
     plt.tight_layout()
     buf = io.BytesIO()
     plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=bg, edgecolor="none")

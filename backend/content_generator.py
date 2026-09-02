@@ -385,8 +385,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     en = getattr(request, "language", "fr") == "en"
     name = request.company.name
     env = request.environmental
-    from esg_advanced import sector_benchmark, esg_maturity
-    bm = sector_benchmark(request, scores)
+    from esg_advanced import esg_maturity
     mat = esg_maturity(request, scores)
     # ── 1. Cartographie de priorisation des enjeux ───────────────────────
     # NE PAS réintroduire de méthodologie ESRS ici (IRO-1, SBM-3, sévérité ×
@@ -461,38 +460,28 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"stratégique."
         )
 
-    # ── 3. Analyse ESRS + benchmark par pilier (phrase de clôture) ───────
-    def bench_sentence(delta, en):
-        if en:
-            pos = "above" if delta >= 0 else "below"
-            return f" The pillar stands {_pts(delta)} {pos} the internal sector reference"
-        pos = "au-dessus de" if delta >= 0 else "en retrait de"
-        return f" Le pilier se situe {_pts(delta)} {pos} la référence sectorielle interne"
-
-    esrs_close = {
-        "environmental": (" et couvre les principales exigences des normes ESRS E1 (climat) et E5 (économie circulaire).",
-                          " and covers the main requirements of ESRS E1 (climate) and E5 (circular economy)."),
-        "social": (" ; le reporting s'inscrit dans le périmètre de la norme ESRS S1 (effectifs propres).",
-                   "; reporting falls within the scope of ESRS S1 (own workforce)."),
-        "governance": (" ; le dispositif répond aux attendus des normes ESRS G1 (conduite des affaires) et ESRS 2 (gouvernance des enjeux de durabilité).",
-                       "; the framework addresses ESRS G1 (business conduct) and ESRS 2 (sustainability governance)."),
-    }
-    for key, dkey in (("environmental", "env"), ("social", "social"), ("governance", "gov")):
-        close_fr, close_en = esrs_close[key]
-        content[key] = (content[key] + bench_sentence(bm["deltas"][dkey], en)
-                        + (close_en if en else close_fr))
+    # ── 3. (supprimé) Clôture benchmark + couverture ESRS par pilier ─────
+    # Deux affirmations concaténées aveuglément sur les trois piliers ont été
+    # retirées ici, et ne doivent pas revenir :
+    #  1. « Le pilier se situe X pts au-dessus de la référence sectorielle
+    #     interne » — la référence en question était une table de 15 triplets
+    #     écrits à la main, sans source (cf. note dans esg_advanced.py) ;
+    #  2. « couvre les principales exigences des normes ESRS E1/E5 » (et les
+    #     équivalents S1, G1/ESRS 2) — une affirmation de couverture
+    #     normative que RIEN dans le code ne vérifie. Même famille que la
+    #     matérialité fictive : on ne déclare pas couvrir une norme sans
+    #     avoir contrôlé un seul point de données.
+    # Verrouillé par un test.
 
     # ── 4. Synthèse exécutive : ajout du « so what » décisionnel ─────────
     gaps = _esrs_gaps(request, en)
-    gd = bm["deltas"]["global"]
     stage_fr = {"initiated": "initiée", "structuring": "en structuration", "structured": "structurée",
                 "advanced": "avancée", "exemplary": "exemplaire"}
     stage_en = {"initiated": "initiated", "structuring": "structuring", "structured": "structured",
                 "advanced": "advanced", "exemplary": "exemplary"}
     if en:
-        pos = f"{_pts(gd)} {'above' if gd >= 0 else 'below'} the sector reference"
         content["executive_summary"] += (
-            f" Overall, the profile stands {pos}, with an ESG maturity assessed as "
+            f" Overall, ESG maturity is assessed as "
             f"{stage_en.get(mat.get('key', 'structured'), 'structured')} ({mat['stage']}/5). "
             + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
                f"secure CSRD readiness and strengthen investor confidence." if gaps else
@@ -500,9 +489,8 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                f"assurance and investor dialogue.")
         )
     else:
-        pos = f"{_pts(gd)} {'au-dessus' if gd >= 0 else 'en retrait'} de la référence sectorielle"
         content["executive_summary"] += (
-            f" Au global, le profil se situe {pos}, avec une maturité ESG évaluée comme "
+            f" Au global, la maturité ESG est évaluée comme "
             f"{stage_fr.get(mat.get('key', 'structured'), 'structurée')} ({mat['stage']}/5). "
             + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
                f"{gaps[0]} — constitue le levier le plus rapide pour sécuriser la conformité CSRD "
@@ -623,8 +611,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"notée sur une grille différenciée par famille sectorielle (services, industrie, "
             f"transport, énergie…) ; le score global est la moyenne "
             f"pondérée des trois piliers, et la notation lettrée (échelle interne AAA-CCC) est indicative — "
-            f"elle ne constitue pas une notation d'agence. La comparaison sectorielle s'appuie sur une base de référence "
-            f"interne du marché PME/ETI et n'implique aucun transfert de données externe — l'ensemble du "
+            f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
+            f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
+            f"piliers entre eux. Aucun transfert de données externe n'a lieu — l'ensemble du "
             f"rapport est produit localement. Limites : certains indicateurs reposent sur des données "
             f"déclaratives et des estimations ; ils sont affinés à mesure que les dispositifs de mesure "
             f"gagnent en maturité.{gap_txt}"
@@ -1667,10 +1656,6 @@ def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
     Retourne {value, unit, label, statement}."""
     en = getattr(request, "language", "fr") == "en"
     env, tx = request.environmental, request.taxonomy
-    from esg_advanced import sector_benchmark
-    bm = sector_benchmark(request, scores)
-    gd = bm["deltas"]["global"]
-
     # 1) Scope 3 dominant dans l'empreinte carbone
     scopes = [env.scope1_emissions, env.scope2_emissions, env.scope3_emissions]
     if all(v is not None for v in scopes) and sum(scopes) > 0 and env.scope3_emissions >= 0.5 * sum(scopes):
@@ -1680,12 +1665,9 @@ def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
                 "statement": ("La chaîne de valeur, principal terrain d'action climat." if not en
                               else "The value chain is the main climate battleground.")}
 
-    # 2) Avance sectorielle nette
-    if gd >= 4:
-        return {"value": f"+{gd:.0f}", "unit": "pts",
-                "label": "au-dessus de la moyenne de votre secteur" if not en else "above your sector average",
-                "statement": ("Un positionnement ESG différenciant, à valoriser commercialement." if not en
-                              else "A differentiating ESG position — worth leveraging commercially.")}
+    # 2) (supprimé) « +X pts au-dessus de la moyenne de votre secteur » :
+    #    reposait sur une référence sectorielle inventée. La cascade remonte
+    #    donc au candidat suivant. Ne pas réintroduire sans source réelle.
 
     # 3) Alignement Taxonomie fort
     tax_vals = [v for v in ((tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)
@@ -1766,33 +1748,49 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
 # ══════════════════════════════════════════════════════════════════════════
 
 def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
-    """Titre-conclusion + lecture du positionnement vs. secteur."""
-    from esg_advanced import sector_benchmark
+    """Titre-conclusion + lecture du positionnement INTERNE des piliers.
+
+    Ne compare plus l'entreprise à un secteur : la table de référence
+    sectorielle qui servait ici était inventée (cf. note dans
+    esg_advanced.py). Tout ce qui suit se déduit des trois scores de
+    l'entreprise entre eux — vrai sans aucune donnée externe.
+
+    Renvoie aussi `rows` : le classement prêt à afficher (pilier, score,
+    écart au meilleur pilier, lecture), consommé par les trois formats.
+    """
     en = getattr(request, "language", "fr") == "en"
-    bm = sector_benchmark(request, scores)
-    gd = bm["deltas"]["global"]
-    name, sector = request.company.name, request.company.sector
-    d = bm["deltas"]
+    name = request.company.name
+    pil = {"env": scores.environmental_score, "social": scores.social_score,
+           "gov": scores.governance_score}
     labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
               "en": {"env": "environment", "social": "social", "gov": "governance"}}[("en" if en else "fr")]
-    lead = max(("env", "social", "gov"), key=lambda k: d[k])
-    lag = min(("env", "social", "gov"), key=lambda k: d[k])
-    agd = abs(gd)
+    lead = max(pil, key=lambda k: pil[k])
+    lag = min(pil, key=lambda k: pil[k])
+    ecart = pil[lead] - pil[lag]
+
     if en:
-        title = (f"{name} outperforms its sector by {gd:.0f} points" if gd >= 8 else
-                 f"{name} is above its sector average (+{gd:.0f} pts)" if gd >= 2 else
-                 f"{name} is in line with its sector average" if gd >= -2 else
-                 f"{name} is {agd:.0f} pts below its sector average")
-        insight = (f"Your edge is on {labels[lead]} (+{d[lead]:.0f} pts vs sector); "
-                   f"{labels[lag]} ({d[lag]:+.0f} pts) is where the gap must be closed.")
+        title = (f"{labels[lead].capitalize()} is {name}'s strong point, "
+                 f"{labels[lag]} its priority")
+        insight = (f"{ecart:.0f} points separate your most solid pillar from your most "
+                   f"fragile one — the internal gap to close first.")
+        lect = {"lead": "Strong point", "lag": "Priority", "mid": "Consolidated"}
     else:
-        title = (f"{name} surperforme son secteur de {gd:.0f} points" if gd >= 8 else
-                 f"{name} devance la moyenne de son secteur (+{gd:.0f} pts)" if gd >= 2 else
-                 f"{name} est aligné sur la moyenne de son secteur" if gd >= -2 else
-                 f"{name} se situe {agd:.0f} pts sous la moyenne de son secteur")
-        insight = (f"Votre avance se joue sur {labels[lead]} (+{d[lead]:.0f} pts vs secteur) ; "
-                   f"{labels[lag]} ({d[lag]:+.0f} pts) est l'écart à combler en priorité.")
-    return {"title": title, "insight": insight, "bm": bm}
+        title = (f"{labels[lead].capitalize()} est le point fort de {name}, "
+                 f"{labels[lag]} sa priorité")
+        insight = (f"{ecart:.0f} points séparent votre pilier le plus solide du plus "
+                   f"fragile — l'écart interne à réduire en priorité.")
+        lect = {"lead": "Point fort", "lag": "Priorité", "mid": "Consolidé"}
+
+    meilleur = pil[lead]
+    rows = []
+    for cle in ("env", "social", "gov"):
+        role = "lead" if cle == lead else ("lag" if cle == lag else "mid")
+        rows.append({"key": cle, "score": pil[cle],
+                     "delta": pil[cle] - meilleur,   # 0 pour le meilleur pilier
+                     "reading": lect[role], "role": role})
+    rows.sort(key=lambda r: -r["score"])
+    return {"title": title, "insight": insight, "rows": rows,
+            "lead": lead, "lag": lag, "gap": ecart}
 
 
 def maturity_text(request: ESGRequest, scores: ESGScores) -> dict:
@@ -1851,8 +1849,6 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     env, soc, gov = request.environmental, request.social, request.governance
     tx = request.taxonomy
     rev = request.company.revenue_eur
-    from esg_advanced import sector_benchmark
-    bm = sector_benchmark(request, scores)
 
     def T(fr, tag_fr, en_, tag_en, imp=None, lik=None):
         """imp/lik : 'H' (élevé/probable) ou 'M' (modéré/possible) → priorité P1-P3."""
@@ -1910,9 +1906,9 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     if env.waste_recycled_percent is not None and env.waste_recycled_percent >= 60:
         opps.append(T("Économie circulaire : baisse des coûts matières et déchets", "Coûts",
                       "Circular economy: lower materials and waste costs", "Costs"))
-    if bm["deltas"]["global"] >= 2:
-        opps.append(T("Surperformance sectorielle : différenciation commerciale et appels d'offres", "Marché",
-                      "Sector outperformance: commercial differentiation and tenders", "Market"))
+    # (supprimé) « Surperformance sectorielle » : dépendait d'une référence
+    # sectorielle inventée. Le fallback générique en fin de fonction garantit
+    # qu'au moins trois opportunités restent listées.
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
         opps.append(T("Bilan carbone complet : avance sur la conformité CSRD", "Conformité",
                       "Full carbon footprint: ahead on CSRD compliance", "Compliance"))

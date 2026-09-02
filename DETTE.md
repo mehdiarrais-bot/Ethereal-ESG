@@ -6,6 +6,20 @@ consignés ici pour ne pas être perdus. À traiter en bloc, après le socle de
 clauses (`backend/bands.py`, `backend/composer.py`, `backend/clauses/`) et
 la rédaction des clauses elles-mêmes.
 
+## 0. ÉVOLUTION PRIORITAIRE — donner un contenu propre à la section Positionnement
+
+- **Contexte** : la comparaison à une référence sectorielle inventée a été
+  retirée (chantier du 2026-09-02). La section « Positionnement » affiche
+  désormais un classement **interne** des trois piliers — vrai, mais proche
+  d'un doublon du tableau de bord de la page 2.
+- **La vraie valeur d'un outil de suivi pluriannuel** : comparer l'entreprise
+  **à elle-même**, exercice après exercice. La donnée existe déjà
+  (`score_history` sur `ESGRequest`, déjà utilisée par la page trajectoire).
+- **À faire** : reconstruire la section sur cette comparaison temporelle
+  (évolution par pilier, écart au précédent exercice, tendance). Sourcé,
+  vrai, et sans doublon. Limite connue : rien à afficher au premier
+  exercice — prévoir le repli sur le classement interne actuel.
+
 ## 1. `accident_frequency_rate` — barème non recalibré
 
 - **Où** : `backend/esg_calculator.py:132-135` (score), recopié tel quel
@@ -69,6 +83,17 @@ la rédaction des clauses elles-mêmes.
 - **À faire** : passer tout le système en `12 000` **d'un seul coup**,
   ancien générateur + composer, avec un test de non-régression sur le
   rendu. Ne pas le faire section par section.
+
+## 6. `include_benchmarks` : drapeau défini mais jamais lu
+
+- **Où** : `backend/models.py:245` définit `include_benchmarks: bool = True`.
+- **Constat** : aucun générateur ne teste ce drapeau (`grep` : 2 occurrences
+  en tout, le modèle et un test). La section correspondante s'affiche donc
+  toujours, même si le consultant la désactive dans le formulaire.
+- **Décision** : non traité pendant le chantier « référence sectorielle »
+  — le drapeau perd en partie son objet maintenant que la comparaison
+  externe a disparu. À réévaluer : soit le câbler sur la section
+  Positionnement, soit le retirer du modèle et du formulaire.
 
 ---
 

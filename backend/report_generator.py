@@ -929,10 +929,9 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     for w in scores.weaknesses:
         story.append(Paragraph(f"–  {esc(w)}", styles["bullet"]))
 
-    # ── Diagnostic stratégique : benchmark sectoriel + maturité + R&O ─────
+    # ── Diagnostic stratégique : positionnement interne + maturité + R&O ──
     from content_generator import benchmark_verdict, maturity_text, risks_opportunities
     _bv = benchmark_verdict(request, scores)
-    _bm = _bv["bm"]
     _mt = maturity_text(request, scores)
     _ro = risks_opportunities(request, scores)
     _red = colors.HexColor("#E74C3C")
@@ -947,23 +946,29 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     _hstyle = ParagraphStyle("bh", fontSize=9, fontName=ts["font_bold"], textColor=colors.white, alignment=TA_CENTER)
     _cstyle = ParagraphStyle("bc", fontSize=9.5, fontName=ts["font"], textColor=pal["text"], alignment=TA_CENTER)
     _lstyle = ParagraphStyle("bl", fontSize=9.5, fontName=ts["font_bold"], textColor=pal["primary"])
-    comp = {"env": scores.environmental_score, "social": scores.social_score,
-            "gov": scores.governance_score, "global": scores.total_esg_score}
-    pil_lbl = [("env", TR["pillar_env"]), ("social", TR["pillar_soc"]),
-               ("gov", TR["pillar_gov"]), ("global", TR.get("score_global_short", "Global"))]
+    # Positionnement INTERNE : les trois piliers comparés entre eux, plus le
+    # score global en ligne de synthèse. Aucune donnée externe (la référence
+    # sectorielle qui figurait ici était inventée — cf. esg_advanced.py).
+    _pil_lbl = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
     bench_rows = [[Paragraph(TR["bench_metric_col"], _hstyle), Paragraph(TR["bench_you"], _hstyle),
-                   Paragraph(TR["bench_sector"], _hstyle), Paragraph(TR["bench_delta_col"], _hstyle)]]
-    for key, lbl in pil_lbl:
-        d = _bm["deltas"][key]
-        dcol = "#2E7D32" if d >= 0 else "#E74C3C"
-        sign = "+" if d >= 0 else ""
+                   Paragraph(TR["bench_delta_col"], _hstyle), Paragraph(TR["bench_reading_col"], _hstyle)]]
+    for row in _bv["rows"]:
+        d = row["delta"]
+        dtxt = "—" if d == 0 else f"{d:.0f} pts"
+        rcol = "#2E7D32" if row["role"] == "lead" else ("#E74C3C" if row["role"] == "lag" else pal["text"])
         bench_rows.append([
-            Paragraph(esc(lbl), _lstyle),
-            Paragraph(f"{comp[key]:.0f}", _cstyle),
-            Paragraph(f"{_bm['avg'][key]:.0f}", _cstyle),
-            Paragraph(f'<font color="{dcol}"><b>{sign}{d:.0f}</b></font>', _cstyle),
+            Paragraph(esc(_pil_lbl[row["key"]]), _lstyle),
+            Paragraph(f"{row['score']:.0f}", _cstyle),
+            Paragraph(dtxt, _cstyle),
+            Paragraph(f'<font color="{rcol}"><b>{esc(row["reading"])}</b></font>', _cstyle),
         ])
-    bt = Table(bench_rows, colWidths=[7 * cm, 3.2 * cm, 3.2 * cm, 3.1 * cm])
+    bench_rows.append([
+        Paragraph(esc(TR.get("score_global_short", "Global")), _lstyle),
+        Paragraph(f"{scores.total_esg_score:.0f}", _cstyle),
+        Paragraph("", _cstyle),
+        Paragraph(esc(scores.rating), _cstyle),
+    ])
+    bt = Table(bench_rows, colWidths=[6 * cm, 2.8 * cm, 3.2 * cm, 4.5 * cm])
     bt.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), pal["primary"]),
         ('BACKGROUND', (0, 1), (-1, -1), pal["light_bg"]),

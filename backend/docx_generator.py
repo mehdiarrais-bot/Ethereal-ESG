@@ -510,10 +510,9 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             meta.font.size = Pt(8.5)
             meta.font.color.rgb = hex_to_rgb("7F8C8D")
 
-    # ── Diagnostic stratégique : benchmark + maturité + R&O + roadmap ─────
+    # ── Diagnostic stratégique : positionnement interne + maturité + R&O ──
     from content_generator import benchmark_verdict, maturity_text, risks_opportunities, roadmap_12m
     _bv = benchmark_verdict(request, scores)
-    _bm = _bv["bm"]
     _mt = maturity_text(request, scores)
     _ro = risks_opportunities(request, scores)
 
@@ -525,14 +524,15 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
     cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
 
-    comp = {"env": scores.environmental_score, "social": scores.social_score,
-            "gov": scores.governance_score, "global": scores.total_esg_score}
-    rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_sector"], TR["bench_delta_col"])]
-    for key, lbl in [("env", TR["pillar_env"]), ("social", TR["pillar_soc"]),
-                     ("gov", TR["pillar_gov"]), ("global", TR.get("score_global_short", "Global"))]:
-        d = _bm["deltas"][key]
-        rows.append((lbl, f"{comp[key]:.0f}", f"{_bm['avg'][key]:.0f}",
-                     ("+" if d >= 0 else "") + f"{d:.0f}"))
+    # Positionnement INTERNE (cf. report_generator.py) : aucune référence externe.
+    _pil_lbl = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
+    rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_delta_col"], TR["bench_reading_col"])]
+    for row in _bv["rows"]:
+        d = row["delta"]
+        rows.append((_pil_lbl[row["key"]], f"{row['score']:.0f}",
+                     "—" if d == 0 else f"{d:.0f} pts", row["reading"]))
+    rows.append((TR.get("score_global_short", "Global"), f"{scores.total_esg_score:.0f}",
+                 "", scores.rating))
     tbl = doc.add_table(rows=len(rows), cols=4)
     tbl.style = "Table Grid"
     for ci, val in enumerate(rows[0]):
