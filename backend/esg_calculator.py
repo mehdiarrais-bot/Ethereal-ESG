@@ -261,7 +261,11 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
     if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
         weaknesses.append(f"Taux de recyclage faible ({env.waste_recycled_percent:.0f}%)")
     if social.female_employees_percent is not None and social.female_employees_percent < 40:
-        weaknesses.append(f"Déséquilibre de genre dans les effectifs ({social.female_employees_percent:.0f}% femmes — objectif 40%)")
+        # Pas de « objectif 40% » : aucun quota legal ne porte sur la
+        # mixite de l'effectif total (verifie le 2026-09-02). Pointer le
+        # desequilibre reste un jugement de consultant defendable ; lui
+        # adosser une cible chiffree en ferait une affirmation normative.
+        weaknesses.append(f"Déséquilibre de genre dans les effectifs ({social.female_employees_percent:.0f}% de femmes)")
     if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
         weaknesses.append(f"Taux d'accidents supérieur aux standards sectoriels (TF {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
@@ -338,7 +342,8 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
     if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
         r.append(f"Low recycling rate ({env.waste_recycled_percent:.0f}%)")
     if social.female_employees_percent is not None and social.female_employees_percent < 40:
-        r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women — target 40%)")
+        # Voir la note du bloc FR equivalent.
+        r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women)")
     if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
         r.append(f"Accident rate above sector standards (rate {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:

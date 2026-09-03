@@ -1407,9 +1407,18 @@ _REC_META = {
     "scope3": ("env", "Court terme", "Short term",
         "Comble le principal angle mort du bilan carbone ; exigé par l'ESRS E1 de la CSRD pour les émissions de la chaîne de valeur.",
         "Closes the main carbon blind spot; required under CSRD's ESRS E1 for value-chain emissions."),
+    # Aucune justification reglementaire ici : la loi Rixain vise les cadres
+    # dirigeants et les instances dirigeantes, PAS la mixite de l'effectif,
+    # et l'Index de l'egalite professionnelle ne fonde aucune cible de
+    # mixite d'effectif non plus (verifie le 2026-09-02 : ses 5 indicateurs
+    # portent sur les remunerations, augmentations, promotions et la parite
+    # parmi les 10 plus hautes remunerations). La mention « transparence
+    # salariale UE » a ete retiree faute d'avoir ete verifiee. Cette
+    # recommandation est un objectif d'amelioration interne, pas une mise en
+    # conformite — ne pas y reintroduire de reference legale sans source.
     "parity": ("social", "2026", "2026",
-        "Renforce la diversité et la conformité (loi Rixain, transparence salariale UE) ; améliore l'attractivité employeur.",
-        "Strengthens diversity and compliance (EU pay transparency); improves employer attractiveness."),
+        "Renforce la diversité des équipes et l'attractivité employeur ; améliore la fidélisation des talents.",
+        "Strengthens team diversity and employer attractiveness; improves talent retention."),
     "training": ("social", "Continu", "Ongoing",
         "Développe les compétences et la fidélisation ; réduit le turnover et sécurise la transformation.",
         "Builds skills and retention; lowers turnover and de-risks transformation."),
@@ -2049,12 +2058,14 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
       "Comité de durabilité en place" if gov.sustainability_committee else "Pas de comité dédié",
       "Sustainability committee in place" if gov.sustainability_committee else "No dedicated committee")
 
-    # Parité effectifs
-    g = soc.female_employees_percent
-    R("Mixité des effectifs (cible 40 %)", "Workforce gender balance (40% target)", "Index égalité / ESRS S1-9",
-      "na" if g is None else ("ok" if g >= 40 else ("partial" if g >= 35 else "no")),
-      "Donnée non renseignée" if g is None else f"{g:.0f} % de femmes",
-      "Not reported" if g is None else f"{g:.0f}% women")
+    # (supprime) Ligne « Mixite des effectifs (cible 40 %) », reference
+    # « Index egalite / ESRS S1-9 ». Ce tableau analyse les ECARTS
+    # REGLEMENTAIRES : chaque ligne doit correspondre a une exigence reelle.
+    # Or aucune obligation chiffree ne fonde une cible de 40 % de femmes sur
+    # l'effectif total (verifie le 2026-09-02), et ni l'Index de l'egalite
+    # ni ESRS S1-9 n'en fixent une. Mesurer un ecart a une norme inexistante
+    # est un faux par construction. Ne pas retablir cette ligne sans une
+    # exigence sourcee a laquelle la rattacher.
 
     # Indépendance du conseil
     bi = gov.independent_board_percent

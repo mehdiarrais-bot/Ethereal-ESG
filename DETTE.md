@@ -69,28 +69,55 @@ la rédaction des clauses elles-mêmes.
   ajouter au score, et libellé à écrire pour le cas `> 0`), sujet distinct
   du socle de clauses.
 
-## 3. `female_board_percent` — attribution légale à vérifier
+## 3. Régime du conseil d'administration : renforcement non traité
 
-- **Où** : `backend/content_generator.py:777` : `"conforme loi Rixain
-  (≥40%)"` pour le seuil de 40% au **conseil d'administration**.
-- **Constat (non vérifié, à confirmer contre le texte des lois)** : de
-  mémoire, le quota de 40% au conseil d'administration relève de la loi
-  Copé-Zimmermann (2011) ; la loi Rixain (2021) porte sur les comités
-  exécutifs / comités de direction, avec une trajectoire vers 40% à horizon
-  2029-2030 — pas sur le conseil d'administration lui-même.
-- **Décision pour ce chantier** : `backend/bands.py` n'inscrit **aucune**
-  entrée `CIBLES` pour `female_board_percent` tant que l'attribution légale
-  n'est pas vérifiée contre le texte réel des deux lois.
+- **Traité le 2026-09-03** : l'attribution du quota de 40 % au conseil
+  d'administration à la loi Rixain était fausse ; elle relève de la loi
+  Copé-Zimmermann (n° 2011-103 du 27 janvier 2011). Corrigé, avec test.
+- **CE QUI RESTE** : le régime du CA ne se résume plus à Copé-Zimmermann.
+  L'**ordonnance n° 2024-934 du 15 octobre 2024**, transposant la
+  **directive (UE) 2022/2381**, l'a renforcé — notamment en intégrant les
+  administrateurs représentant les salariés dans le calcul, avec des
+  objectifs à atteindre au 30 juin 2026 — et le **décret n° 2025-744 du
+  30 juillet 2025** en précise l'application. Le livrable ne mentionne que
+  Copé-Zimmermann : juste sur l'origine, incomplet sur le droit applicable.
+- **À faire** : décider si le livrable doit citer ce régime consolidé, et
+  sous quelle forme.
 
-## 4. `female_employees_percent` — "objectif légal 40%" sans fondement identifié
+## 3bis. Seuils de Copé-Zimmermann non vérifiés sur texte primaire
 
-- **Où** : `backend/content_generator.py:741-744` : gap calculé par rapport
-  à un "objectif légal 40%" sur l'effectif total de l'entreprise (pas le
-  conseil, pas le CODIR).
-- **Constat** : aucun fondement légal identifié pour un quota de 40% sur
-  l'effectif total en droit français. À vérifier ou à retirer du texte.
-- **Décision pour ce chantier** : `backend/bands.py` n'inscrit **aucune**
-  entrée `CIBLES` pour `female_employees_percent`.
+- **Constat** : les résumés officiels consultés donnent des seuils
+  d'application divergents (**500 salariés / 50 M€** dans l'un,
+  **250 salariés / 50 M€** dans l'autre), vraisemblablement parce que le
+  seuil a évolué — mais cela n'a **pas pu être vérifié**.
+- **Pourquoi** : `legifrance.gouv.fr`, `vie-publique.fr` et
+  `travail-emploi.gouv.fr` sont **bloqués par le proxy réseau** de
+  l'environnement de développement. La vérification du 2026-09-02 s'est
+  donc appuyée sur les résumés de recherche de ces pages officielles, pas
+  sur les textes primaires.
+- **Mesure prise en attendant** : le livrable ne cite **aucun seuil
+  chiffré**, et emploie « pour les sociétés concernées » plutôt que
+  d'affirmer que l'obligation s'applique au client.
+- **À faire** : revérifier les seuils sur Légifrance dès que l'accès est
+  possible, et décider si le livrable doit les mentionner.
+
+## 4. Mixité de l'effectif : aucun quota légal — traité
+
+- **Traité le 2026-09-03** : « objectif légal 40 % » sur l'effectif total
+  supprimé partout (constat brut désormais), ligne « Mixité des effectifs
+  (cible 40 %) » retirée du tableau d'écarts réglementaires, référence
+  « loi Rixain » retirée de la recommandation parité, mention « objectif
+  40 % » retirée des axes d'amélioration. Vérifié : aucun quota légal ne
+  porte sur la mixité de l'effectif total, et l'Index de l'égalité
+  professionnelle n'en fonde pas non plus (ses 5 indicateurs portent sur
+  les rémunérations, augmentations, promotions et la parité parmi les
+  10 plus hautes rémunérations).
+- **RESTE À ARBITRER** : le seuil de 40 % subsiste comme **déclencheur
+  interne** (`esg_calculator.py` : axe d'amélioration si < 40 %, point fort
+  si ≥ 40 % ; `content_generator.py` : recommandation parité si < 40 %).
+  Il ne s'affiche plus, mais il continue de piloter le jugement porté sur
+  le client, en reprenant un chiffre emprunté aux quotas légaux. À
+  reconsidérer dans le chantier « exactitude du scoring ».
 
 ## 5. Séparateur de milliers anglais dans un texte français
 

@@ -422,6 +422,109 @@ def test_pack_contains_five_deliverables(client):
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
 
+# ── Attributions legales des quotas de genre ──────────────────────────────
+
+# Verifie le 2026-09-02 contre les sources officielles :
+#  - le quota de 40 % au CONSEIL D'ADMINISTRATION releve de la loi
+#    Cope-Zimmermann (n° 2011-103 du 27 janvier 2011) ;
+#  - la loi Rixain (2021) vise les cadres dirigeants et les instances
+#    dirigeantes, PAS le conseil d'administration ;
+#  - AUCUN quota legal de 40 % ne porte sur l'effectif total.
+# Le code affirmait les trois a tort. Ces chaines ne doivent pas revenir.
+ATTRIBUTIONS_LEGALES_FAUSSES = [
+    "Rixain",                     # jamais applicable au CA ni a l'effectif
+    "objectif légal 40",          # aucun quota legal sur l'effectif
+    "legal 40% target",
+    "objectif 40%",               # cible d'effectif presentee comme une norme
+    "target 40%",
+    "cible 40 %",
+    "40% target",
+    "40 % de femmes dans les effectifs",
+    "40% women in the workforce",
+    "transparence salariale UE",  # reference non verifiee, retiree
+]
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucune_attribution_legale_fausse_dans_le_texte(lang):
+    """Couvre content_generator ET esg_calculator (forces/faiblesses)."""
+    r = make_request(lang)
+    r.governance.female_board_percent = 33   # sinon la clause CA ne sort pas
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    blob = " ".join(str(v) for v in c.values() if v)
+    blob += " " + " ".join(s.strengths + s.weaknesses + s.recommendations)
+    for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
+        assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
+
+
+def test_aucune_attribution_legale_fausse_dans_les_livrables():
+    """Bout en bout sur les cinq livrables : le tableau d'ecarts
+    reglementaires et le plan d'action passent par la aussi."""
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from ppt_generator import generate_pptx
+    from docx_generator import generate_word_report
+    from onepager_generator import generate_onepager_pdf
+    from main import build_advanced_charts
+
+    r = make_request()
+    r.governance.female_board_percent = 33   # sinon la clause CA ne sort pas
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    ch_l = build_advanced_charts(r, s, light_bg=True)
+
+    textes = {}
+    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
+                      ("onepager", generate_onepager_pdf(r, s))):
+        doc = fitz.open(stream=data, filetype="pdf")
+        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
+                      ("docx", generate_word_report(r, s, c, ch_l))):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            textes[nom] = " ".join(
+                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
+
+    for nom, blob in textes.items():
+        for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+
+
+def test_quota_du_conseil_attribue_a_cope_zimmermann():
+    """Contrepartie positive : la bonne loi est bien citee, et sans
+    affirmer qu'elle s'applique a CE client (le code ne connait ni le
+    statut cote ni un effectif fiable)."""
+    # make_request() ne renseigne pas female_board_percent : sans cette
+    # donnee la clause du conseil ne se declenche pas du tout.
+    r = make_request()
+    r.governance.female_board_percent = 33
+    s = calculate_esg_scores(r)
+    gouv = generate_esg_content(r, s)["governance"]
+    assert "Copé-Zimmermann" in gouv
+    assert "pour les sociétés concernées" in gouv
+    assert "Rixain" not in gouv
+
+    r_en = make_request("en")
+    r_en.governance.female_board_percent = 33
+    s_en = calculate_esg_scores(r_en)
+    gouv_en = generate_esg_content(r_en, s_en)["governance"]
+    assert "Copé-Zimmermann" in gouv_en
+    assert "for companies within its scope" in gouv_en
+
+
+def test_tableau_de_conformite_ne_liste_pas_de_mixite_des_effectifs():
+    """Un tableau d'ecarts REGLEMENTAIRES ne peut pas mesurer l'ecart a une
+    norme inexistante : la ligne « Mixite des effectifs » a ete retiree."""
+    from content_generator import compliance_assessment
+    r = make_request()
+    s = calculate_esg_scores(r)
+    for ligne in compliance_assessment(r, s):
+        libelle = " ".join(str(v) for v in ligne.values() if isinstance(v, str))
+        assert "Mixité des effectifs" not in libelle
+        assert "Workforce gender balance" not in libelle
+
+
 # ── Élision devant la raison sociale ──────────────────────────────────────
 
 @pytest.mark.parametrize("nom,attendu", [
