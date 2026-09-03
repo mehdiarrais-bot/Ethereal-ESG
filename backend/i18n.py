@@ -8,7 +8,7 @@ LABELS = {
     "fr": {
         # ── Charts ──────────────────────────────────────────────
         "chart_env": "Environnement", "chart_soc": "Social", "chart_gov": "Gouvernance",
-        "chart_avg": "Moyenne 50", "chart_leaders": "Excellence 75",
+        "chart_avg": "Repère 50", "chart_leaders": "Repère 75",
         "chart_global": "Score Global", "chart_score_axis": "Score / 100",
         "pie_s1": "Scope 1\n(Direct)", "pie_s2": "Scope 2\n(Énergie)", "pie_s3": "Scope 3\n(Indirect)",
         "pie_title": "Répartition des émissions GES",
@@ -164,7 +164,7 @@ LABELS = {
     "en": {
         # ── Charts ──────────────────────────────────────────────
         "chart_env": "Environmental", "chart_soc": "Social", "chart_gov": "Governance",
-        "chart_avg": "Average 50", "chart_leaders": "Leading 75",
+        "chart_avg": "Threshold 50", "chart_leaders": "Threshold 75",
         "chart_global": "Overall Score", "chart_score_axis": "Score / 100",
         "pie_s1": "Scope 1\n(Direct)", "pie_s2": "Scope 2\n(Energy)", "pie_s3": "Scope 3\n(Indirect)",
         "pie_title": "GHG Emissions Breakdown",

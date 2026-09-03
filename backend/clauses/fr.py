@@ -74,29 +74,32 @@ CLAUSES["ouverture:environmental"] = [
 ]
 
 CLAUSES["environmental"] = {
-    # Pas de {value} ici : la tranche vient de l'INTENSITÉ carbone comparée
-    # à une grille SECTORIELLE (bornes différentes selon le secteur), il n'y
-    # a donc pas de seuil unique à citer dans la phrase.
+    # {value} porte ici l'INTENSITÉ carbone (t CO₂e/M€ de CA), arrondie à
+    # l'entier par l'appelant — pas la tonne brute. Les clauses énoncent
+    # cette valeur et sa conséquence : aucune ne situe l'entreprise par
+    # rapport à un secteur, une moyenne ou un standard externe. La grille
+    # qui produit la tranche est interne et non sourcée ; elle est declarée
+    # une seule fois, dans la note méthodologique du rapport.
     "co2_emissions_tonnes": {
         "exemplaire": [
-            "L'intensité carbone se situe parmi les meilleures de son secteur, un atout rare dans un contexte de renchérissement du prix du carbone.",
-            "Rapportées au chiffre d'affaires, les émissions placent {n} en tête de son secteur sur l'efficacité carbone.",
+            "L'intensité carbone s'établit à {value} t CO₂e par million d'euros de chiffre d'affaires, un niveau bas qui limite l'exposition au renchérissement du carbone.",
+            "À {value} t CO₂e par million d'euros de chiffre d'affaires, l'efficacité carbone de {n} constitue un atout.",
         ],
         "solide": [
-            "L'intensité carbone est nettement inférieure à la référence de son secteur, signe d'un modèle déjà sobre en émissions.",
-            "Les émissions rapportées au chiffre d'affaires situent {n} au-dessus de la moyenne sectorielle en matière d'efficacité carbone.",
+            "L'intensité carbone s'établit à {value} t CO₂e par million d'euros de chiffre d'affaires, signe d'un modèle déjà sobre en émissions.",
+            "Les émissions de {n} représentent {value} t CO₂e par million d'euros de chiffre d'affaires, une efficacité carbone solide.",
         ],
         "satisfaisant": [
-            "L'intensité carbone est conforme à ce qu'on observe dans son secteur, sans avantage ni retard marqué.",
-            "Rapportées au chiffre d'affaires, les émissions de {n} se situent dans la moyenne de son secteur.",
+            "L'intensité carbone atteint {value} t CO₂e par million d'euros de chiffre d'affaires, un niveau intermédiaire : ni avantage ni retard marqué.",
+            "Les émissions de {n} représentent {value} t CO₂e par million d'euros de chiffre d'affaires.",
         ],
         "fragile": [
-            "L'intensité carbone dépasse la référence sectorielle : l'exposition au coût du carbone constitue un point de vigilance.",
-            "Les émissions rapportées au chiffre d'affaires sont supérieures à la moyenne du secteur, ce qui expose {n} au renchérissement du carbone.",
+            "L'intensité carbone atteint {value} t CO₂e par million d'euros de chiffre d'affaires, un niveau à surveiller : l'exposition au coût du carbone constitue un point de vigilance.",
+            "À {value} t CO₂e par million d'euros de chiffre d'affaires, l'intensité carbone expose {n} au renchérissement du carbone.",
         ],
         "critique": [
-            "L'intensité carbone est très supérieure à la référence sectorielle, une exposition majeure au prix du carbone à traiter en priorité.",
-            "Rapportées au chiffre d'affaires, les émissions placent {n} loin derrière son secteur : la décarbonation est l'enjeu environnemental central.",
+            "L'intensité carbone atteint {value} t CO₂e par million d'euros de chiffre d'affaires, un niveau élevé : exposition majeure au prix du carbone, à traiter en priorité.",
+            "À {value} t CO₂e par million d'euros de chiffre d'affaires, la décarbonation est l'enjeu environnemental central de {n}.",
         ],
     },
     "renewable_energy_percent": {
@@ -127,7 +130,7 @@ CLAUSES["environmental"] = {
             "Avec {value} % de déchets recyclés, {n} inscrit pleinement son activité dans une logique circulaire.",
         ],
         "solide": [
-            "Le taux de recyclage s'élève à {value} %, une gestion des déchets nettement au-dessus de la moyenne.",
+            "Le taux de recyclage s'élève à {value} %, une valorisation matière élevée.",
             "À {value} % de déchets recyclés, {n} affiche une valorisation matière solide.",
         ],
         "satisfaisant": [
@@ -136,7 +139,7 @@ CLAUSES["environmental"] = {
         ],
         "fragile": [
             "Le taux de recyclage reste limité à {value} %, un axe de progrès en matière d'économie circulaire.",
-            "À {value} % de déchets recyclés, la valorisation matière de {n} reste en deçà des pratiques du secteur.",
+            "À {value} % de déchets recyclés, la valorisation matière de {n} reste limitée.",
         ],
         "critique": [
             "Le taux de recyclage n'atteint que {value} %, une gestion des déchets à repenser en priorité.",

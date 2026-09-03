@@ -119,6 +119,38 @@ la rédaction des clauses elles-mêmes.
   le client, en reprenant un chiffre emprunté aux quotas légaux. À
   reconsidérer dans le chantier « exactitude du scoring ».
 
+## 4bis. Résidus du chantier « comparaison sectorielle » — points laissés ouverts
+
+Chantier du 2026-09-03 : les phrases qui affirmaient une comparaison
+sectorielle ont été réécrites (18 emplacements, FR et EN). Quatre points
+identifiés au passage et **volontairement non traités** :
+
+- **`carbon_grid_sector_specific` (`esg_calculator.py:80`)** : booléen
+  stocké dans `details`, aucun consommateur trouvé. Donnée morte, à
+  confirmer puis supprimer.
+- **`donnees["co2_emissions_tonnes"]` (`content_generator.py`)** : la clé
+  porte le nom du champ mais contient une **intensité** (t CO₂e/M€ de CA),
+  pas la tonne brute. Nommage trompeur, source d'erreur pour qui reprend
+  le code. À renommer (`co2_intensity`) avec les clés correspondantes dans
+  `bands.py` et `clauses/fr.py`.
+- **`onepager_generator.py:5` et `:92`** : docstring et commentaire disent
+  encore « barres par pilier vs secteur ». Vérifié : le **rendu** ne
+  comporte plus de repère sectoriel (retiré au chantier 2+4), seuls les
+  commentaires sont périmés.
+- **`questionnaire_generator.py:59`** : le questionnaire de collecte
+  annonce « Seuil légal de référence : 40 % » pour `female_board_percent`.
+  Formulation à revoir à la lumière du chantier Rixain — le quota relève
+  de Copé-Zimmermann et ne s'applique qu'aux sociétés concernées.
+
+**Faux positif connu du test de gel** : le marqueur « marché PME/ETI » /
+« SME/mid-cap market » vise un **vocabulaire**, pas une affirmation.
+`proposal_generator.py:72` et `:78` l'emploient légitimement pour décrire un
+**périmètre réglementaire** (« les exigences CSRD/VSME applicables au marché
+PME/ETI »), pas une comparaison. La couverture du test a donc été
+volontairement **limitée aux cinq livrables analytiques**, lettre de mission
+exclue. Étendre le test au document contractuel déclencherait ce faux
+positif : il faudrait alors distinguer les deux usages.
+
 ## 5. Séparateur de milliers anglais dans un texte français
 
 - **Où** : `backend/content_generator.py` (ancien générateur, format `,`

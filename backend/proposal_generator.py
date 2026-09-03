@@ -126,11 +126,11 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
 
     # ── 4. Livrables ───────────────────────────────────────────────────────
     _h(doc, "4. " + ("Deliverables" if en else "Livrables"), 14, colors["primary"])
-    dels_fr = ["Rapport ESG complet (PDF) : diagnostic, benchmark sectoriel, analyse des écarts, plan d'action",
+    dels_fr = ["Rapport ESG complet (PDF) : diagnostic scoré par pilier, analyse des écarts réglementaires, plan d'action",
                "Présentation de direction (PowerPoint) prête pour comité",
                "Rapport rédigé (Word) modifiable par vos équipes",
                "Feuille de route 12 mois priorisée (quick wins, responsables, échéances)"]
-    dels_en = ["Full ESG report (PDF): diagnosis, sector benchmark, gap analysis, action plan",
+    dels_en = ["Full ESG report (PDF): scored diagnosis by pillar, regulatory gap analysis, action plan",
                "Board-ready management presentation (PowerPoint)",
                "Editable written report (Word)",
                "Prioritised 12-month roadmap (quick wins, owners, due dates)"]

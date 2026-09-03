@@ -166,7 +166,7 @@ ENV_SCOPE_PHRASES = [
 
 ENV_OUTLOOK = [
     "La trajectoire de décarbonation s'articule autour de {p} pour les prochains exercices.",
-    "L'axe de progrès prioritaire porte sur {p}, en cohérence avec les exigences sectorielles.",
+    "L'axe de progrès prioritaire porte sur {p}, identifié comme tel dans la feuille de route.",
     "Les efforts à venir se concentrent sur {p}, levier d'amélioration identifié dans la feuille de route.",
     "Le plan environnemental vise en priorité {p}, conformément aux engagements de durabilité.",
     "La feuille de route environnementale cible {p} comme priorité opérationnelle.",
@@ -268,7 +268,7 @@ CONCLUSION_HIGH = [
     ("témoigne d'une démarche ESG mature et structurée", "Fort de ces acquis,", "entend consolider ses avancées tout en accélérant sur ses axes d'amélioration"),
     ("confirme son engagement dans une stratégie de durabilité ambitieuse", "Sur cette base solide,", "se donne les moyens de franchir un cap supplémentaire dans sa performance extra-financière"),
     ("illustre la maturité croissante de sa démarche de développement durable", "Capitalisant sur ces résultats,", "s'engage à amplifier ses efforts sur les axes prioritaires identifiés"),
-    ("positionne {n} parmi les acteurs responsables de son secteur", "Dans cette dynamique positive,", "poursuit l'intégration de la durabilité dans l'ensemble de ses décisions stratégiques"),
+    ("témoigne d'un engagement structuré sur les trois piliers", "Dans cette dynamique positive,", "poursuit l'intégration de la durabilité dans l'ensemble de ses décisions stratégiques"),
     ("valide la pertinence de la stratégie ESG engagée ces dernières années", "Renforcée par ces résultats,", "accélère la mise en œuvre de sa feuille de route long-terme"),
 ]
 
@@ -295,9 +295,9 @@ CONCLUSION_REFS = [
 ]
 
 PERF_DESC = {
-    "AAA": "performance de premier plan, alignée avec les leaders mondiaux ESG",
-    "AA":  "très bonne performance, dépassant les standards sectoriels reconnus",
-    "A":   "bonne performance, nettement au-dessus de la moyenne sectorielle",
+    "AAA": "performance de premier plan sur l'ensemble des piliers",
+    "AA":  "performance élevée sur la grille de notation interne",
+    "A":   "bonne performance sur la grille de notation interne",
     "BBB": "performance satisfaisante avec des marges de progression identifiées",
     "BB":  "performance en développement — plan d'action structuré engagé",
     "B":   "performance limitée — transformation de fond nécessaire sur l'ensemble des piliers",
@@ -642,14 +642,15 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"operational-control basis. Greenhouse-gas emissions are computed according to the GHG "
             f"Protocol (Scopes 1, 2 and 3); social indicators follow ESRS S1 definitions; governance "
             f"indicators are documented from corporate records. Pillar scores (0-100) aggregate each "
-            f"indicator against regulatory thresholds and recognised sector standards — carbon "
-            f"intensity is rated on a sector-family grid (services, industry, transport, energy…); "
-            f"the overall score "
+            f"indicator on an INTERNAL scoring grid, specific to this tool: its thresholds were "
+            f"defined in-house and are not derived from any published external reference. Carbon "
+            f"intensity is rated on a grid differentiated by sector family (services, industry, "
+            f"transport, energy…), which is likewise internal. The overall score "
             f"is the weighted average of the three pillars, and the letter rating (internal AAA-CCC "
-            f"scale) is indicative — it does not constitute a rating-agency assessment. The sector "
-            f"comparison uses an internal "
-            f"reference base for the SME/mid-cap market and involves no external data transfer — the "
-            f"entire report is produced locally. Limitations: some indicators rely on declarative data "
+            f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
+            f"contains no comparison against an external sector reference: the positioning shown is "
+            f"internal, comparing the three pillars with one another. No external data transfer "
+            f"takes place — the entire report is produced locally. Limitations: some indicators rely on declarative data "
             f"and estimates; they are refined as measurement systems mature.{gap_txt}"
         )
     else:
@@ -660,10 +661,11 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"l'approche du contrôle opérationnel. Les émissions de gaz à effet de serre sont calculées "
             f"selon le GHG Protocol (Scopes 1, 2 et 3) ; les indicateurs sociaux suivent les définitions "
             f"de la norme ESRS S1 ; les indicateurs de gouvernance sont documentés à partir des registres "
-            f"de l'entreprise. Les scores par pilier (0-100) agrègent chaque indicateur au regard des "
-            f"seuils réglementaires et des standards sectoriels reconnus — l'intensité carbone est "
+            f"de l'entreprise. Les scores par pilier (0-100) agrègent chaque indicateur sur une "
+            f"GRILLE DE NOTATION INTERNE, propre à l'outil : ses seuils ont été définis en interne "
+            f"et ne sont adossés à aucun référentiel externe publié. L'intensité carbone est "
             f"notée sur une grille différenciée par famille sectorielle (services, industrie, "
-            f"transport, énergie…) ; le score global est la moyenne "
+            f"transport, énergie…), elle aussi interne. Le score global est la moyenne "
             f"pondérée des trois piliers, et la notation lettrée (échelle interne AAA-CCC) est indicative — "
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
             f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
@@ -702,7 +704,11 @@ def _environnement_par_clauses(request: ESGRequest, scores: ESGScores):
     # classable et vaut None (aucune clause carbone, pas de crash).
     intensite_carbone = None
     if env.co2_emissions_tonnes and company.revenue_eur:
-        intensite_carbone = env.co2_emissions_tonnes / company.revenue_eur * 1e6
+        # Arrondi a l'entier ICI, pas dans _formater_valeur() : une intensite
+        # carbone se cite en entier ("171 t CO2e/M€"), alors que d'autres
+        # indicateurs ont besoin de leur decimale (taux de frequence 6.2).
+        # Le formateur partage reste donc generique.
+        intensite_carbone = round(env.co2_emissions_tonnes / company.revenue_eur * 1e6)
 
     donnees = {
         "co2_emissions_tonnes": intensite_carbone,
@@ -1048,9 +1054,9 @@ def _ctx_en(sector):
 
 
 PERF_DESC_EN = {
-    "AAA": "leading performance, on par with global ESG leaders",
-    "AA": "strong performance, exceeding recognised sector standards",
-    "A": "good performance, well above the sector average",
+    "AAA": "leading performance across all pillars",
+    "AA": "high performance on the internal scoring grid",
+    "A": "good performance on the internal scoring grid",
     "BBB": "satisfactory performance with identified room for improvement",
     "BB": "developing performance — a structured action plan is under way",
     "B": "limited performance — deep transformation is needed across all pillars",
@@ -1565,7 +1571,7 @@ _PILLAR_INSIGHT = {
     "fr": {
         "env": {
             "high": "Performance environnementale de premier plan : la maîtrise du carbone et de l'énergie constitue un actif différenciant.",
-            "good": "Performance environnementale solide, au-dessus de la moyenne sectorielle ; l'intensité carbone reste le principal levier de création de valeur durable.",
+            "good": "Performance environnementale solide ; l'intensité carbone reste le principal levier de création de valeur durable.",
             "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la conformité CSRD.",
             "low": "Performance environnementale en retrait : la transition bas-carbone doit devenir une priorité stratégique à court terme.",
         },
@@ -1585,7 +1591,7 @@ _PILLAR_INSIGHT = {
     "en": {
         "env": {
             "high": "Leading environmental performance: carbon and energy control is a differentiating asset.",
-            "good": "Solid environmental performance, above the sector average; carbon intensity remains the main lever for sustainable value creation.",
+            "good": "Solid environmental performance; carbon intensity remains the main lever for sustainable value creation.",
             "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive CSRD compliance.",
             "low": "Lagging environmental performance: the low-carbon transition must become a near-term strategic priority.",
         },
@@ -1963,8 +1969,8 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
         risks.append(T("Incident cyber déclaré : risque réputationnel et RGPD", "Réputation",
                        "Reported cyber incident: reputational & GDPR risk", "Reputation", "H", "M"))
     if soc.accident_frequency_rate is not None and soc.accident_frequency_rate > 5:
-        risks.append(T("Sinistralité au-dessus des standards : risque humain et social", "Opérationnel",
-                       "Accident rate above standards: human & social risk", "Operational", "H", "H"))
+        risks.append(T("Sinistralité élevée : risque humain et social", "Opérationnel",
+                       "High accident rate: human & social risk", "Operational", "H", "H"))
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
         risks.append(T("Manquements éthiques enregistrés : risque juridique", "Éthique",
                        "Recorded ethics breaches: legal risk", "Ethics", "M", "M"))

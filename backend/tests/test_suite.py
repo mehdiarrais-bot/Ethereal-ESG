@@ -596,12 +596,31 @@ def test_elision_du_titre_de_la_section_positionnement():
 # supprimee le 2026-09-02, avec tous les ecarts chiffres qu'elle imprimait.
 # S'y ajoutait une affirmation de couverture normative que rien ne verifie.
 MARQUEURS_BENCHMARK_INVENTE = [
-    "référence sectorielle", "internal sector reference", "sector reference",
+    # NB : « sector reference » seul n'est PAS banni. La note methodologique
+    # emploie legitimement le terme pour NIER la comparaison (« contains no
+    # comparison against an external sector reference »), exactement comme
+    # « double materialite » est employe pour s'en demarquer. Ce sont les
+    # AFFIRMATIONS qui sont interdites, pas le mot qui les nie.
+    "référence sectorielle", "internal sector reference",
     "moyenne de votre secteur", "moyenne de son secteur", "sector average",
     "devance la moyenne", "surperforme son secteur", "outperforms its sector",
     "vs secteur", "vs sector", "Surperformance sectorielle",
     "marché ETI/PME", "marché PME/ETI", "mid-market",
+    # Variantes qui avaient echappe a la premiere purge : la note
+    # methodologique EN est restee perimee un chantier entier parce que la
+    # liste calquait le libelle FR exact du moment.
+    "sector comparison uses", "SME/mid-cap market", "reference base for",
+    "standards sectoriels", "sector standards", "moyenne sectorielle",
+    "leaders mondiaux", "global ESG leaders", "de son secteur", "pratiques du secteur",
 ]
+
+# Contrepartie positive : la grille de notation est interne et non sourcee.
+# Ce fait doit etre DECLARE, une fois, dans la note methodologique — un
+# retrait silencieux de cette divulgation doit casser le test.
+DIVULGATION_GRILLE_INTERNE = {
+    "fr": "grille de notation interne",
+    "en": "internal scoring grid",
+}
 MARQUEURS_COUVERTURE_ESRS = [
     "couvre les principales exigences",
     "covers the main requirements",
@@ -622,6 +641,18 @@ def test_aucune_comparaison_sectorielle_dans_le_texte(lang):
     blob = " ".join(str(v) for v in c.values() if v)
     for marqueur in MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_COUVERTURE_ESRS:
         assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_la_grille_interne_est_declaree(lang):
+    """La note methodologique doit dire que les seuils sont internes et non
+    adosses a un referentiel externe publie. Sans cette divulgation, les
+    jugements de niveau du rapport (« eleve », « a surveiller ») n'ont plus
+    d'origine declarable."""
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    methodo = generate_esg_content(r, s)["methodology"]
+    assert DIVULGATION_GRILLE_INTERNE[lang].lower() in methodo.lower()
 
 
 def test_aucune_comparaison_sectorielle_dans_les_livrables():

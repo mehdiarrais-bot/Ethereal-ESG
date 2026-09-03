@@ -267,7 +267,7 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
         # adosser une cible chiffree en ferait une affirmation normative.
         weaknesses.append(f"Déséquilibre de genre dans les effectifs ({social.female_employees_percent:.0f}% de femmes)")
     if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
-        weaknesses.append(f"Taux d'accidents supérieur aux standards sectoriels (TF {social.accident_frequency_rate:.1f})")
+        weaknesses.append(f"Taux de fréquence des accidents élevé (TF {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         weaknesses.append(f"Volume de formation insuffisant ({social.training_hours_per_employee:.0f} h/an, objectif 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
@@ -345,7 +345,7 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
         # Voir la note du bloc FR equivalent.
         r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women)")
     if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
-        r.append(f"Accident rate above sector standards (rate {social.accident_frequency_rate:.1f})")
+        r.append(f"High accident frequency rate (rate {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         r.append(f"Insufficient training volume ({social.training_hours_per_employee:.0f} h/year, target 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
