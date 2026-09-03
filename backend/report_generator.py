@@ -629,7 +629,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     _toc_parts = [
         ("01", TR["toc_part1"], [TR["pdf_s1"], TR["pdf_s2"], TR["pdf_s3"], TR["pdf_s4"], TR["pdf_s5"]]),
         ("02", TR["toc_part2"], [TR["pdf_s6"], TR["pdf_diag"]]),
-        ("03", TR["toc_part3"], [TR["pdf_s7"], TR["roadmap_title"], TR["pdf_s8"], TR["pdf_concl"]]),
+        ("03", TR["toc_part3"], [TR["pdf_s7"], TR["roadmap_title"], TR["pdf_concl"]]),
     ]
     _tnum = ParagraphStyle("tn", fontSize=26, fontName=ts["font_bold"],
                            textColor=pal["accent"], leading=28)
@@ -901,8 +901,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Spacer(1, 0.3 * cm))
     story.append(Paragraph(TR["sub_targets"], styles["h2"]))
     story.append(Paragraph(esc(content.get("targets", "")), styles["body"]))
-    _img("targets", 15, 7.9, TR["cap_targets"])
-    _img("carbon_trajectory", 15, 7.5, TR["cap_carbon"])
+    # (supprimes) graphiques "targets" et "carbon_trajectory" — voir esg_advanced.py
 
     if content.get("taxonomy"):
         story.append(Spacer(1, 0.3 * cm))
@@ -1211,12 +1210,10 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         story.append(htbl)
         story.append(btbl)
 
-    # ── Alignement référentiels ───────────────────────────────────────────
-    story.append(Spacer(1, 0.5 * cm))
-    section_header(story, TR["pdf_s8"], pal["secondary"], pal, styles, ts)
-
-    ref_text = TR["ref_text"]
-    story.append(Paragraph(ref_text, styles["body"]))
+    # (supprimee) Section « Cadres de Référence & Alignement ODD » : elle
+    # revendiquait GRI, TCFD, CSRD, SFDR et ISO 14001/26000 ainsi que six ODD
+    # identiques pour tout dossier, sans qu'aucune donnée ne les fonde. Le
+    # périmètre réel est désormais porté par la seule note méthodologique.
 
     # ── Section spécifique White Paper : Vision Stratégique ──────────────
     if request.report_type.value == "white_paper":

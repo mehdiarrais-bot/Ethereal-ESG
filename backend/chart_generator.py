@@ -434,84 +434,10 @@ def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = Fa
     return buf.read()
 
 
-def targets_chart(pillars: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
-    """Objectifs par pilier : actuel vs. cible (barres groupées)."""
-    colors = get_colors(theme, light_bg, brand)
-    LB = L(lang)
-    bg = colors["bg"]
-
-    fig, ax = plt.subplots(figsize=(8, 4.2), facecolor=bg)
-    ax.set_facecolor(bg)
-
-    labels = [p["label"] for p in pillars]
-    current = [p["current"] for p in pillars]
-    target = [p["target"] for p in pillars]
-    ypos = list(range(len(labels)))
-
-    ax.barh([y + 0.2 for y in ypos], current, height=0.36,
-            color=[_pillar_hex(colors, p["color"]) for p in pillars], alpha=0.9, label=LB["tgt_current"])
-    ax.barh([y - 0.2 for y in ypos], target, height=0.36,
-            color=colors["accent"], alpha=0.55, label=LB["tgt_target"], hatch="//", edgecolor=bg)
-
-    for y, (c, t) in enumerate(zip(current, target)):
-        ax.text(c + 1.5, y + 0.2, f"{c:.0f}", va="center", fontsize=9,
-                color=colors["text"], fontweight="bold")
-        ax.text(t + 1.5, y - 0.2, f"{t:.0f}", va="center", fontsize=9,
-                color=colors["accent"], fontweight="bold")
-
-    ax.set_yticks(ypos)
-    ax.set_yticklabels(labels, color=colors["text"], fontsize=10)
-    ax.set_xlim(0, 115)
-    ax.set_xlabel(LB["chart_score_axis"], color=colors["text"], fontsize=10)
-    ax.tick_params(colors=colors["text"])
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.spines[['left', 'bottom']].set_color(colors["secondary"])
-    ax.legend(loc="lower right", fontsize=9, framealpha=0.2, labelcolor=colors["text"])
-
-    plt.tight_layout()
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
-    plt.close()
-    buf.seek(0)
-    return buf.read()
-
-
-def carbon_trajectory_chart(carbon: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
-    """Trajectoire de décarbonation type SBTi (1,5°C, -42% à 2030)."""
-    colors = get_colors(theme, light_bg, brand)
-    LB = L(lang)
-    bg = colors["bg"]
-
-    fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
-    ax.set_facecolor(bg)
-
-    years, values = carbon["years"], carbon["values"]
-    ax.plot(years, values, 'o-', linewidth=2.6, color=colors["env"],
-            markersize=6, markerfacecolor=colors["accent"], markeredgecolor=bg, zorder=3)
-    ax.fill_between(years, values, alpha=0.14, color=colors["env"])
-
-    ax.axhline(carbon["base"], color=colors["secondary"], linestyle=':', alpha=0.5, linewidth=1)
-    ax.text(years[0], carbon["base"], LB["carbon_ref"].format(y=years[0]), va="bottom",
-            fontsize=8, color=colors["secondary"])
-    ax.annotate(LB["carbon_annot"].format(p=carbon["reduction_pct"], y=carbon["target_year"], v=carbon["target"]),
-                (years[-1], values[-1]), xytext=(-10, 22), textcoords="offset points",
-                fontsize=8.5, color=colors["env"], fontweight="bold", ha="right")
-
-    ax.set_xlabel(LB["carbon_x"], color=colors["text"], fontsize=10)
-    ax.set_ylabel(LB["carbon_y"], color=colors["text"], fontsize=10)
-    ax.tick_params(colors=colors["text"], labelsize=9)
-    ax.set_ylim(0, carbon["base"] * 1.18)
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.spines[['left', 'bottom']].set_color(colors["secondary"])
-    ax.set_title(LB["carbon_title"], color=colors["text"],
-                 fontsize=11, fontweight="bold", pad=12)
-
-    plt.tight_layout()
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=bg, edgecolor='none')
-    plt.close()
-    buf.seek(0)
-    return buf.read()
+# targets_chart() et carbon_trajectory_chart() supprimees le 2026-09-03 :
+# elles tracaient des cibles par pilier et une trajectoire carbone -42 %
+# fabriquees par l'outil, presentees comme les engagements du client.
+# Voir la note dans esg_advanced.py.
 
 
 def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:

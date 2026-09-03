@@ -208,7 +208,11 @@ def test_no_completed_action_omits_callout_and_sentence():
     """Aucune action cochée -> ni encart, ni phrase de synthèse."""
     full = _completed_actions_pdf_text([])
     assert "ACTIONS ENGAGÉES" not in full.upper()
-    assert "déclarée" not in full and "déclarées" not in full
+    # Bannir la FORMULATION, pas le mot : « déclarées » figure aussi
+    # legitimement dans la note methodologique (« parts déclarées comme
+    # alignées à la Taxonomie UE »). Troisieme fois que ce patron se
+    # presente, apres « double materialite » et « sector reference ».
+    assert "déclarée engagée" not in full and "déclarées engagées" not in full
     assert "preuve" not in full.lower()
 
 
@@ -421,6 +425,125 @@ def test_pack_contains_five_deliverables(client):
 
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
+
+# ── Engagements fabriques : trajectoire, cibles, alignements ──────────────
+
+# Le code ne collecte AUCUN objectif chiffre. Il en fabriquait pourtant :
+#  - une trajectoire « -42 % a 2030, methodologie SBTi » declenchee par la
+#    seule saisie d'un total CO2 (le -42 % etait une constante) ;
+#  - une cible par pilier calculee par uplift() : cur + (100-cur)*0.45 + 5 ;
+#  - une conformite ESRS E1-4 deduite de cet objectif invente ;
+#  - le respect du principe DNSH et des garanties minimales affirme sur la
+#    foi de trois pourcentages Taxonomie saisis a la main ;
+#  - un alignement SFDR (qui ne vise pas les entreprises non financieres),
+#    ISO 14001/26000 (26000 n'est pas certifiable) et six ODD identiques
+#    pour tout dossier.
+# Verifie le 2026-09-03 contre EFRAG, EUR-Lex, ESMA et ISO.
+# NB : le nombre « 42 » nu n'est PAS banni — il figure legitimement comme
+# valeur d'indicateur (42 % de renouvelable dans le jeu de test). Seules les
+# FORMULATIONS qui ne peuvent venir que de la trajectoire fabriquee le sont.
+ENGAGEMENTS_FABRIQUES = [
+    "réduction de 42", "42% reduction", "-42 %", "-42%",
+    "Science Based Targets", "SBTi",
+    "trajectoire SBTi", "SBTi pathway",
+    # L'AFFIRMATION, pas le terme : le rapport mentionne desormais DNSH et
+    # les garanties minimales pour dire qu'ils ne sont PAS evalues.
+    "dans le respect du principe DNSH",
+    "in compliance with the DNSH principle",
+    "SFDR", "ISO 14001", "ISO 26000",
+    "ODD 7", "ODD 8", "SDG 7", "SDG 8",
+    "ancrée dans les ODD", "anchored in the UN SDGs",
+    "Cadres de Référence & Alignement ODD", "Reporting Frameworks & SDG Alignment",
+    "Chaque pilier fait l'objet d'une cible",
+    "Each pillar is assigned a progression target",
+]
+
+# Contreparties positives : ce que le rapport doit dire a la place.
+REMPLACEMENTS_ATTENDUS = {
+    "fr": ["n'a pas communiqué d'objectifs de durabilité chiffrés",
+           "ESRS E1-4 demande de publier si et comment"],
+    "en": ["has not disclosed quantified sustainability targets",
+           "ESRS E1-4 requires disclosing whether and how"],
+}
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucun_engagement_fabrique_dans_le_texte(lang):
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    blob = " ".join(str(v) for v in c.values() if v)
+    blob += " " + " ".join(s.strengths + s.weaknesses + s.recommendations)
+    for marqueur in ENGAGEMENTS_FABRIQUES:
+        assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_les_objectifs_sont_dits_a_definir(lang):
+    """Contrepartie positive : le rapport doit dire que les objectifs
+    restent a definir, et rappeler ce qu'exige reellement ESRS E1-4."""
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    txt = generate_esg_content(r, s)["targets"]
+    for attendu in REMPLACEMENTS_ATTENDUS[lang]:
+        assert attendu.lower() in txt.lower(), f"{attendu!r} absent du texte {lang}"
+
+
+def test_ligne_esrs_e1_4_est_non_renseignee_jamais_conforme():
+    """L'ancien code declarait « Conforme » des qu'un total CO2 etait saisi,
+    sur la foi d'un objectif que l'outil avait lui-meme invente. E1-4 exige
+    de DIVULGUER les cibles, pas d'en avoir : sans cible collectee, le seul
+    statut defendable est « non renseigne »."""
+    from content_generator import compliance_assessment
+    r = make_request()                       # make_request() renseigne co2_emissions_tonnes
+    assert r.environmental.co2_emissions_tonnes, "le test doit porter sur un dossier AVEC bilan GES"
+    s = calculate_esg_scores(r)
+    lignes = [l for l in compliance_assessment(r, s) if l["ref"] == "ESRS E1-4"]
+    assert len(lignes) == 1
+    assert lignes[0]["status"] == "na"
+    assert "42" not in str(lignes[0])
+
+
+def test_aucun_engagement_fabrique_dans_les_livrables():
+    """Bout en bout sur les cinq livrables."""
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from ppt_generator import generate_pptx
+    from docx_generator import generate_word_report
+    from onepager_generator import generate_onepager_pdf
+    from main import build_advanced_charts
+
+    r = make_request()
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    ch_l = build_advanced_charts(r, s, light_bg=True)
+
+    textes = {}
+    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
+                      ("onepager", generate_onepager_pdf(r, s))):
+        doc = fitz.open(stream=data, filetype="pdf")
+        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
+                      ("docx", generate_word_report(r, s, c, ch_l))):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            textes[nom] = " ".join(
+                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
+
+    for nom, blob in textes.items():
+        for marqueur in ENGAGEMENTS_FABRIQUES:
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+
+
+def test_la_couverture_ne_porte_que_le_referentiel_vise():
+    """GRI et TCFD figuraient sur la couverture sans qu'aucune donnee ne
+    les fonde ; seul le referentiel vise est une donnee saisie."""
+    from i18n import L
+    for lang in ("fr", "en"):
+        d = L(lang)
+        assert d["cover_refs"] == "CSRD / ESRS"
+        assert d["cover_refs_vsme"] == "VSME (EFRAG)"
+
 
 # ── Attributions legales des quotas de genre ──────────────────────────────
 

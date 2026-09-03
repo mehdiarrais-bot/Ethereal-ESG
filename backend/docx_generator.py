@@ -465,8 +465,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_heading(doc, TR["sub_targets"], 2, colors["secondary"], style=style)
     if content.get("targets"):
         doc.add_paragraph(content["targets"]).paragraph_format.space_after = Pt(6)
-    _docx_img("targets", 15)
-    _docx_img("carbon_trajectory", 15)
+    # (supprimes) graphiques "targets" et "carbon_trajectory" — voir esg_advanced.py
 
     if content.get("taxonomy"):
         add_heading(doc, TR["sub_taxonomy"], 2, colors["secondary"], style=style)
@@ -612,10 +611,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                     qw.font.color.rgb = hex_to_rgb(colors["accent"])
 
     # ── 7. Référentiels ───────────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s8"], 1, colors["primary"], style=style)
-    add_hr(doc, colors["secondary"])
-    ref_text = TR["ref_text_docx"]
-    doc.add_paragraph(ref_text)
+    # (supprimee) Section « Cadres de Référence & Alignement ODD » — voir la
+    # note dans report_generator.py.
 
     # ── Conclusion ────────────────────────────────────────────────────────
     doc.add_page_break()

@@ -86,13 +86,6 @@ _TERMS = [
      "Framework for disclosing climate-related financial risks, structured around "
      "governance, strategy, risk management and metrics."),
 
-    ("sbti", "SBTi",
-     "Science Based Targets initiative. Méthodologie de définition d'objectifs de "
-     "réduction d'émissions compatibles avec la trajectoire de l'Accord de Paris.",
-     "SBTi",
-     "Science Based Targets initiative — methodology for setting emission-reduction "
-     "targets consistent with the Paris Agreement pathway."),
-
     ("assurance", "Assurance limitée",
      "Niveau de vérification par un tiers indépendant requis par la CSRD : le vérificateur "
      "conclut qu'il n'a pas relevé d'anomalie significative, sans l'audit approfondi que "
@@ -101,13 +94,6 @@ _TERMS = [
      "The level of independent third-party verification required by the CSRD: the verifier "
      "concludes that nothing material came to their attention, without the deeper testing "
      "of reasonable assurance."),
-
-    ("sdg", "ODD",
-     "Les 17 Objectifs de développement durable des Nations unies, utilisés comme grille "
-     "de lecture universelle de la contribution d'une organisation.",
-     "SDGs",
-     "The United Nations' 17 Sustainable Development Goals, used as a universal frame for "
-     "an organisation's contribution."),
 
     ("gri", "GRI",
      "Global Reporting Initiative : référentiel international de reporting de durabilité, "
@@ -145,8 +131,6 @@ def glossary_entries(request, scores=None) -> list:
         skip.add("intensity")
     if not has_taxonomy:
         skip |= {"taxonomy", "dnsh"}
-    if not has_carbon:
-        skip.add("sbti")
     # Le référentiel non retenu n'a pas à être défini
     skip.add("vsme" if not vsme else "csrd")
 

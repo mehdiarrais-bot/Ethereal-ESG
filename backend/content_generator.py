@@ -284,15 +284,15 @@ CONCLUSION_LOW = [
     ("prend acte des axes de progrès significatifs identifiés dans ce rapport", "Avec détermination,", "s'engage à structurer un plan d'action ESG concret et mesurable"),
 ]
 
+# Ne revendique QUE le referentiel effectivement vise (CSRD/ESRS ou VSME,
+# donnee saisie). Les variantes precedentes affirmaient un alignement GRI,
+# TCFD et ODD que rien ne fondait — supprimees le 2026-09-03.
 CONCLUSION_REFS = [
-    "en alignement avec les référentiels GRI Standards, TCFD, CSRD et les ODD des Nations Unies.",
-    "en cohérence avec les cadres GRI, ESRS (CSRD), TCFD et les 17 Objectifs de Développement Durable.",
-    "en ligne avec les standards GRI, les exigences CSRD, le cadre TCFD et les ODD de l'Agenda 2030.",
-    "conforme aux référentiels internationaux GRI, aux exigences ESRS de la directive CSRD et aux ODD.",
-    "ancré dans les cadres de reporting reconnus : GRI Standards, TCFD, CSRD/ESRS et ODD Nations Unies.",
-    "en réponse aux attentes des cadres GRI, ESRS, TCFD et des ODD de l'Agenda 2030.",
-    "sous l'angle des référentiels CSRD/ESRS, GRI Standards, TCFD et ODD Nations Unies.",
+    "au regard du référentiel de reporting retenu pour l'exercice.",
+    "dans le cadre du référentiel de reporting retenu par l'organisation.",
+    "selon le référentiel de reporting visé pour cet exercice.",
 ]
+
 
 PERF_DESC = {
     "AAA": "performance de premier plan sur l'ensemble des piliers",
@@ -484,7 +484,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         renew = (f" The renewable share of the energy mix ({env.renewable_energy_percent:.0f}%) partially "
                  f"mitigates energy-transition risk." if env.renewable_energy_percent is not None else "")
         content["climate_risk"] = (
-            f"In line with TCFD recommendations and ESRS E1 (E1-9), {name} analyses its climate risks "
+            f"Structured along the TCFD logic and the ESRS E1 (E1-9) categories, this section reviews the climate risks of {name} "
             f"over three horizons: short term (0-3 years, aligned with budget cycles), medium term "
             f"(3-10 years) and long term (beyond 10 years). Physical risks primarily concern {phys}. "
             f"Transition risks are driven by {trans}.{exposure}{renew} "
@@ -502,7 +502,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         renew = (f" La part renouvelable du mix énergétique ({env.renewable_energy_percent:.0f} %) atténue "
                  f"partiellement le risque de transition énergétique." if env.renewable_energy_percent is not None else "")
         content["climate_risk"] = (
-            f"En ligne avec les recommandations de la TCFD et la norme ESRS E1 (E1-9), {name} analyse "
+            f"Structurée selon la logique TCFD et les catégories de la norme ESRS E1 (E1-9), cette section examine "
             f"ses risques climatiques sur trois horizons : court terme (0-3 ans, aligné sur les cycles "
             f"budgétaires), moyen terme (3-10 ans) et long terme (au-delà de 10 ans). Les risques "
             f"physiques concernent en premier lieu {phys}. Les risques de transition sont portés par "
@@ -650,7 +650,12 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
             f"contains no comparison against an external sector reference: the positioning shown is "
             f"internal, comparing the three pillars with one another. No external data transfer "
-            f"takes place — the entire report is produced locally. Limitations: some indicators rely on declarative data "
+            f"takes place — the entire report is produced locally. Scope: this report documents the "
+            f"indicators collected for the financial year — emissions inventory by scope, social and "
+            f"governance indicators, and shares reported as EU Taxonomy-aligned where provided. It "
+            f"constitutes neither third-party assurance, nor a declaration of conformity with a "
+            f"reporting framework, nor a commitment by the organisation. "
+            f"Limitations: some indicators rely on declarative data "
             f"and estimates; they are refined as measurement systems mature.{gap_txt}"
         )
     else:
@@ -670,7 +675,12 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
             f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
             f"piliers entre eux. Aucun transfert de données externe n'a lieu — l'ensemble du "
-            f"rapport est produit localement. Limites : certains indicateurs reposent sur des données "
+            f"rapport est produit localement. Périmètre : ce rapport documente les indicateurs "
+            f"collectés pour l'exercice — bilan d'émissions par scope, indicateurs sociaux et de "
+            f"gouvernance, et parts déclarées comme alignées à la Taxonomie UE lorsqu'elles sont "
+            f"renseignées. Il ne constitue ni une vérification par un tiers, ni une déclaration de "
+            f"conformité à un cadre de reporting, ni un engagement de l'organisation. "
+            f"Limites : certains indicateurs reposent sur des données "
             f"déclaratives et des estimations ; ils sont affinés à mesure que les dispositifs de mesure "
             f"gagnent en maturité.{gap_txt}"
         )
@@ -949,29 +959,33 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         f"peut en constituer une étape préparatoire."
     )
 
-    # ── Objectifs & trajectoire (SBTi) ─────────────────────────────────────
+    # ── Objectifs & trajectoire ────────────────────────────────────────────
+    # AUCUNE CIBLE N'EST PRETEE AU CLIENT ICI. Le code ne collecte aujourd'hui
+    # aucun objectif chiffre : ni trajectoire carbone, ni cible par pilier.
+    # Le texte dit donc ce qui est vrai — ces objectifs restent a definir —
+    # et rappelle ce qu'exige reellement l'ESRS E1-4 : DIVULGUER les cibles,
+    # y compris leur absence. Ne pas y reintroduire de valeur par defaut
+    # (le -42 %/2030 « SBTi » supprime le 2026-09-03 en etait une).
     ty = max(company.target_year, year + 1)
-    targets_intro = [
-        f"{name} inscrit sa démarche ESG dans une trajectoire de progrès chiffrée à horizon {ty}.",
-        f"La feuille de route de durabilité de {name} fixe des cibles mesurables à l'échéance {ty}.",
-        f"Des objectifs ESG quantifiés structurent l'ambition de {name} d'ici {ty}.",
-    ]
-    targets_txt = _pick(s, 6, targets_intro)
+    targets_txt = (
+        f"À la date de ce rapport, {name} n'a pas communiqué d'objectifs de durabilité "
+        f"chiffrés à horizon {ty} : ni trajectoire de réduction des émissions, ni cible de "
+        f"progression par pilier. "
+    )
     if env.co2_emissions_tonnes and env.co2_emissions_tonnes > 0:
         targets_txt += (
-            f" Sur le plan climatique, l'entreprise vise une réduction de 42% de ses émissions "
-            f"de gaz à effet de serre d'ici 2030 par rapport à l'année de référence {year}, "
-            f"en cohérence avec une trajectoire alignée sur l'objectif 1,5°C de l'Accord de Paris "
-            f"(méthodologie Science Based Targets initiative). "
+            f"Le bilan d'émissions étant établi pour l'exercice {year}, il fournit l'année de "
+            f"référence à partir de laquelle une trajectoire de réduction peut être définie. "
         )
     else:
         targets_txt += (
-            " La définition d'une trajectoire carbone chiffrée, alignée sur l'initiative "
-            "Science Based Targets, constitue une priorité de la feuille de route. "
+            "L'établissement d'un bilan d'émissions constitue le préalable à toute trajectoire "
+            "de réduction chiffrée. "
         )
     targets_txt += (
-        f"Chaque pilier fait l'objet d'une cible de progression, avec un suivi annuel des "
-        f"indicateurs clés et une revue par la gouvernance ESG."
+        "La norme ESRS E1-4 demande de publier si et comment des cibles de réduction ont été "
+        "fixées — leur absence, documentée comme telle, relève de cette même exigence de "
+        "transparence."
     )
 
     # ── Taxonomie UE ───────────────────────────────────────────────────────
@@ -989,16 +1003,17 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         taxonomy = (
             f"Au titre du règlement Taxonomie de l'Union européenne, {name} déclare la part de ses "
             f"activités durables sur le plan environnemental : " + ", ".join(parts) + " alignés. "
-            f"Ces indicateurs traduisent la contribution substantielle des activités à au moins un "
-            f"objectif environnemental, dans le respect du principe DNSH (« ne pas causer de "
-            f"préjudice important ») et des garanties minimales sociales. Le CapEx aligné, "
-            f"prospectif, reflète la trajectoire d'investissement de l'entreprise vers une "
-            f"économie bas-carbone."
+            f"Ces parts sont celles déclarées par l'entreprise. L'alignement au sens du règlement "
+            f"suppose une contribution substantielle à au moins un objectif environnemental, le "
+            f"respect du principe DNSH (« ne pas causer de préjudice important ») et des garanties "
+            f"minimales sociales — diligence raisonnable au sens des Principes directeurs de l'OCDE "
+            f"et des Nations unies. Ces trois conditions ne sont pas évaluées dans ce rapport. Le "
+            f"CapEx aligné, prospectif, renseigne sur la trajectoire d'investissement déclarée."
         )
 
     # ── Risques climatiques (TCFD) ─────────────────────────────────────────
     climate_risk = (
-        f"En ligne avec les recommandations de la TCFD, {name} identifie deux catégories de "
+        f"Structurée selon la logique TCFD, cette section distingue pour {name} deux catégories de "
         f"risques climatiques. Les risques physiques (aigus et chroniques) recouvrent l'exposition "
         f"des actifs et de la chaîne d'approvisionnement aux événements climatiques extrêmes et à "
         f"l'évolution des conditions environnementales. Les risques de transition — réglementaires, "
@@ -1206,15 +1221,13 @@ CONCLUSION_LOW_EN = [
     ("stands at a pivotal moment in its ESG trajectory", "Faced with these challenges,", "mobilises its resources to accelerate its sustainable transformation"),
     ("acknowledges the significant areas for progress identified in this report", "With determination,", "commits to structuring a concrete, measurable ESG action plan"),
 ]
+# See the FR block: only the reporting framework actually targeted.
 CONCLUSION_REFS_EN = [
-    "in alignment with the GRI Standards, TCFD, CSRD and the UN Sustainable Development Goals.",
-    "in line with the GRI, ESRS (CSRD), TCFD frameworks and the 17 Sustainable Development Goals.",
-    "consistent with the GRI standards, CSRD requirements, the TCFD framework and the 2030 Agenda SDGs.",
-    "compliant with the international GRI frameworks, the ESRS requirements of the CSRD directive and the SDGs.",
-    "grounded in recognised reporting frameworks: GRI Standards, TCFD, CSRD/ESRS and UN SDGs.",
-    "in response to the expectations of the GRI, ESRS, TCFD frameworks and the 2030 Agenda SDGs.",
-    "through the lens of the CSRD/ESRS, GRI Standards, TCFD and UN SDG frameworks.",
+    "under the reporting framework selected for the financial year.",
+    "within the reporting framework adopted by the organisation.",
+    "in line with the reporting framework targeted for this year.",
 ]
+
 
 
 def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
@@ -1335,16 +1348,20 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         f"of impacts, risks and opportunities. It may serve as a preparatory step."
     )
     ty = max(company.target_year, year + 1)
-    targets_txt = f"{name} embeds its ESG approach in a quantified path of progress towards {ty}."
+    # Voir la note du bloc FR equivalent : aucune cible n'est pretee au client.
+    targets_txt = (
+        f"As at the date of this report, {name} has not disclosed quantified sustainability "
+        f"targets for {ty}: neither an emissions reduction pathway nor progression targets by "
+        f"pillar. ")
     if env.co2_emissions_tonnes and env.co2_emissions_tonnes > 0:
         targets_txt += (
-            f" On climate, the company targets a 42% reduction in greenhouse gas emissions by 2030 "
-            f"versus the {year} baseline, consistent with a 1.5°C pathway under the Paris Agreement "
-            f"(Science Based Targets initiative methodology). ")
+            f"With the emissions inventory established for {year}, a baseline is available from "
+            f"which a reduction pathway can be defined. ")
     else:
-        targets_txt += (" Defining a quantified carbon trajectory aligned with the Science Based "
-                        "Targets initiative is a roadmap priority. ")
-    targets_txt += "Each pillar is assigned a progression target, with annual monitoring of key indicators reviewed by ESG governance."
+        targets_txt += ("Establishing an emissions inventory is the prerequisite for any "
+                        "quantified reduction pathway. ")
+    targets_txt += ("ESRS E1-4 requires disclosing whether and how reduction targets have been set — "
+                    "their absence, documented as such, falls under that same transparency requirement.")
 
     taxonomy = None
     tx = request.taxonomy
@@ -1358,14 +1375,16 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
             parts.append(f"{tx.opex_aligned_percent:.0f}% of OpEx")
         taxonomy = (
             f"Under the EU Taxonomy Regulation, {name} discloses the share of its environmentally "
-            f"sustainable activities: " + ", ".join(parts) + " aligned. These indicators reflect a "
-            f"substantial contribution to at least one environmental objective, in compliance with the "
-            f"DNSH principle (‘do no significant harm’) and minimum social safeguards. Aligned "
-            f"CapEx, forward-looking, reflects the company's investment path towards a low-carbon economy."
+            f"sustainable activities: " + ", ".join(parts) + " aligned. These shares are as reported "
+            f"by the company. Alignment under the Regulation requires a substantial contribution to at "
+            f"least one environmental objective, compliance with the DNSH principle (‘do no significant "
+            f"harm’) and minimum safeguards — due diligence under the OECD Guidelines and the UN Guiding "
+            f"Principles. These three conditions are not assessed in this report. Aligned CapEx, "
+            f"forward-looking, indicates the reported investment path."
         )
 
     climate_risk = (
-        f"In line with TCFD recommendations, {name} identifies two categories of climate risk. "
+        f"Structured along the TCFD logic, this section distinguishes two categories of climate risk for {name}. "
         f"Physical risks (acute and chronic) cover the exposure of assets and the supply chain to "
         f"extreme weather events and changing environmental conditions. Transition risks — "
         f"regulatory, technological, market and reputational — stem from the shift to a low-carbon "
@@ -1408,8 +1427,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
 _REC_META = {
     # clé : (pillar, horizon_fr, horizon_en, detail_fr, detail_en)
     "renewable": ("env", "2027", "2027",
-        "Réduit les émissions Scope 2 et l'exposition aux prix de l'énergie ; contribue directement à la trajectoire SBTi.",
-        "Cuts Scope 2 emissions and energy-price exposure; directly supports the SBTi pathway."),
+        "Réduit les émissions Scope 2 et l'exposition aux prix de l'énergie ; premier levier d'une trajectoire de réduction.",
+        "Cuts Scope 2 emissions and energy-price exposure; a primary lever for any reduction pathway."),
     "scope3": ("env", "Court terme", "Short term",
         "Comble le principal angle mort du bilan carbone ; exigé par l'ESRS E1 de la CSRD pour les émissions de la chaîne de valeur.",
         "Closes the main carbon blind spot; required under CSRD's ESRS E1 for value-chain emissions."),
@@ -1816,7 +1835,6 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
         taxonomy = (f"{tax_top[0]:.0f}% {tax_top[1]} already EU Taxonomy-aligned"
                     if tax_top else "EU Taxonomy alignment under way")
         strategic = f"{ns} established strengths, {nw} levers for progress"
-        odd = "An ESG strategy anchored in the UN SDGs"
     else:
         materiality = f"Le {top_topic.lower()} concentre les enjeux ESG prioritaires"
         objectives = ("Une trajectoire de -42 % des émissions d'ici 2030" if env.co2_emissions_tonnes
@@ -1824,10 +1842,9 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
         taxonomy = (f"{tax_top[0]:.0f} % {tax_top[1]} déjà alignés à la Taxonomie UE"
                     if tax_top else "Alignement Taxonomie UE en cours")
         strategic = f"{ns} forces établies, {nw} leviers de progression"
-        odd = "Une stratégie ESG ancrée dans les ODD de l'ONU"
 
     return {"materiality": materiality, "objectives": objectives,
-            "taxonomy": taxonomy, "strategic": strategic, "odd": odd}
+            "taxonomy": taxonomy, "strategic": strategic}
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -2090,12 +2107,16 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
       vsme_out_of_scope=True)
 
     # Trajectoire climat
+    # ESRS E1-4 exige de DIVULGUER si et comment des cibles ont ete fixees,
+    # pas d'en avoir. Le code ne collecte aucune cible : le statut est donc
+    # « non renseigne », jamais « conforme » (l'ancien code declarait conforme
+    # des qu'un total CO2 etait saisi, sur la foi d'un objectif que l'outil
+    # avait lui-meme invente) — et jamais « non conforme » non plus, ce qui
+    # preterait a l'entreprise un manquement qu'on ne peut pas constater.
     R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
-      "ok" if env.co2_emissions_tonnes else "partial",
-      "Trajectoire -42 % à 2030 définie (réf. SBTi)" if env.co2_emissions_tonnes
-      else "Trajectoire à définir une fois le bilan GES établi",
-      "-42% by 2030 pathway defined (SBTi ref.)" if env.co2_emissions_tonnes
-      else "Pathway to be set once the GHG inventory is established")
+      "na",
+      "Cibles climatiques non documentées dans ce reporting",
+      "Climate targets not documented in this reporting")
 
     return rows
 

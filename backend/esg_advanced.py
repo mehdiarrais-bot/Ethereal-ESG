@@ -1,12 +1,11 @@
 """
-Analyses ESG avancées, alignées sur les référentiels CSRD/ESRS, TCFD et SBTi.
+Analyses ESG avancées, dérivées des données saisies.
 Tout est dérivé localement des données saisies — aucune donnée externe.
 
 - Priorisation des enjeux : positionnement (exposition vs. sensibilité
   économique), dérivé des indicateurs déclarés — PAS une double matérialité
   au sens de l'ESRS 1 (ni consultation des parties prenantes, ni cotation
   dédiée des impacts, risques et opportunités)
-- Objectifs & trajectoire : cibles par pilier + trajectoire carbone type SBTi
 - Taxonomie UE : synthèse CA / CapEx / OpEx alignés
 """
 from models import ESGRequest, ESGScores
@@ -92,49 +91,20 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     return topics
 
 
-def esg_targets(request: ESGRequest, scores: ESGScores, lang: str = "fr") -> dict:
-    """Objectifs par pilier + trajectoire carbone (type SBTi 1,5°C : -42% à 2030)."""
-    base_year = request.company.reporting_year
-    PL = _PILLAR_LABELS.get(lang, _PILLAR_LABELS["fr"])
-    target_year = max(request.company.target_year, base_year + 1)
-
-    def uplift(cur):
-        gap = 100 - cur
-        return round(min(100, cur + gap * 0.45 + 5), 0)
-
-    pillars = [
-        {"label": PL[0], "current": scores.environmental_score,
-         "target": uplift(scores.environmental_score), "color": "env"},
-        {"label": PL[1], "current": scores.social_score,
-         "target": uplift(scores.social_score), "color": "social"},
-        {"label": PL[2], "current": scores.governance_score,
-         "target": uplift(scores.governance_score), "color": "gov"},
-        {"label": PL[3], "current": scores.total_esg_score,
-         "target": uplift(scores.total_esg_score), "color": "accent"},
-    ]
-
-    # Trajectoire carbone SBTi : réduction linéaire -42% entre base et 2030
-    carbon = None
-    co2 = request.environmental.co2_emissions_tonnes
-    if co2 and co2 > 0:
-        sbti_year = 2030
-        reduction = 0.42
-        end = base_year if target_year <= base_year else min(target_year, sbti_year)
-        if end <= base_year:
-            end = base_year + 5
-        years = list(range(base_year, end + 1))
-        # interpolation linéaire jusqu'à -42% en 2030
-        span = max(1, sbti_year - base_year)
-        pts = []
-        for y in years:
-            frac = min(1.0, (y - base_year) / span)
-            pts.append(round(co2 * (1 - reduction * frac)))
-        carbon = {"years": years, "values": pts, "base": round(co2),
-                  "target": round(co2 * (1 - reduction)), "reduction_pct": int(reduction * 100),
-                  "target_year": sbti_year}
-
-    return {"base_year": base_year, "target_year": target_year,
-            "pillars": pillars, "carbon": carbon}
+# ══════════════════════════════════════════════════════════════════════════
+# esg_targets() a ete SUPPRIMEE le 2026-09-03, avec les deux graphiques
+# qu'elle alimentait (targets_chart et carbon_trajectory_chart).
+#
+# Elle fabriquait deux engagements que le client n'a jamais pris :
+#  - une trajectoire carbone « -42 % a 2030, methodologie SBTi », declenchee
+#    par la seule saisie d'un total CO2 — le -42 % etait une constante ;
+#  - une cible par pilier calculee par uplift() : cur + (100-cur)*0.45 + 5,
+#    formule arbitraire affichee comme l'ambition de l'entreprise.
+#
+# Le code ne collecte aucun objectif chiffre. Tant qu'il n'en collecte pas
+# (etape B, cf. DETTE.md), le rapport doit dire que ces objectifs restent a
+# definir — jamais afficher une valeur par defaut comme un engagement.
+# ══════════════════════════════════════════════════════════════════════════
 
 
 def taxonomy_summary(request: ESGRequest):

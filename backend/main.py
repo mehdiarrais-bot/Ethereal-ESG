@@ -291,9 +291,8 @@ def build_extras(request: ESGRequest) -> tuple:
 
 def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
     """Graphiques ESG avancés : matérialité, objectifs, trajectoire carbone, taxonomie."""
-    from esg_advanced import materiality_topics, esg_targets, taxonomy_summary
-    from chart_generator import (materiality_matrix, targets_chart,
-                                 carbon_trajectory_chart, taxonomy_chart, benchmark_chart)
+    from esg_advanced import materiality_topics, taxonomy_summary
+    from chart_generator import materiality_matrix, taxonomy_chart, benchmark_chart
     theme = request.aesthetic_theme
     lang = request.language
     brand = getattr(request, 'custom_colors', None)
@@ -303,13 +302,9 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
             materiality_topics(request, scores, lang), theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Materiality chart error: {e}")
-    try:
-        tg = esg_targets(request, scores, lang)
-        out["targets"] = targets_chart(tg["pillars"], theme, light_bg=light_bg, lang=lang, brand=brand)
-        if tg["carbon"]:
-            out["carbon_trajectory"] = carbon_trajectory_chart(tg["carbon"], theme, light_bg=light_bg, lang=lang, brand=brand)
-    except Exception as e:
-        print(f"Targets chart error: {e}")
+    # (supprime) graphiques "targets" et "carbon_trajectory" : ils affichaient
+    # des cibles par pilier et une trajectoire carbone -42 % fabriquees par
+    # l'outil, jamais fixees par le client. Voir la note dans esg_advanced.py.
     try:
         tx = taxonomy_summary(request)
         if tx:

@@ -630,7 +630,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     _toc = [
         ("01", t["toc_part1"], [t["exec_title"], t["pillar_env"], t["pillar_soc"], t["pillar_gov"]]),
         ("02", t["toc_part2"], [t["benchmark_kicker"].title(), t["ro_kicker"].title(), t["strategic"]]),
-        ("03", t["toc_part3"], [t["recommendations"], t["roadmap_title"], t["odd_title"], t["conclusion_title"]]),
+        ("03", t["toc_part3"], [t["recommendations"], t["roadmap_title"], t["conclusion_title"]]),
     ]
     _tw = Inches(3.95)
     for i, (num, act, items) in enumerate(_toc):
@@ -914,40 +914,9 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_text(slide, t["materiality_desc"], cx + Inches(0.3), Inches(2.7), cw - Inches(0.55), Inches(3.5),
                  font_size=13.5, color=theme["text_dark"], font=fb)
 
-    # ── SLIDE 5c: Objectifs & trajectoire (hero : chiffre clé + viz) ────
-    if "targets" in chart_images or "carbon_trajectory" in chart_images:
-        slide = content_slide(prs, blank_layout, theme, style,
-                              _sh["objectives"], header_color, kicker=t["targets_title"])
-        co2 = request.environmental.co2_emissions_tonnes
-        has_carbon = "carbon_trajectory" in chart_images and co2 and co2 > 0
-        # Chiffre clé dominant à gauche
-        if has_carbon:
-            big, cap = "-42%", t["obj_kpi_cap"]
-            sub = f"{t['obj_target']} 2030 : {co2 * 0.58:,.0f} {t['obj_unit']}"
-        else:
-            avg_target = round((min(100, scores.environmental_score + 15) +
-                                min(100, scores.social_score + 10) +
-                                min(100, scores.governance_score + 5)) / 3)
-            big, cap = f"{avg_target}", t["pillars_caption"]
-            sub = f"{t['obj_target']} {max(request.company.target_year, request.company.reporting_year + 1)}"
-        add_text(slide, big, Inches(0.45), Inches(1.7), Inches(5.4), Inches(1.9),
-                 font_size=96, bold=True, color=theme["accent"], font=ft)
-        add_text(slide, cap, Inches(0.6), Inches(3.75), Inches(5.3), Inches(0.9),
-                 font_size=15, bold=True, color=theme["text_dark"], font=fb)
-        add_text(slide, sub, Inches(0.6), Inches(4.55), Inches(5.3), Inches(0.5),
-                 font_size=13, color=theme["muted"], font=fb)
-        # Carte lecture métier
-        add_shape(slide, ROUNDED_RECT, Inches(0.55), Inches(5.15), Inches(5.35), Inches(1.85),
-                  fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
-        add_shape(slide, RECT, Inches(0.55), Inches(5.15), Inches(0.09), Inches(1.85), fill=theme["accent"])
-        add_text(slide, t["key_takeaway"], Inches(0.85), Inches(5.32), Inches(4.8), Inches(0.4),
-                 font_size=11.5, bold=True, color=theme["accent"], font=fb)
-        add_text(slide, t["obj_insight"], Inches(0.85), Inches(5.72), Inches(4.85), Inches(1.2),
-                 font_size=13, color=theme["text_dark"], font=fb)
-        # Visualisation à droite
-        chart_key = "carbon_trajectory" if has_carbon else "targets"
-        add_image_from_bytes(slide, chart_images[chart_key],
-                             Inches(6.35), Inches(2.3), width=Inches(6.6))
+    # (supprimee) SLIDE « Objectifs & trajectoire » : son chiffre-choc etait
+    # « -42 % » (constante) ou une moyenne de cibles par pilier fabriquees
+    # (score + 15 / +10 / +5). Rien n'y venait du client. Voir esg_advanced.py.
 
     # ── SLIDE 5d: Taxonomie UE (hero : % dominant + viz) ────────────────
     if "taxonomy" in chart_images:
@@ -1133,43 +1102,11 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                              qw_w, Inches(0.22), font_size=8.5, bold=True,
                              color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=fb)
 
-    # ── SLIDE 8: Alignement ODD ──────────────────────────────────────────
-    slide = content_slide(prs, blank_layout, theme, style,
-                          _sh["odd"], header_color, kicker=t["odd_title"])
-
-    _odd_colors = [theme["accent"], theme["social"], theme["gov"], theme["env"], theme["env"], theme["gov"]]
-    odds = [(num, lab, _odd_colors[i]) for i, (num, lab) in enumerate(t["odds"])]
-    odd_shape = ROUNDED_RECT if style["card"] == "rounded" else RECT
-    for idx, (odd_num, odd_label, odd_color) in enumerate(odds):
-        col = Inches(0.3) + (idx % 3) * Inches(4.3)
-        row = Inches(1.3) + (idx // 3) * Inches(1.8)
-        if style["card"] == "outline":
-            add_shape(slide, RECT, col, row, Inches(4.0), Inches(1.6), fill=theme["card_bg"],
-                      line_color=odd_color, line_width_pt=1.5)
-            txt_color, sub_color = odd_color, theme["text_dark"]
-        else:
-            add_shape(slide, odd_shape, col, row, Inches(4.0), Inches(1.6), fill=odd_color)
-            txt_color = sub_color = RGBColor(0xFF, 0xFF, 0xFF)
-        add_text(slide, odd_num, col + Inches(0.15), row + Inches(0.1),
-                 Inches(3.7), Inches(0.6), font_size=18, bold=True, color=txt_color, font=ft)
-        add_text(slide, odd_label, col + Inches(0.15), row + Inches(0.75),
-                 Inches(3.7), Inches(0.7), font_size=13, color=sub_color, font=fb)
-
-    frameworks = ["GRI Standards", "TCFD", "CSRD / DPEF", "SFDR", "ISO 14001 / 26000"]
-    sep_color = theme["accent"] if style["header"] != "minimal" else RGBColor(0xBD, 0xBD, 0xBD)
-    add_bg_rect(slide, Inches(0.3), Inches(5.0), Inches(12.73), Inches(0.03), sep_color)
-    add_text(slide, t["frameworks_line"] + "  |  ".join(frameworks),
-             Inches(0.3), Inches(5.15), Inches(12.7), Inches(0.5),
-             font_size=13, bold=True, color=theme["text_dark"], align=PP_ALIGN.CENTER, font=fb)
-    # Encart « Impact business »
-    _dark = style["dark_slides"]
-    add_shape(slide, ROUNDED_RECT, Inches(0.3), Inches(5.85), Inches(12.73), Inches(1.25),
-              fill=theme["card_bg"], line_color=theme["accent"], line_width_pt=1.25)
-    add_shape(slide, RECT, Inches(0.3), Inches(5.85), Inches(0.09), Inches(1.25), fill=theme["accent"])
-    add_text(slide, t["key_takeaway"], Inches(0.6), Inches(6.02), Inches(12), Inches(0.35),
-             font_size=12, bold=True, color=theme["accent"] if not _dark else theme["text_dark"], font=fb)
-    add_text(slide, t["odd_insight"], Inches(0.6), Inches(6.4), Inches(12.1), Inches(0.65),
-             font_size=13.5, color=theme["text_dark"], font=fb)
+    # (supprimee) SLIDE « Alignement — ODD & Cadres de Reference » : elle
+    # affichait six ODD identiques pour tout dossier et une liste de cadres
+    # en dur (GRI, TCFD, CSRD, SFDR, ISO 14001/26000), sans qu'aucune donnee
+    # ne les fonde. SFDR ne vise pas les entreprises non financieres et
+    # ISO 26000 n'est pas certifiable. Verifie le 2026-09-03.
 
     # ── SLIDE 9: Conclusion — clôture éditoriale + engagements ──────────
     from content_generator import enriched_recommendations

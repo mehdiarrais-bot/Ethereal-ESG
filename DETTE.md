@@ -20,6 +20,51 @@ la rédaction des clauses elles-mêmes.
   vrai, et sans doublon. Limite connue : rien à afficher au premier
   exercice — prévoir le repli sur le classement interne actuel.
 
+## 0bis. ÉTAPE B — collecter les objectifs et engagements du client
+
+Le chantier du 2026-09-03 (étape A) a **retiré** tous les engagements que
+l'outil fabriquait : trajectoire « -42 % à 2030 (SBTi) », cibles par pilier
+calculées par `uplift()`, conformité ESRS E1-4 déduite de cet objectif,
+respect du DNSH et des garanties minimales, alignement SFDR / ISO / six ODD.
+Le rapport dit désormais que ces objectifs **restent à définir**.
+
+**Étape B — les rendre saisissables.** Tant qu'elle n'est pas faite, le
+rapport ne peut rien affirmer sur les engagements du client.
+
+Périmètre chiffré au diagnostic :
+
+| Emplacement | Volume actuel | Ajout estimé |
+|---|---|---|
+| `backend/models.py` | 51 champs | +5 à 7 (cible % / année de base / année cible / périmètre scopes / cadre revendiqué / certifications ISO / ODD retenus) + validateurs |
+| Wizard React (`frontend/src/components/steps/`) | 5 steps | un **6ᵉ step « Objectifs & engagements »** plutôt que gonfler `StepEnvironmental` (77 l.) |
+| `frontend/src/demoData.js` | — | valeurs de démonstration |
+| `backend/questionnaire_generator.py` | 45 champs | +5 à 7 entrées |
+| `backend/import_data.py` | 40 mappings CSV | +5 à 7 mappings + alias |
+| Les 5 livrables | — | lecture conditionnelle : cible saisie → citée comme engagement du client ; absente → texte « à définir » |
+| Tests | 127 | cas « avec cible » / « sans cible » sur chaque livrable |
+
+**Coût caché identifié** : les certifications et les ODD sont des listes
+**multi-sélection**, ce que le wizard ne sait pas faire aujourd'hui (il n'a
+que des champs numériques et des booléens). C'est le vrai poste de travail
+de l'étape B, pas les champs eux-mêmes.
+
+**Ordre impératif** : A avant B. Faire B d'abord aurait laissé les
+affirmations fausses en production le temps du chantier de saisie.
+
+## 0ter. Mapping ODD dérivé des indicateurs réellement collectés
+
+Les six ODD affichés (7, 8, 10, 12, 13, 16) étaient identiques pour tout
+dossier et ont été retirés. Une version défendable reste possible : dériver
+les ODD **des indicateurs effectivement collectés** — par exemple ODD 13 si
+un bilan GES existe, ODD 7 si la part d'énergie renouvelable est renseignée,
+ODD 5 si la mixité l'est. Le lien serait alors traçable jusqu'à la donnée,
+et le rapport dirait « thèmes couverts par les indicateurs collectés »
+plutôt que « l'organisation contribue aux ODD ».
+
+À traiter avec l'étape B, ou séparément — cela ne demande aucun nouveau
+champ, seulement une table de correspondance indicateur → ODD et une
+formulation qui n'affirme pas une contribution.
+
 ## 1. `accident_frequency_rate` — barème non recalibré
 
 - **Où** : `backend/esg_calculator.py:132-135` (score), recopié tel quel
