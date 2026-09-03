@@ -823,11 +823,13 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if soc.total_employees:
         soc_items.append(f"{soc.total_employees:,} collaborateurs ({company.country})")
     if soc.female_employees_percent is not None:
-        gap = 40 - soc.female_employees_percent
-        if gap <= 0: fem_n = "objectif légal 40% atteint"
-        elif gap <= 5: fem_n = f"à {_pts(gap)} de l'objectif 40%"
-        else: fem_n = f"écart {gap:.0f} pts vs. objectif 40%"
-        soc_items.append(f"{soc.female_employees_percent:.0f}% de femmes ({fem_n})")
+        # Constat brut, sans cible : AUCUN quota legal de 40 % de femmes sur
+        # l'effectif total n'existe en droit francais (verifie le 2026-09-02
+        # contre les sources officielles). Les quotas de 40 % portent sur les
+        # conseils d'administration (Cope-Zimmermann) et sur les cadres
+        # dirigeants / instances dirigeantes (Rixain), pas sur l'effectif.
+        # Ne pas reintroduire de cible ici : verrouille par un test.
+        soc_items.append(f"{soc.female_employees_percent:.0f}% de femmes dans l'effectif")
     if soc.training_hours_per_employee is not None:
         lvl = "excellent" if soc.training_hours_per_employee >= 40 else ("satisfaisant" if soc.training_hours_per_employee >= 20 else "à renforcer")
         soc_items.append(f"{soc.training_hours_per_employee:.0f} h/an de formation par collaborateur ({lvl})")
@@ -860,8 +862,20 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.board_members:
         gov_items.append(f"CA de {gov.board_members} membres")
     if gov.female_board_percent is not None:
-        rixain = "conforme loi Rixain (≥40%)" if gov.female_board_percent >= 40 else f"{_pts(40 - gov.female_board_percent)} sous l'objectif Rixain 40%"
-        gov_items.append(f"{gov.female_board_percent:.0f}% de femmes au CA ({rixain})")
+        # Le quota de 40 % au CONSEIL D'ADMINISTRATION releve de la loi
+        # Cope-Zimmermann (n° 2011-103 du 27 janvier 2011), pas de la loi
+        # Rixain (2021) qui vise les cadres dirigeants et les instances
+        # dirigeantes. Attribution verifiee le 2026-09-02 contre les sources
+        # officielles ; l'ancienne mention "Rixain" etait fausse.
+        # "pour les societes concernees" : le code ne connait ni le statut
+        # cote ni un effectif fiable, il n'affirme donc pas que l'obligation
+        # s'applique a CE client (une PME hors champ ne doit pas se voir
+        # reprocher une obligation qui ne la vise pas).
+        cible_ca = ("objectif de 40 % atteint (loi Copé-Zimmermann, pour les sociétés concernées)"
+                    if gov.female_board_percent >= 40 else
+                    f"{_pts(40 - gov.female_board_percent)} sous l'objectif de 40 % "
+                    f"fixé par la loi Copé-Zimmermann pour les sociétés concernées")
+        gov_items.append(f"{gov.female_board_percent:.0f}% de femmes au CA ({cible_ca})")
     if gov.independent_board_percent is not None:
         afep = "conforme AFEP-MEDEF (≥50%)" if gov.independent_board_percent >= 50 else "sous le seuil AFEP-MEDEF 50%"
         gov_items.append(f"{gov.independent_board_percent:.0f}% d'administrateurs indépendants ({afep})")
@@ -1253,9 +1267,9 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if soc.total_employees:
         items.append(f"{soc.total_employees:,} employees ({company.country})")
     if soc.female_employees_percent is not None:
-        gap = 40 - soc.female_employees_percent
-        fn = "legal 40% target met" if gap <= 0 else f"{_pts(gap)} from the 40% target" if gap <= 5 else f"{gap:.0f} pts below the 40% target"
-        items.append(f"{soc.female_employees_percent:.0f}% women ({fn})")
+        # Voir la note du bloc FR equivalent : pas de quota legal sur
+        # l'effectif total, donc constat brut sans cible.
+        items.append(f"{soc.female_employees_percent:.0f}% women in the workforce")
     if soc.training_hours_per_employee is not None:
         lvl = "excellent" if soc.training_hours_per_employee >= 40 else "satisfactory" if soc.training_hours_per_employee >= 20 else "to strengthen"
         items.append(f"{soc.training_hours_per_employee:.0f} h/year training per employee ({lvl})")
@@ -1277,7 +1291,11 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.board_members:
         items.append(f"{gov.board_members}-member Board")
     if gov.female_board_percent is not None:
-        rx = "compliant with the 40% quota" if gov.female_board_percent >= 40 else f"{_pts(40 - gov.female_board_percent)} below the 40% quota"
+        # Voir la note du bloc FR equivalent.
+        rx = ("40% objective met (Copé-Zimmermann Act, for companies within its scope)"
+              if gov.female_board_percent >= 40 else
+              f"{_pts(40 - gov.female_board_percent)} below the 40% objective set by the "
+              f"Copé-Zimmermann Act for companies within its scope")
         items.append(f"{gov.female_board_percent:.0f}% women on the Board ({rx})")
     if gov.independent_board_percent is not None:
         ind = "≥50% independence met" if gov.independent_board_percent >= 50 else "below the 50% independence threshold"
@@ -2080,7 +2098,11 @@ _REC_OWNERS = {
 _REC_OBJECTIVES = {
     "renewable": ("50 % d'énergie renouvelable dans le mix", "50% renewable energy in the mix"),
     "scope3": ("Scope 3 mesuré et publié au prochain exercice", "Scope 3 measured and disclosed next year"),
-    "parity": ("40 % de femmes dans les effectifs", "40% women in the workforce"),
+    # Plus de "40 %" ici : aucun quota legal ne fonde ce chiffre sur
+    # l'effectif, et le reprendre lui donnait l'autorite d'une norme.
+    # L'action recommandee est justement de DEFINIR la cible.
+    "parity": ("Cible de mixité définie et suivie annuellement",
+               "Gender-balance target set and tracked annually"),
     "training": ("20 h de formation par salarié et par an", "20 training hours per employee per year"),
     "audit": ("Assurance limitée obtenue sur le reporting", "Limited assurance obtained on reporting"),
     "committee": ("Comité opérationnel dès le prochain trimestre", "Committee operational next quarter"),
