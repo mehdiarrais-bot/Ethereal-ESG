@@ -201,7 +201,6 @@ def test_completed_action_renders_callout_and_sentence():
     assert "ACTIONS ENGAGÉES" in full.upper()
     assert "déclarée engagée" in full
     assert "Créer un comité de durabilité au conseil" in full
-    assert "preuve" not in full.lower()
 
 
 def test_no_completed_action_omits_callout_and_sentence():
@@ -213,7 +212,47 @@ def test_no_completed_action_omits_callout_and_sentence():
     # alignées à la Taxonomie UE »). Troisieme fois que ce patron se
     # presente, apres « double materialite » et « sector reference ».
     assert "déclarée engagée" not in full and "déclarées engagées" not in full
-    assert "preuve" not in full.lower()
+
+
+# Passe 2 : le ban portait sur le mot nu « preuve », sur les 16 pages du PDF en
+# FR et sur une seule chaine en EN. Il interdisait exactement le vocabulaire de
+# mise en garde que le projet emploie partout ailleurs (« le cabinet n'a pas
+# collecte d'elements de preuve »). Ce sont les formulations qui transforment une
+# DECLARATION en fait verifie qui sont bannies -- et le regime est le meme dans
+# les deux langues.
+FORMULATIONS_DE_VERIFICATION = [
+    "preuve à l'appui", "preuves à l'appui", "sur justificatifs",
+    "action prouvée", "actions prouvées",
+    "vérifié par le cabinet", "vérifiée par le cabinet", "attesté par le cabinet",
+    "proof of completion", "evidence provided", "supporting evidence",
+    "verified by the firm", "attested by the firm",
+]
+
+
+def _texte_de_l_encart(lang, actions):
+    """Le texte que l'outil ecrit AUTOUR des actions engagees : titre de
+    l'encart + phrase de synthese. Portee volontairement etroite : le reste
+    du rapport reste libre d'employer le mot « preuve »."""
+    from i18n import L
+    r = make_request(lang, completed_actions=actions)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    return f'{L(lang)["done_head"]} {c["executive_summary"]}'
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_encart_actions_ne_revendique_aucune_verification(lang):
+    """L'outil reporte une declaration du cabinet, il ne prouve rien
+    (decision du 2026-09-01). L'encart ne doit donc revendiquer ni preuve,
+    ni justificatif, ni verification -- mais le mot « preuve » lui-meme
+    reste disponible ailleurs pour ecrire la mise en garde honnete."""
+    texte = _texte_de_l_encart(lang, [{"title": "Créer un comité de durabilité au conseil",
+                                       "year": 2024}])
+    for formulation in FORMULATIONS_DE_VERIFICATION:
+        assert formulation.lower() not in texte.lower(),             f"{formulation!r} present dans l'encart ({lang})"
+    # Contrepartie positive : la nuance doit rester presente.
+    attendu = "déclarée engagée" if lang == "fr" else "reported as underway"
+    assert attendu in texte, f"la nuance {attendu!r} a disparu de l'encart ({lang})"
 
 
 def test_completed_actions_singular_plural_agreement():
@@ -243,7 +282,7 @@ def test_completed_actions_singular_plural_agreement():
     assert ('two actions are reported as underway, including '
             '"Créer un comité de durabilité au conseil" '
             'and "Porter la formation à 20h/employé/an minimum".') in exec3
-    assert "proof" not in exec3.lower() and "(s)" not in exec3
+    assert "(s)" not in exec3
 
 
 # ── Scoring sectoriel & diagnostic ────────────────────────────────────────
@@ -452,6 +491,7 @@ def _textes_des_livrables(r):
     from ppt_generator import generate_pptx
     from docx_generator import generate_word_report
     from onepager_generator import generate_onepager_pdf
+    from proposal_generator import generate_proposal_docx
     from main import build_advanced_charts
 
     s = calculate_esg_scores(r)
@@ -463,8 +503,12 @@ def _textes_des_livrables(r):
                       ("onepager", generate_onepager_pdf(r, s))):
         doc = fitz.open(stream=data, filetype="pdf")
         textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+    # La lettre de mission etait exclue des tests de gel uniquement pour
+    # contourner le faux positif « marche PME/ETI » (DETTE 4bis). Le marqueur
+    # ayant ete reecrit en passe 2, l'exclusion n'a plus d'objet.
     for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, ch_l))):
+                      ("docx", generate_word_report(r, s, c, ch_l)),
+                      ("lettre", generate_proposal_docx(r, s))):
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             textes[nom] = " ".join(
                 z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
@@ -598,16 +642,28 @@ def test_la_couverture_ne_porte_que_le_referentiel_vise():
 #  - AUCUN quota legal de 40 % ne porte sur l'effectif total.
 # Le code affirmait les trois a tort. Ces chaines ne doivent pas revenir.
 ATTRIBUTIONS_LEGALES_FAUSSES = [
-    "Rixain",                     # jamais applicable au CA ni a l'effectif
-    "objectif légal 40",          # aucun quota legal sur l'effectif
-    "legal 40% target",
-    "objectif 40%",               # cible d'effectif presentee comme une norme
-    "target 40%",
-    "cible 40 %",
-    "40% target",
-    "40 % de femmes dans les effectifs",
-    "40% women in the workforce",
-    "transparence salariale UE",  # reference non verifiee, retiree
+    # Passe 2 : « Rixain » nu interdisait de citer une loi REELLE, y compris
+    # correctement (elle vise les cadres dirigeants et les instances dirigeantes).
+    # Le marqueur vise desormais la mauvaise ATTRIBUTION, pas la citation.
+    "conforme loi Rixain", "objectif Rixain",
+    "loi Rixain, transparence salariale UE",
+    "objectif légal 40", "legal 40% target",
+    # NON REECRITS, et c'est signale : la faute visee ici n'est pas une phrase
+    # mais une LIGNE du tableau d'ecarts reglementaires (la parite de l'effectif
+    # presentee comme une exigence). Aucune reformulation textuelle ne distingue
+    # ce libelle d'un objectif que le client declarerait lui-meme. La faute
+    # structurelle est deja couverte par test_ecarts_sans_mixite_effectif.
+    "40 % de femmes dans les effectifs", "40% women in the workforce",
+]
+
+# Provenance, pas attribution legale (reclassement du 2026-09-05, DETTE 0quater).
+# Un objectif de parite DECLARE par le client est un fait -- c'est meme ce que la
+# recommandation « Definir des objectifs chiffres de parite » lui demande de
+# produire. Le ban ne tient que tant qu'aucun champ ne permet de le saisir :
+# a convertir en test differentiel des que l'etape B existe. Assertes ici en
+# attendant, pour ne pas perdre la couverture.
+PROVENANCE_SANS_DONNEE_COLLECTEE = [
+    "objectif 40%", "target 40%", "cible 40 %", "40% target",
 ]
 
 
@@ -620,7 +676,7 @@ def test_aucune_attribution_legale_fausse_dans_le_texte(lang):
     c = generate_esg_content(r, s)
     blob = " ".join(str(v) for v in c.values() if v)
     blob += " " + " ".join(s.strengths + s.weaknesses + s.recommendations)
-    for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
+    for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE:
         assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
 
 
@@ -629,7 +685,7 @@ def test_aucune_attribution_legale_fausse_dans_les_livrables(livrables_geles, la
     """Bout en bout sur les cinq livrables : le tableau d'ecarts
     reglementaires et le plan d'action passent par la aussi."""
     for nom, blob in livrables_geles(lang, "ca_sous_seuil").items():
-        for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
+        for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE:
             assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
 
 
@@ -738,22 +794,42 @@ def test_elision_du_titre_de_la_section_positionnement():
 # supprimee le 2026-09-02, avec tous les ecarts chiffres qu'elle imprimait.
 # S'y ajoutait une affirmation de couverture normative que rien ne verifie.
 MARQUEURS_BENCHMARK_INVENTE = [
-    # NB : « sector reference » seul n'est PAS banni. La note methodologique
-    # emploie legitimement le terme pour NIER la comparaison (« contains no
-    # comparison against an external sector reference »), exactement comme
-    # « double materialite » est employe pour s'en demarquer. Ce sont les
-    # AFFIRMATIONS qui sont interdites, pas le mot qui les nie.
-    "référence sectorielle", "internal sector reference",
+    # Passe 2 (2026-09-05) : les 13 fragments generiques de cette liste ont ete
+    # remplaces par la FORMULATION reellement fautive, retrouvee dans les lignes
+    # supprimees par 26b3c75 et 33fae44. Un fragment comme « de son secteur » ou
+    # « marche PME/ETI » mordait du texte juste : le premier decrit un perimetre,
+    # le second est employe legitimement par proposal_generator.py:78 pour nommer
+    # le perimetre reglementaire CSRD/VSME.
+    # Regle : bannir l'affirmation de comparaison, jamais le nom du secteur.
+
+    # -- Comparaisons chiffrees a une moyenne inventee (deja cibles, inchanges)
     "moyenne de votre secteur", "moyenne de son secteur", "sector average",
     "devance la moyenne", "surperforme son secteur", "outperforms its sector",
     "vs secteur", "vs sector", "Surperformance sectorielle",
-    "marché ETI/PME", "marché PME/ETI", "mid-market",
-    # Variantes qui avaient echappe a la premiere purge : la note
-    # methodologique EN est restee perimee un chantier entier parce que la
-    # liste calquait le libelle FR exact du moment.
-    "sector comparison uses", "SME/mid-cap market", "reference base for",
-    "standards sectoriels", "sector standards", "moyenne sectorielle",
-    "leaders mondiaux", "global ESG leaders", "de son secteur", "pratiques du secteur",
+    "moyenne sectorielle", "sector comparison uses",
+
+    # -- La « reference sectorielle interne » et ses comparatifs
+    #    (ex-« reference sectorielle », ex-« marche ETI/PME », ex-« mid-market »)
+    "référence sectorielle interne", "dépasse la référence sectorielle",
+    "supérieure à la référence sectorielle", "référence de son secteur",
+    "moyennes ESG typiques par secteur",
+    "internal sector reference",          # la note methodologique dit « external »
+    "sector reference — mid-market",
+    "interne du marché PME/ETI",
+    "reference base for the SME/mid-cap market",
+
+    # -- Le classement par rapport a des « standards » sectoriels
+    #    (ex-« standards sectoriels », ex-« sector standards »)
+    "dépassant les standards sectoriels", "supérieur aux standards sectoriels",
+    "standards sectoriels reconnus",
+    "exceeding recognised sector standards", "above sector standards",
+    "recognised sector standards",
+
+    # -- Le rang par rapport a des leaders / pratiques
+    #    (ex-« leaders mondiaux », ex-« pratiques du secteur »)
+    "alignée avec les leaders mondiaux", "on par with global ESG leaders",
+    "meilleures de son secteur", "en tête de son secteur",
+    "en deçà des pratiques du secteur",
 ]
 
 # Contrepartie positive : la grille de notation est interne et non sourcee.
@@ -831,7 +907,14 @@ def test_positionnement_interne_est_vrai_et_coherent():
 # Le texte les affirmait pourtant jusqu'au 2026-09-02 : materiality_topics()
 # se contente de dériver deux valeurs des scores et des indicateurs déclarés.
 MARQUEURS_METHODO_INVENTEE = [
-    "IRO-1", "SBM-3", "sévérité ×", "severity ×", "irrémédiab", "irremediab",
+    # Passe 2 : « IRO-1 », « SBM-3 », « irremediab » etaient des codes et des
+    # radicaux nus. Citer une norme reelle doit rester possible, y compris pour
+    # dire qu'on ne la couvre PAS. Ce sont les revendications de conformite et la
+    # formule de cotation qui sont bannies, retrouvees dans d9a079a.
+    "(IRO-1, SBM-3)",                     # « ... aux normes ESRS 1/ESRS 2 (IRO-1, SBM-3) »
+    "aux normes ESRS 1/ESRS 2", "and ESRS 1/ESRS 2",
+    "sévérité ×", "severity ×",
+    "× irrémédiabilité", "× irremediability",
     "validation interne par la gouvernance", "internal validation by ESG governance",
 ]
 
@@ -886,7 +969,8 @@ def test_materialite_absente_des_livrables_generes(livrables_geles, lang):
     Le one-pager est ecarte a dessein : il ne l'a jamais couvert, et cette
     passe est a iso-comportement.
     """
-    textes = {n: b for n, b in livrables_geles(lang).items() if n != "onepager"}
+    textes = {n: b for n, b in livrables_geles(lang).items()
+              if n not in ("onepager", "lettre")}
     for nom, blob in textes.items():
         for marqueur in MARQUEURS_METHODO_INVENTEE:
             assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
@@ -1044,3 +1128,95 @@ def test_sommaire_numerotation_et_pagination(lang):
     pages = [int(n) for n in re.findall(r"\| page (\d+)", entier)]
     assert pages == list(range(2, doc.page_count + 1)), \
         f"pagination discontinue : {pages} pour {doc.page_count} pages ({lang})"
+
+
+# ── Regle d'admission : un marqueur doit casser sur la faute qu'il vise ────
+
+# Passe 2 (2026-09-05). Les 75 marqueurs ont tous ete ecrits APRES la
+# suppression de la faute : ils sont nes verts et n'ont jamais discrimine.
+# Chaque marqueur reecrit dans cette passe est donc confronte a la phrase
+# reellement supprimee du depot (commits 26b3c75, 33fae44, d9a079a,
+# 1b03075), retrouvee par `git log -p -S`. Un marqueur qui ne retrouve pas
+# sa propre faute est mort ou vise a cote.
+#
+# LIMITE CONNUE : ce test prouve que l'assertion se declenche, pas que le
+# generateur pourrait encore produire la chaine.
+FAUTES_HISTORIQUES = [
+    # -- MARQUEURS_BENCHMARK_INVENTE
+    ("référence sectorielle interne", "Référence sectorielle interne — marché ETI/PME."),
+    ("dépasse la référence sectorielle",
+     "L'intensité carbone dépasse la référence sectorielle : l'exposition au coût du carbone constitue un point de vigilance."),
+    ("supérieure à la référence sectorielle",
+     "L'intensité carbone est très supérieure à la référence sectorielle, une exposition majeure au prix du carbone."),
+    ("référence de son secteur",
+     "L'intensité carbone est nettement inférieure à la référence de son secteur, signe d'un modèle déjà sobre."),
+    ("moyennes ESG typiques par secteur",
+     "Base de référence interne — moyennes ESG typiques par secteur (marché ETI/PME)."),
+    ("internal sector reference", "The pillar stands 4 pts above the internal sector reference"),
+    ("sector reference — mid-market", "Internal sector reference — mid-market."),
+    ("interne du marché PME/ETI",
+     "la base de référence interne du marché PME/ETI et n'implique aucun transfert de données externe"),
+    ("reference base for the SME/mid-cap market",
+     "reference base for the SME/mid-cap market and involves no external data transfer"),
+    ("dépassant les standards sectoriels",
+     "très bonne performance, dépassant les standards sectoriels reconnus"),
+    ("supérieur aux standards sectoriels",
+     "Taux d'accidents supérieur aux standards sectoriels (TF 6.2)"),
+    ("standards sectoriels reconnus",
+     "seuils réglementaires et des standards sectoriels reconnus — l'intensité carbone est"),
+    ("exceeding recognised sector standards",
+     "strong performance, exceeding recognised sector standards"),
+    ("above sector standards", "Accident rate above sector standards (rate 6.2)"),
+    ("recognised sector standards",
+     "indicator against regulatory thresholds and recognised sector standards"),
+    ("alignée avec les leaders mondiaux",
+     "performance de premier plan, alignée avec les leaders mondiaux ESG"),
+    ("on par with global ESG leaders", "leading performance, on par with global ESG leaders"),
+    ("meilleures de son secteur",
+     "L'intensité carbone se situe parmi les meilleures de son secteur, un atout rare."),
+    ("en tête de son secteur",
+     "Rapportées au chiffre d'affaires, les émissions placent Acme en tête de son secteur."),
+    ("en deçà des pratiques du secteur",
+     "À 63 % de déchets recyclés, la valorisation matière d'Acme reste en deçà des pratiques du secteur."),
+    # -- MARQUEURS_METHODO_INVENTEE
+    ("(IRO-1, SBM-3)",
+     "Conformément à la CSRD et aux normes ESRS 1/ESRS 2 (IRO-1, SBM-3), Acme a conduit une analyse."),
+    ("aux normes ESRS 1/ESRS 2",
+     "Conformément à la CSRD et aux normes ESRS 1/ESRS 2 (IRO-1, SBM-3), Acme a conduit une analyse."),
+    ("and ESRS 1/ESRS 2",
+     "In accordance with the CSRD and ESRS 1/ESRS 2 (IRO-1, SBM-3), Acme conducted a double assessment."),
+    ("× irrémédiabilité",
+     "cotation de la matérialité d'impact (sévérité × étendue × irrémédiabilité, pondérée)"),
+    ("× irremediability",
+     "(severity × scope × irremediability, plus likelihood for potential impacts)"),
+    # -- ATTRIBUTIONS_LEGALES_FAUSSES
+    ("conforme loi Rixain", "conforme loi Rixain (≥40%)"),
+    ("objectif Rixain", "3 pt(s) sous l'objectif Rixain"),
+    ("loi Rixain, transparence salariale UE",
+     "Renforce la diversité et la conformité (loi Rixain, transparence salariale UE)."),
+]
+
+
+@pytest.mark.parametrize("marqueur,faute", FAUTES_HISTORIQUES,
+                         ids=[m for m, _ in FAUTES_HISTORIQUES])
+def test_chaque_marqueur_reecrit_casse_sur_sa_faute(marqueur, faute):
+    """Le marqueur doit (a) figurer dans une liste reellement assertee et
+    (b) retrouver la phrase supprimee qu'il vise."""
+    listes = (MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_METHODO_INVENTEE
+              + ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE)
+    assert marqueur in listes, f"{marqueur!r} n'est asserte par aucune liste"
+    assert marqueur.lower() in faute.lower(), \
+        f"{marqueur!r} ne retrouve pas la faute historique qu'il vise"
+
+
+def test_aucun_marqueur_reecrit_ne_mord_le_texte_produit():
+    """Contrepartie : aucune des formulations reecrites ne doit apparaitre
+    dans le texte que le code produit AUJOURD'HUI, FR et EN. Sans ce
+    controle, un marqueur pourrait « casser sur sa faute » tout en mordant
+    du texte juste."""
+    for lang in ("fr", "en"):
+        r = make_request(lang)
+        s = calculate_esg_scores(r)
+        blob = " ".join(str(v) for v in generate_esg_content(r, s).values() if v).lower()
+        for marqueur, _ in FAUTES_HISTORIQUES:
+            assert marqueur.lower() not in blob, f"{marqueur!r} mord le texte {lang}"

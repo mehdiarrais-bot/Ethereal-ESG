@@ -143,9 +143,13 @@ légitime :
   - **23 mal écrits** : 13 fragments génériques de `BENCHMARK`
     (`de son secteur`, `référence sectorielle`, `standards sectoriels`,
     `mid-market`, `leaders mondiaux`, `reference base for`…), 4 de
-    `METHODO` (`IRO-1`, `SBM-3`, `irrémédiab`, `irremediab`), 6 de
-    `LEGALES` (`Rixain`, `objectif légal 40`,
-    `40 % de femmes dans les effectifs`, `transparence salariale UE`…).
+    `METHODO` (`IRO-1`, `SBM-3`, `irrémédiab`, `irremediab`), et les 6 de
+    `LEGALES` — liste explicite, pour lever toute ambiguïté : `Rixain`,
+    `objectif légal 40`, `legal 40% target`,
+    `40 % de femmes dans les effectifs`, `40% women in the workforce`,
+    `transparence salariale UE`. **Les quatre marqueurs `objectif 40%` /
+    `target 40%` / `cible 40 %` / `40% target` n'en font PAS partie** :
+    ils sont comptés en provenance ci-dessous.
 - **provenance** — la faute et l'énoncé légitime sont **identiques au mot
   près** et ne se distinguent que par **l'existence de la donnée en
   amont**. Aucun test textuel ne peut trancher. **25 marqueurs** :
@@ -159,7 +163,7 @@ légitime :
 | `dans le respect du principe DNSH`, `in compliance with the DNSH principle` | 2 | Cadre revendiqué (étape B) |
 | `Cadres de Référence & Alignement ODD`, `Reporting Frameworks & SDG Alignment` | 2 | Titres de section, légitimes dès que la section a une donnée à afficher |
 | `Chaque pilier fait l'objet d'une cible`, `Each pillar is assigned a progression target` | 2 | Cibles par pilier (étape B) |
-| `objectif 40%`, `target 40%`, `cible 40 %`, `40% target` | 4 | Objectif de parité **déclaré par le client** (étape B). Viennent de `ATTRIBUTIONS_LEGALES_FAUSSES`, où ils étaient classés comme attribution légale fausse : ce sont en réalité des marqueurs de provenance. |
+| `objectif 40%`, `target 40%`, `cible 40 %`, `40% target` | 4 | Objectif de parité **déclaré par le client** (étape B) : c'est un fait, et c'est même ce que la recommandation « Définir des objectifs chiffrés de parité » demande au client de produire. Venaient de `ATTRIBUTIONS_LEGALES_FAUSSES` ; reclassement **déjà appliqué** au commit `1dec462` — les totaux 25 / 23 le reflètent déjà, ne pas le compter une seconde fois. Sortis de cette liste en passe 2 vers `PROVENANCE_SANS_DONNEE_COLLECTEE`, toujours assertés en attendant le différentiel. |
 
 ### Règle d'admission : 1 garde-fou prouvé sur 76
 
@@ -184,6 +188,53 @@ retenu, par famille — **non appliqué à ce jour** :
 - **forme** : mutation manuelle une fois, SHA d'échec tracé en
   commentaire.
 
+
+### Passe 2 (2026-09-05) — 19 marqueurs de formulation réécrits
+
+Chaque fragment générique a été remplacé par la **formulation réellement
+fautive**, retrouvée dans les lignes supprimées du dépôt
+(`git log -p -S` sur `26b3c75`, `33fae44`, `d9a079a`, `1b03075`).
+
+- `MARQUEURS_BENCHMARK_INVENTE` — les 13 fragments (`de son secteur`,
+  `référence sectorielle`, `standards sectoriels`, `mid-market`,
+  `marché PME/ETI`, `leaders mondiaux`, `reference base for`…) sont
+  devenus des comparatifs explicites (`dépasse la référence sectorielle`,
+  `en tête de son secteur`, `exceeding recognised sector standards`…).
+- `MARQUEURS_METHODO_INVENTEE` — `IRO-1` / `SBM-3` / `irrémédiab` visent
+  désormais la revendication (`(IRO-1, SBM-3)`,
+  `aux normes ESRS 1/ESRS 2`, `× irrémédiabilité`). **Citer un code ESRS
+  réel est redevenu possible**, y compris pour dire qu'on ne couvre pas
+  la norme.
+- `ATTRIBUTIONS_LEGALES_FAUSSES` — `Rixain` nu est remplacé par
+  `conforme loi Rixain` / `objectif Rixain` : la loi, qui est **réelle**,
+  peut de nouveau être citée correctement. Le doublon `:558` / `:629` est
+  résorbé, l'assertion isolée ayant disparu avec la réécriture.
+- **`"preuve"`** — le ban du mot nu sur 16 pages est remplacé par
+  `FORMULATIONS_DE_VERIFICATION` (`preuve à l'appui`, `action prouvée`,
+  `sur justificatifs`, `vérifié par le cabinet`, équivalents EN),
+  **restreintes au texte de l'encart**, avec l'assertion positive
+  conservée. Régime FR et EN désormais identique — l'un balayait 16 pages,
+  l'autre une seule chaîne.
+
+**Le faux positif du § 4bis est levé** : `marché PME/ETI` ayant été
+réécrit, l'exclusion de la lettre de mission n'avait plus d'objet. Elle a
+été retirée et le livrable est désormais couvert par les tests de gel.
+
+**Deux marqueurs NON réécrits, et c'est signalé** :
+`40 % de femmes dans les effectifs` et `40% women in the workforce`. La
+faute visée n'est pas une phrase mais une **ligne du tableau d'écarts
+réglementaires** (la parité de l'effectif présentée comme une exigence).
+Aucune reformulation textuelle ne distingue ce libellé d'un objectif que
+le client déclarerait lui-même — et la faute structurelle est déjà
+couverte par le test qui interdit cette ligne dans les écarts. Laissés en
+l'état.
+
+**Règle d'admission appliquée** : les 29 marqueurs réécrits passent par
+`test_chaque_marqueur_reecrit_casse_sur_sa_faute`, qui les confronte à la
+phrase historique qu'ils visent, doublé de
+`test_aucun_marqueur_reecrit_ne_mord_le_texte_produit` (FR/EN). Aucun
+marqueur mort, aucun qui morde le texte vivant. Coût : 0,30 s.
+Le score du § « règle d'admission » passe donc de **1 sur 76 à 30 sur 76**.
 
 ### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
 
