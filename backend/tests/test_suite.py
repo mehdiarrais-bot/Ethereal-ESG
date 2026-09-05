@@ -1000,3 +1000,66 @@ def test_questionnaire_csv_reimports(client):
     assert sec["governance"]["esg_audit_conducted"] is False
     assert sec["governance"]["sustainability_committee"] is True
     assert r.json()["unmatched"] == []
+
+
+# ── Intégrité structurelle du rapport PDF ────────────────────────────────
+
+# Le sommaire (report_generator.py, `_toc_parts`) est câblé EN DUR sur des
+# clés i18n : rien ne garantit qu'une entrée corresponde encore à une
+# section réellement rendue. Les chantiers de septembre 2026 ont retiré du
+# contenu (comparaison sectorielle, engagements fabriqués) ; un retrait de
+# section qui oublierait le sommaire laisserait une entrée pointant dans le
+# vide, sans qu'aucun test ne le voie.
+def _toc_labels(TR):
+    """Les dix entrées du sommaire, dans l'ordre où `_toc_parts` les pose."""
+    return [TR["pdf_s1"], TR["pdf_s2"], TR["pdf_s3"], TR["pdf_s4"], TR["pdf_s5"],
+            TR["pdf_s6"], TR["pdf_diag"], TR["pdf_s7"], TR["roadmap_title"],
+            TR["pdf_concl"]]
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_sommaire_numerotation_et_pagination(lang):
+    """Trois contrôles structurels sur le PDF, FR et EN :
+
+    1. aucune entrée du sommaire ne pointe dans le vide — chaque libellé
+       apparaît AU MOINS DEUX FOIS (une dans le sommaire, une comme titre
+       de section rendu) ;
+    2. la numérotation des sections va de 1 à 8 sans saut ;
+    3. les pieds de page forment une suite continue jusqu'à la dernière page.
+
+    NB méthodologique : on compte les OCCURRENCES, pas les index de page.
+    Le sommaire et les deux premiers titres tombent sur la même page, si
+    bien qu'un contrôle par numéro de page les déclarerait orphelins à
+    tort.
+
+    LIMITE CONNUE : `_toc_parts` est une variable locale de
+    `generate_pdf_report`, non importable ; la liste ci-dessus la
+    RECOPIE. Le test attrape donc le cas réel (une section retirée du
+    corps dont l'entrée survit au sommaire — vérifié par mutation) mais
+    PAS l'ajout d'une entrée fantôme directement dans `_toc_parts`.
+    Rendre `_toc_parts` extractible lèverait la duplication.
+    """
+    import re
+    import fitz
+    from i18n import L
+    from report_generator import generate_pdf_report
+    from main import build_advanced_charts
+
+    r = make_request(lang)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    doc = fitz.open(stream=generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True)),
+                    filetype="pdf")
+    entier = re.sub(r"\s+", " ", " ".join(doc[i].get_text() for i in range(doc.page_count)))
+
+    for libelle in _toc_labels(L(lang)):
+        attendu = re.sub(r"\s+", " ", libelle).strip()
+        assert entier.count(attendu) >= 2, \
+            f"entrée de sommaire sans section correspondante : {attendu!r} ({lang})"
+
+    numeros = sorted({int(n) for n in re.findall(r"(?:^| )([1-8])\. [A-ZÉÀ]", entier)})
+    assert numeros == list(range(1, 9)), f"numérotation des sections trouée : {numeros} ({lang})"
+
+    pages = [int(n) for n in re.findall(r"\| page (\d+)", entier)]
+    assert pages == list(range(2, doc.page_count + 1)), \
+        f"pagination discontinue : {pages} pour {doc.page_count} pages ({lang})"

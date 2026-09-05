@@ -65,6 +65,57 @@ plutôt que « l'organisation contribue aux ODD ».
 champ, seulement une table de correspondance indicateur → ODD et une
 formulation qui n'affirme pas une contribution.
 
+## 0quater. Patron « liste noire sur un mot nu » — trois faux positifs, chantier dédié
+
+- **Constat** : les tests de gel bannissent une chaîne dans le texte
+  généré. Quand la chaîne bannie est une **formulation fautive**
+  (« a conduit une analyse de double matérialité »), le test vise juste.
+  Quand c'est un **mot nu ou une sous-chaîne générique**, il interdit
+  aussi les emplois légitimes — y compris ceux qui **nient**
+  l'affirmation, c'est-à-dire exactement la correction recherchée.
+- **Trois occurrences déjà déclenchées** :
+  1. « double matérialité » — l'expression reste légitime pour s'en
+     démarquer ; d'où la scission `MARQUEURS_METHODO_INVENTEE` /
+     `AFFIRMATIONS_INTERDITES`.
+  2. « sector reference » — la note méthodologique EN l'emploie pour
+     nier la comparaison ; d'où le NB en tête de
+     `MARQUEURS_BENCHMARK_INVENTE` et le retrait du marqueur nu.
+  3. « déclarée » — figure légitimement dans la note méthodologique
+     (« parts déclarées comme alignées à la Taxonomie UE ») ; le test
+     bannit désormais « déclarée engagée » / « déclarées engagées ».
+- **Ce n'est plus un accident** : trois fois le même patron, corrigé
+  trois fois après coup, chaque fois au moment où le test a cassé sur du
+  texte juste. **À traiter comme un chantier dédié**, pas au cas par cas :
+  passer en revue toutes les listes noires, remplacer chaque marqueur
+  générique par la formulation qu'il visait, et poser la règle
+  (« bannir une affirmation, jamais un mot »).
+- **Inventaire des marqueurs encore exposés** : établi le 2026-09-05, non
+  corrigé — voir la section « Marqueurs génériques restants » ci-dessous.
+
+### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
+
+| Marqueur | Où | Portée | Pourquoi il est exposé |
+|---|---|---|---|
+| `"preuve"` / `"proof"` | `test_suite.py:204,216,246` | **PDF entier** | Mot nu, et sous-chaîne d'« épreuve ». Interdit la mise en garde honnête que le projet ajoute par ailleurs (« le cabinet n'a pas collecté d'éléments de preuve »). Le plus exposé de la liste. |
+| `"de son secteur"` | `MARQUEURS_BENCHMARK_INVENTE` | texte + 4 livrables | Fragment générique : « les obligations réglementaires de son secteur » est vrai et non comparatif. |
+| `"référence sectorielle"` | idem | idem | Banni nu en FR alors que son équivalent EN « sector reference » est explicitement épargné pour pouvoir **nier** la comparaison. Asymétrie FR/EN non justifiée. |
+| `"standards sectoriels"` / `"sector standards"` | idem | idem | Les normes sectorielles ESRS sont un objet réglementaire réel ; le marqueur interdit de les citer. |
+| `"mid-market"` / `"marché PME/ETI"` / `"SME/mid-cap market"` | idem | idem | Faux positif **déjà connu et documenté** (§ 4bis) : contenu en restreignant la portée du test à cinq livrables plutôt qu'en corrigeant le marqueur. |
+| `"leaders mondiaux"` / `"pratiques du secteur"` / `"reference base for"` | idem | idem | Fragments génériques, aucune affirmation comparative en propre. |
+| `"IRO-1"` / `"SBM-3"` | `MARQUEURS_METHODO_INVENTEE` | texte materiality + 3 livrables | Codes ESRS réels : interdit de citer la norme même pour dire qu'on ne la couvre pas. |
+| `"irrémédiab"` / `"irremediab"` | idem | idem | Radicaux tronqués : bloqueraient « le caractère irrémédiable n'a pas été coté ». |
+| `"Rixain"` | `test_suite.py:629` | texte gouvernance | Loi **réelle**, avec des quotas réels sur les cadres dirigeants. Le marqueur interdit de la citer correctement — il visait une mauvaise attribution, pas la loi. |
+| `"42"` | `test_suite.py:504` | `str(lignes[0])` | Bannit une paire de chiffres : casse sur toute valeur contenant 42, et ne voit pas la cible « -42 % » si elle réapparaît sur une autre ligne. Faux positif **et** faux négatif. |
+| `"module"` / `"optionnel"` | `test_suite.py:321-322` | note d'audit | VSME est structuré en modules (Basic / Comprehensive) : le marqueur interdit de décrire correctement le référentiel. |
+| `"EAU"` | `test_bands.py:413` | section composée | Sous-chaîne de NIVEAU, BUREAU, RÉSEAU, TABLEAU. Contenu aujourd'hui par des clauses de test maîtrisées, structurellement fragile. |
+| `"VSME/"` | `test_suite.py:292` | `row["ref"]` | Bannit une forme de référence ; à confirmer contre les refs VSME réelles (B1-B11, C1-C9). |
+
+**Contrôlés et jugés SAINS** (à ne pas ré-inventorier) : `"CSRD"` et
+`"Taxonomie européenne"` (`:942-943`) et `"Vérification du reporting par un
+tiers"` (`:330`) portent sur une **liste/ensemble de termes exacts**, pas sur
+une sous-chaîne de prose. `"(s)"`, `"http://"`, `"automatiq"` visent une
+forme, pas un mot de vocabulaire.
+
 ## 1. `accident_frequency_rate` — barème non recalibré
 
 - **Où** : `backend/esg_calculator.py:132-135` (score), recopié tel quel
