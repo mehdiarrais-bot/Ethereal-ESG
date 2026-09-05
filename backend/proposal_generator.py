@@ -70,13 +70,13 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
                f"{scores.total_esg_score:.0f}/100 (indicative internal scale), with an ESG maturity "
                f"assessed as {mat_lbl.lower()} ({mat['stage']}/5). In view of the CSRD/VSME requirements "
                f"applicable to the SME/mid-cap market, the review identifies "
-               f"{len(gaps)} regulatory gap(s) to address.")
+               f"{len(gaps)} coverage gap(s) to address.")
     else:
         ctx = (f"Une revue préliminaire des données ESG de {name} aboutit à un score global de "
                f"{scores.total_esg_score:.0f}/100 (échelle interne indicative), pour une maturité ESG "
                f"évaluée comme {mat_lbl.lower()} ({mat['stage']}/5). Au regard des exigences CSRD/VSME "
                f"applicables au marché PME/ETI, cette revue identifie "
-               f"{len(gaps)} écart(s) réglementaire(s) à traiter.")
+               f"{len(gaps)} écart(s) de couverture à traiter.")
     doc.add_paragraph(ctx)
 
     if gaps:
@@ -103,11 +103,11 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     # ── 2. Objectifs de la mission ─────────────────────────────────────────
     _h(doc, "2. " + ("Engagement objectives" if en else "Objectifs de la mission"), 14, colors["primary"])
     objs_fr = ["Fiabiliser et compléter le reporting extra-financier au regard des exigences CSRD/VSME",
-               "Traiter en priorité les écarts réglementaires identifiés au pré-diagnostic",
+               "Traiter en priorité les écarts de couverture identifiés au pré-diagnostic",
                "Structurer la gouvernance ESG et le plan d'action à 12 mois",
                "Produire les livrables de restitution à destination de la direction et des parties prenantes"]
     objs_en = ["Strengthen and complete sustainability reporting against CSRD/VSME requirements",
-               "Address the regulatory gaps identified in the preliminary assessment as a priority",
+               "Address the coverage gaps identified in the preliminary assessment as a priority",
                "Structure ESG governance and the 12-month action plan",
                "Produce management- and stakeholder-ready deliverables"]
     for o in (objs_en if en else objs_fr):

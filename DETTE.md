@@ -492,7 +492,15 @@ en FR et en EN.
   python-pptx et python-docx n'exposent pas tous le même niveau de
   contrôle sur ces champs.
 
-## 0octies. Seuil d'indépendance du conseil : AFEP-MEDEF appliqué hors de son champ
+## 0octies. AFEP-MEDEF appliqué hors de son champ — **chantier « exactitude du scoring »**
+
+> **Rattachement** : ces trois constats rejoignent le chantier
+> « exactitude du scoring » du registre, avec le § 1 (barème TF non
+> recalibré), le § 1bis (grille carbone non sourcée), le § 2
+> (`corruption_cases` absent du score) et le § 4 (seuil de 40 % conservé
+> comme déclencheur interne). Ce ne sont **pas** des défauts de
+> vocabulaire : le chantier du 2026-09-05 n'a corrigé que l'intitulé, le
+> barème est intact et continue de piloter le statut **et** le score.
 
 Constaté le 2026-09-05 en vérifiant la formulation du principe avant de
 l'imprimer (chantier « vocabulaire du tableau d'écarts »). **Non corrigé** —
@@ -501,14 +509,23 @@ le barème n'a pas été touché, seul l'intitulé l'a été.
 - **Le principe s'appelle « appliquer ou expliquer »** dans le code
   français ; « comply or explain » en est la traduction usuelle, pas le
   libellé du texte. L'intitulé retenu emploie donc la forme française.
-- **Le seuil de 50 % n'est pas universel.** Le code retient **la moitié**
-  pour les sociétés à capital dispersé sans actionnaire de contrôle, et
-  **le tiers** pour les sociétés contrôlées. `esg_calculator` /
-  `compliance_assessment` appliquent 50 % (et 33 % comme borne `partial`)
+- **Le seuil de 50 % n'est pas universel — défaut d'exactitude du
+  scoring, pas de vocabulaire.** Le code retient **la moitié** pour les
+  sociétés à capital dispersé sans actionnaire de contrôle, et **le
+  tiers** pour les sociétés contrôlées. `esg_calculator` (barème
+  d'indépendance) et `compliance_assessment` appliquent 50 %
   **uniformément**, sans savoir si la société est contrôlée — information
-  que le modèle ne collecte pas.
+  que le modèle ne collecte pas. La borne `partial` à 33 % coïncide par
+  hasard avec le seuil des sociétés contrôlées, sans que ce soit
+  intentionnel. Comme au § 1 et au § 1bis, la correction devra toucher
+  **le score et le tableau dans le même commit**.
 - **Le code AFEP-MEDEF vise les sociétés cotées.** Le produit cible des
   PME/ETI souvent non cotées, pour lesquelles il ne s'applique pas.
+  **Même famille que la ligne « Mixité des effectifs » retirée à l'étape A** :
+  mesurer un écart à une norme qui ne s'applique pas au client est un faux
+  par construction, quel que soit le mot employé pour le dire. La question
+  n'est donc pas de reformuler la ligne mais de décider si elle doit
+  figurer au tableau pour un client non coté.
 - **Mesure prise** : le seuil chiffré a été **retiré de l'intitulé**, qui
   porte désormais le registre (« AFEP-MEDEF, appliquer ou expliquer »).
   Le barème reste inchangé et continue de piloter le statut.

@@ -1001,7 +1001,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     story.append(Paragraph(esc(_mt["next_hint"]), styles["body"]))
     story.append(Spacer(1, 0.4 * cm))
 
-    # ── Analyse des écarts réglementaires (conforme / partiel / non conforme)
+    # ── Couverture des exigences de reporting (libelles selon gap_status)
     from content_generator import compliance_assessment
     _gaps = compliance_assessment(request, scores)
     story.append(Paragraph(TR["gap_title"], styles["h2"]))

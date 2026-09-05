@@ -559,7 +559,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
     doc.add_paragraph(_mt["next_hint"])
 
-    # ── Analyse des écarts réglementaires ─────────────────────────────────
+    # ── Couverture des exigences de reporting ─────────────────────────────
     from content_generator import compliance_assessment
     _ga = compliance_assessment(request, scores)
     add_heading(doc, TR["gap_title"], 2, colors["secondary"], style=style)

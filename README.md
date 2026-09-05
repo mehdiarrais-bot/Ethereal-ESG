@@ -64,7 +64,7 @@ et déclinables en 7 thèmes graphiques.
 </tr>
 <tr>
 <td align="center"><em>Synthèse une page : score, trajectoire, risques, top-3 actions</em></td>
-<td align="center"><em>Diagnostic : benchmark, trajectoire pluriannuelle, écarts réglementaires</em></td>
+<td align="center"><em>Diagnostic : trajectoire pluriannuelle, couverture des exigences de reporting</em></td>
 </tr>
 <tr>
 <td width="50%"><img src="docs/img/04-rapport-synthese.png" alt="Synthèse exécutive du rapport"></td>
@@ -92,10 +92,15 @@ L'enjeu n'est pas de remplir des pages, c'est de produire un diagnostic défenda
 un directeur financier. Sans jamais inventer une donnée : ce qui n'est pas renseigné est
 affiché comme tel.
 
-- **Double matérialité CSRD/ESRS** — méthodologie IRO en quatre étapes, enjeux réellement
-  cotés (impact × matérialité financière) et repris nommément dans le texte.
-- **Analyse des écarts réglementaires** — huit exigences (ESRS E1-6, ESRS 2 GOV-1, AFEP-MEDEF,
-  Taxonomie UE…) avec statut *conforme / partiel / non conforme / non renseigné* et constat chiffré.
+- **Priorisation des enjeux** — cartographie dérivée des indicateurs déclarés et des scores par
+  pilier, reprise nommément dans le texte. Le rapport indique explicitement qu'elle **ne constitue
+  pas** une analyse de double matérialité au sens d'ESRS 1 : l'outil ne conduit ni consultation des
+  parties prenantes, ni cotation des IRO.
+- **Couverture des exigences de reporting** — sept exigences (ESRS E1-6, ESRS 2 GOV-1, AFEP-MEDEF,
+  Taxonomie UE…) avec un statut qui dit ce qui est constaté et rien de plus : *publié / publié
+  partiellement / non publié* pour les lignes de publication, *au-dessus / sous le seuil* pour les
+  lignes de seuil, et *non renseigné* (donnée absente chez le client) distingué de *non couvert par
+  ce reporting* (donnée que l'outil ne collecte pas).
 - **Registre des risques** — chaque risque coté impact × probabilité, priorisé P1-P3.
 - **Risques climatiques TCFD** — risques physiques et de transition **spécifiques au secteur**,
   sur trois horizons, avec exposition au prix du carbone calculée depuis l'intensité réelle.

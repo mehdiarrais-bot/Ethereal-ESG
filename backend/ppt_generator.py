@@ -776,7 +776,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_text(slide, t["cap_trend"], Inches(1.3), Inches(6.9), Inches(10.7), Inches(0.35),
                  font_size=10, italic=True, color=theme["muted"], font=fb)
 
-    # ── SLIDE 2b2: Analyse des écarts réglementaires ─────────────────────
+    # ── SLIDE 2b2: Couverture des exigences de reporting ─────────────────
     from content_generator import compliance_assessment
     _ga = compliance_assessment(request, scores)
     if _ga:

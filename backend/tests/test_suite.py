@@ -1376,8 +1376,15 @@ def test_provenance_avec_la_donnee_lobjectif_de_parite_est_cite(lang):
 # Ces marqueurs sont des LIBELLES EXACTS, pas des mots nus : « conformite » et
 # « conformity » subsistent legitimement dans le rapport et ne sont pas mordus
 # (verifie : aucun n'est un sur-mot de « Conforme » ni de « Compliant »).
+# Correction de ma propre passe : « Conforme » et « Compliant » figuraient ici
+# comme marqueurs textuels. Ce sont des CHAINES NUES -- une phrase legitime
+# comme « le rapport n'affirme pas que l'entreprise est conforme » les
+# declencherait. Le patron du DETTE 0quater, reproduit dans le chantier qui le
+# corrige. Le vocabulaire des statuts est desormais gele STRUCTURELLEMENT, sur
+# la table des libelles (test_aucun_libelle_de_statut_ne_prononce_une_conformite),
+# ou aucun faux positif n'est possible. Ne restent ici que des FORMULATIONS :
+# les deux intitules de section retires.
 VOCABULAIRE_DE_CONFORMITE_RETIRE = [
-    "Conforme", "Compliant", "Non conforme", "Non-compliant",
     "Analyse des écarts réglementaires", "Regulatory gap analysis",
 ]
 
@@ -1486,3 +1493,54 @@ def test_les_gardefous_du_vocabulaire_cassent_sur_lancien_etat():
     # 3. L'ancienne couleur de `ok` sur une publication aurait ete refusee.
     assert GS.FRANCHI == "#2E7D32"
     assert GS.couleur("ok", GS.PUBLICATION) != "#2E7D32"
+
+
+# -- Regle d'admission appliquee aux garde-fous de CETTE passe -------------
+
+# Fautes historiques des deux intitules retires : la phrase telle qu'elle
+# etait imprimee avant le chantier.
+FAUTES_DU_VOCABULAIRE = [
+    ("Analyse des écarts réglementaires",
+     "Analyse des écarts réglementaires — Exigence | Référence | Statut | Constat"),
+    ("Regulatory gap analysis",
+     "Regulatory gap analysis — Requirement | Reference | Status | Finding"),
+]
+
+
+@pytest.mark.parametrize("marqueur,faute", FAUTES_DU_VOCABULAIRE,
+                         ids=[m for m, _ in FAUTES_DU_VOCABULAIRE])
+def test_chaque_marqueur_du_vocabulaire_casse_sur_sa_faute(marqueur, faute):
+    """Meme regime que les marqueurs des passes precedentes : le marqueur
+    doit figurer dans une liste reellement assertee et retrouver la phrase
+    qu'il vise."""
+    assert marqueur in VOCABULAIRE_DE_CONFORMITE_RETIRE
+    assert marqueur.lower() in faute.lower()
+
+
+def test_aucun_gardefou_de_cette_passe_ne_bannit_une_chaine_nue():
+    """La regle du chantier « listes noires » s'applique a ses propres
+    garde-fous : bannir une affirmation, jamais un mot. Un marqueur d'un
+    seul ou deux mots est un mot de vocabulaire, pas une formulation."""
+    for marqueur in VOCABULAIRE_DE_CONFORMITE_RETIRE:
+        assert len(marqueur.split()) >= 3, (
+            f"{marqueur!r} est une chaine nue : il mordrait un emploi "
+            f"legitime du mot. Le geler structurellement, pas textuellement.")
+
+
+def test_le_gardefou_de_source_unique_discrimine():
+    """Meta-test du garde-fou corrige en cours de passe.
+
+    Premier jet : il bannissait la chaine « 2E7D32 » dans tout le fichier et
+    mordait l'encart des actions engagees, les pastilles lead/lag et le
+    one-pager -- le patron du DETTE 0quater, reproduit dans le chantier qui
+    le corrige. La version corrigee vise les IDENTIFIANTS des tables
+    supprimees : elle doit attraper l'ancienne table ET laisser passer un
+    usage legitime de la couleur.
+    """
+    identifiants = ("_st_col", "_stc = {", "_st_hex", "_st_lbl", "_stl = {")
+    ancienne_table = '_st_col = {"ok": "#2E7D32", "partial": "#D97706", "no": "#E74C3C"}'
+    usage_legitime = '_green = colors.HexColor("#2E7D32")   # encart actions engagees'
+    assert any(i in ancienne_table for i in identifiants), \
+        "le garde-fou ne retrouve pas la table qu'il vise"
+    assert not any(i in usage_legitime for i in identifiants), \
+        "le garde-fou mord un usage legitime de la couleur"
