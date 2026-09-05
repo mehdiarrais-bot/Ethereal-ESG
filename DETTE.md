@@ -116,6 +116,71 @@ tiers"` (`:330`) portent sur une **liste/ensemble de termes exacts**, pas sur
 une sous-chaîne de prose. `"(s)"`, `"http://"`, `"automatiq"` visent une
 forme, pas un mot de vocabulaire.
 
+## 0quinquies. Tests de gel : portée réelle ≠ portée annoncée
+
+Constaté le 2026-09-05 en vérifiant le contrôle de propagation de
+l'étape A. **Non corrigé** — la correction suppose d'abord de trancher
+l'inventaire du § 0quater.
+
+| Test | Ce que le nom / la docstring annonce | Ce que le test vérifie |
+|---|---|---|
+| `test_aucun_engagement_fabrique_dans_les_livrables` | « Bout en bout sur les **cinq** livrables. » | **4** générateurs : `generate_pdf_report`, `generate_onepager_pdf`, `generate_pptx`, `generate_word_report`. **FR seul.** |
+| `test_aucune_comparaison_sectorielle_dans_les_livrables` | « Bout en bout sur les **cinq** livrables : PDF, PPTX, Word, one-pager. » | Les **4** mêmes. La docstring **se contredit elle-même** : elle annonce cinq et en énumère quatre. **FR seul.** |
+| `test_materialite_absente_des_livrables_generes` | « les **trois** formats (PDF, PPTX, Word) » | **3** générateurs — docstring exacte. **FR seul.** |
+
+**Écart exact, en trois points :**
+
+1. **Le livrable manquant est le questionnaire de collecte**
+   (`generate_questionnaire_html`), absent des trois tests. La lettre de
+   mission (`generate_proposal_docx`) est, elle, exclue **sciemment**
+   (§ 4bis : elle déclencherait le faux positif « marché PME/ETI ») —
+   c'est une exclusion assumée, pas un oubli. Les « cinq livrables
+   analytiques » du § 4bis sont donc : PDF, PPTX, Word, one-pager,
+   questionnaire — et le quatrième seul est couvert quatre fois sur cinq.
+2. **Aucun des trois n'est paramétré en langue** : tous appellent
+   `make_request()` sans argument, donc **FR uniquement**. L'anglais
+   n'est gelé qu'au niveau du *texte* (`generate_esg_content`, tests
+   `@parametrize("lang", ["fr","en"])`), **jamais au niveau du livrable
+   rendu**. Or c'est précisément là que le trou s'est déjà produit : le
+   commentaire de `MARQUEURS_BENCHMARK_INVENTE` note que « la note
+   méthodologique EN est restée périmée un chantier entier parce que la
+   liste calquait le libellé FR exact du moment ».
+3. **Le nom porte l'affirmation la plus large** : `..._dans_les_livrables`
+   se lit comme « dans tous les livrables ». Un lecteur qui cherche où
+   est gelée une affirmation supprimée conclura, à tort, que les six
+   documents sont couverts.
+
+**Coût de la correction** : porter les trois tests à 5 livrables × FR/EN
+multiplie leur temps d'exécution par ~3 (ils génèrent déjà des PDF/PPTX
+réels) et fera remonter immédiatement les marqueurs génériques du
+§ 0quater sur les livrables nouvellement couverts. À faire **après**
+l'arbitrage sur l'inventaire, pas avant.
+
+## 0sexies. Limite du test d'intégrité du sommaire
+
+`test_sommaire_numerotation_et_pagination` (ajouté le 2026-09-05) vérifie
+que chaque entrée du sommaire correspond à une section rendue, que la
+numérotation va de 1 à 8 sans saut et que la pagination est continue,
+en FR et en EN.
+
+- **Découvert par mutation** : `_toc_parts` est une **variable locale**
+  de `generate_pdf_report`, donc non importable. Le test **recopie** la
+  liste des dix libellés à partir des clés i18n au lieu de la lire à la
+  source.
+- **Conséquence, vérifiée** : renommer le titre rendu d'une section
+  (mutation sur `TR["pdf_concl"]`) fait bien échouer le test — c'est le
+  cas réel visé, une section retirée dont l'entrée survit au sommaire.
+  Mais **ajouter une entrée fantôme directement dans `_toc_parts`
+  passerait inaperçu**, puisque le test n'interroge jamais `_toc_parts`.
+- **Deuxième enseignement de la mutation** : un premier contrôle
+  comparant les **index de page** déclarait orphelines les deux
+  premières entrées, parce que le sommaire et les deux premiers titres
+  tombent sur la même page. Le test final compte les **occurrences**
+  (≥ 2 : une au sommaire, une en titre). À ne pas « simplifier » vers un
+  contrôle par page.
+- **À faire** : rendre `_toc_parts` extractible (constante de module ou
+  fonction) pour supprimer la duplication et couvrir l'entrée fantôme.
+
 ## 1. `accident_frequency_rate` — barème non recalibré
 
 - **Où** : `backend/esg_calculator.py:132-135` (score), recopié tel quel
