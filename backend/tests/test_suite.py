@@ -552,7 +552,11 @@ def livrables_geles():
 # NB : le nombre « 42 » nu n'est PAS banni — il figure legitimement comme
 # valeur d'indicateur (42 % de renouvelable dans le jeu de test). Seules les
 # FORMULATIONS qui ne peuvent venir que de la trajectoire fabriquee le sont.
-ENGAGEMENTS_FABRIQUES = [
+# Passe 3 : scission par famille. Ces 21 marqueurs sont de PROVENANCE -- ils
+# deviennent vrais des que le consultant declare la donnee correspondante. Le
+# ban ne vaut donc QUE pour un dossier qui ne porte pas cette donnee, ce qui est
+# le cas de tout dossier aujourd'hui (aucun champ ne permet de la saisir).
+ENGAGEMENTS_SANS_DONNEE_COLLECTEE = [
     "réduction de 42", "42% reduction", "-42 %", "-42%",
     "Science Based Targets", "SBTi",
     "trajectoire SBTi", "SBTi pathway",
@@ -562,11 +566,19 @@ ENGAGEMENTS_FABRIQUES = [
     "in compliance with the DNSH principle",
     "SFDR", "ISO 14001", "ISO 26000",
     "ODD 7", "ODD 8", "SDG 7", "SDG 8",
-    "ancrée dans les ODD", "anchored in the UN SDGs",
     "Cadres de Référence & Alignement ODD", "Reporting Frameworks & SDG Alignment",
     "Chaque pilier fait l'objet d'une cible",
     "Each pillar is assigned a progression target",
 ]
+
+# Formulation, pas provenance : meme avec des ODD collectes, le 0ter impose de
+# dire « themes couverts par les indicateurs » et non « ancree dans les ODD ».
+# Ces deux-la restent interdits quelle que soit la donnee.
+AFFIRMATIONS_ODD_INTERDITES = [
+    "ancrée dans les ODD", "anchored in the UN SDGs",
+]
+
+ENGAGEMENTS_FABRIQUES = ENGAGEMENTS_SANS_DONNEE_COLLECTEE + AFFIRMATIONS_ODD_INTERDITES
 
 # Contreparties positives : ce que le rapport doit dire a la place.
 REMPLACEMENTS_ATTENDUS = {
@@ -585,7 +597,9 @@ def test_aucun_engagement_fabrique_dans_le_texte(lang):
     blob = " ".join(str(v) for v in c.values() if v)
     blob += " " + " ".join(s.strengths + s.weaknesses + s.recommendations)
     for marqueur in ENGAGEMENTS_FABRIQUES:
-        assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
+        assert marqueur.lower() not in blob.lower(), (
+            f"{marqueur!r} present dans le texte {lang} alors qu'aucune donnee "
+            f"du dossier ne le justifie")
 
 
 @pytest.mark.parametrize("lang", ["fr", "en"])
@@ -614,12 +628,24 @@ def test_ligne_esrs_e1_4_est_non_renseignee_jamais_conforme():
     assert "42" not in str(lignes[0])
 
 
+@pytest.mark.parametrize("variante", ["base", "ca_sous_seuil"])
 @pytest.mark.parametrize("lang", ["fr", "en"])
-def test_aucun_engagement_fabrique_dans_les_livrables(livrables_geles, lang):
-    """Bout en bout sur les cinq livrables."""
-    for nom, blob in livrables_geles(lang).items():
-        for marqueur in ENGAGEMENTS_FABRIQUES:
-            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
+def test_provenance_sans_donnee_aucun_engagement_dans_les_livrables(livrables_geles, lang, variante):
+    """Moitie « SANS la donnee » du differentiel de provenance.
+
+    Ce test ne dit PAS que ces chaines sont interdites pour toujours : il
+    dit qu'elles sont interdites DANS CE DOSSIER-CI, qui ne porte aucune
+    cible, aucune certification et aucun ODD declares -- parce qu'aucun
+    champ ne permet aujourd'hui de les saisir (DETTE.md § 0bis). Le jour
+    ou l'etape B les rendra saisissables, un dossier qui les porte devra
+    au contraire les CITER : c'est la moitie « avec la donnee », ci-dessous.
+    """
+    for nom, blob in livrables_geles(lang, variante).items():
+        for marqueur in MARQUEURS_DE_PROVENANCE:
+            assert marqueur.lower() not in blob.lower(), (
+                f"{marqueur!r} apparait dans le {nom} ({lang}/{variante}) alors que "
+                f"ce dossier ne porte AUCUNE donnee qui le justifie. Ce n'est pas "
+                f"un mot interdit : c'est une affirmation sans source.")
 
 
 def test_la_couverture_ne_porte_que_le_referentiel_vise():
@@ -662,9 +688,13 @@ ATTRIBUTIONS_LEGALES_FAUSSES = [
 # produire. Le ban ne tient que tant qu'aucun champ ne permet de le saisir :
 # a convertir en test differentiel des que l'etape B existe. Assertes ici en
 # attendant, pour ne pas perdre la couverture.
-PROVENANCE_SANS_DONNEE_COLLECTEE = [
+PARITE_SANS_DONNEE_COLLECTEE = [
     "objectif 40%", "target 40%", "cible 40 %", "40% target",
 ]
+
+# La famille provenance au complet : engagements + objectif de parite (29 marqueurs
+# annonces au chantier ; 25 dans le code, cf. DETTE.md § 0quater).
+MARQUEURS_DE_PROVENANCE = ENGAGEMENTS_SANS_DONNEE_COLLECTEE + PARITE_SANS_DONNEE_COLLECTEE
 
 
 @pytest.mark.parametrize("lang", ["fr", "en"])
@@ -676,7 +706,7 @@ def test_aucune_attribution_legale_fausse_dans_le_texte(lang):
     c = generate_esg_content(r, s)
     blob = " ".join(str(v) for v in c.values() if v)
     blob += " " + " ".join(s.strengths + s.weaknesses + s.recommendations)
-    for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE:
+    for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
         assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
 
 
@@ -685,7 +715,7 @@ def test_aucune_attribution_legale_fausse_dans_les_livrables(livrables_geles, la
     """Bout en bout sur les cinq livrables : le tableau d'ecarts
     reglementaires et le plan d'action passent par la aussi."""
     for nom, blob in livrables_geles(lang, "ca_sous_seuil").items():
-        for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE:
+        for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
             assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
 
 
@@ -1203,7 +1233,7 @@ def test_chaque_marqueur_reecrit_casse_sur_sa_faute(marqueur, faute):
     """Le marqueur doit (a) figurer dans une liste reellement assertee et
     (b) retrouver la phrase supprimee qu'il vise."""
     listes = (MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_METHODO_INVENTEE
-              + ATTRIBUTIONS_LEGALES_FAUSSES + PROVENANCE_SANS_DONNEE_COLLECTEE)
+              + ATTRIBUTIONS_LEGALES_FAUSSES + PARITE_SANS_DONNEE_COLLECTEE)
     assert marqueur in listes, f"{marqueur!r} n'est asserte par aucune liste"
     assert marqueur.lower() in faute.lower(), \
         f"{marqueur!r} ne retrouve pas la faute historique qu'il vise"
@@ -1220,3 +1250,117 @@ def test_aucun_marqueur_reecrit_ne_mord_le_texte_produit():
         blob = " ".join(str(v) for v in generate_esg_content(r, s).values() if v).lower()
         for marqueur, _ in FAUTES_HISTORIQUES:
             assert marqueur.lower() not in blob, f"{marqueur!r} mord le texte {lang}"
+
+
+# ── Differentiel de provenance : anti-oubli, puis les deux moities ────────
+
+# Les marqueurs de provenance ne sont PAS fautifs en soi. « SBTi »,
+# « ISO 14001 », « ODD 7 », « -42 % », « cible 40 % » deviennent VRAIS des que
+# le consultant declare la donnee correspondante. L'invariant a exprimer n'est
+# donc pas « cette chaine n'apparait jamais » mais « elle apparait SI ET
+# SEULEMENT SI le champ amont est renseigne ».
+#
+# Moitie « sans la donnee » : ecrivable aujourd'hui -- c'est l'etat du produit.
+# Moitie « avec la donnee »  : non exprimable, aucun champ n'existe (DETTE 0bis).
+
+# Motifs de nom de champ qu'introduirait l'etape B. Verifies contre les 62
+# champs actuels : aucun ne correspond. NB : « target » nu est exclu a dessein,
+# CompanyInfo.target_year existe deja ; de meme « framework », a cause de
+# ESGRequest.reporting_framework.
+MOTIFS_CHAMPS_ETAPE_B = [
+    r"sbti", r"science_based", r"sdg", r"odd",
+    r"iso_?\d", r"certification", r"dnsh", r"sfdr", r"commitment",
+    r"base(line)?_year",
+    r"(reduction|emission|carbon|climate)_target", r"target_(reduction|percent)",
+    r"(parity|gender|diversity)_target",
+]
+
+
+def _tous_les_champs_du_modele():
+    from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,
+                        GovernanceData, TaxonomyData)
+    champs = []
+    for modele in (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,
+                   GovernanceData, TaxonomyData):
+        champs += [(modele.__name__, nom) for nom in modele.model_fields]
+    return champs
+
+
+def test_anti_oubli_letape_b_rallume_le_differentiel():
+    """LE test qui empeche le differentiel de pourrir en `skip` oublie.
+
+    Tant qu'aucun champ d'engagement n'existe, la moitie « avec la donnee »
+    est inecrivable et reste skippee. Le jour ou l'etape B ajoute ces
+    champs, CE test casse -- et force a retirer les decorateurs `skip`.
+    Ne pas le neutraliser : le supprimer, c'est condamner la moitie
+    « avec » a ne jamais etre rallumee.
+    """
+    import re
+    trouves = [(modele, champ) for modele, champ in _tous_les_champs_du_modele()
+               for motif in MOTIFS_CHAMPS_ETAPE_B if re.search(motif, champ, re.I)]
+    assert not trouves, (
+        f"L'etape B semble avoir atterri : {trouves}. "
+        "Retirer les @pytest.mark.skip du differentiel de provenance "
+        "(tests test_provenance_*_avec_la_donnee) et renseigner ces champs "
+        "dans leur corps, deja ecrit. Voir DETTE.md § 0bis.")
+
+
+# ── Moitie « AVEC la donnee » : ecrite, skippee, pas xfail ────────────────
+
+# POURQUOI `skip` ET JAMAIS `xfail` : les champs ci-dessous n'existent pas
+# encore. Les affecter leve une erreur de validation Pydantic -- pas un echec
+# d'assertion. Un `xfail` non strict passerait sur CETTE erreur et afficherait
+# un voyant vert qui ne mesure rien du tout. `skip` dit la verite : le test
+# n'est pas execute.
+#
+# Le corps est ecrit EN ENTIER : le jour ou l'etape B atterrit, retirer le
+# decorateur suffit. Et si quelqu'un oublie de le retirer,
+# test_anti_oubli_letape_b_rallume_le_differentiel casse.
+_MOTIF_SKIP = ("Etape B non faite : aucun champ ne permet de saisir une cible, "
+               "une certification ou un ODD (DETTE.md § 0bis). Retirer ce "
+               "decorateur le jour ou ces champs atterrissent -- le corps est "
+               "deja ecrit.")
+
+
+@pytest.mark.skip(reason=_MOTIF_SKIP)
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_provenance_avec_la_donnee_la_cible_declaree_est_citee(lang):
+    """Moitie « AVEC la donnee » : un engagement SAISI doit etre CITE.
+
+    Symetrique de test_provenance_sans_donnee_... : la meme chaine qui est
+    interdite sans donnee devient obligatoire avec. C'est cette moitie qui
+    empeche le garde-fou de degenerer en ban absolu -- et c'est elle qui
+    prouve que le garde-fou discrimine au lieu d'interdire.
+    """
+    r = make_request(lang)
+    r.environmental.carbon_reduction_target_percent = 42      # etape B
+    r.environmental.baseline_year = 2019                      # etape B
+    r.company.claimed_frameworks = ["SBTi"]                   # etape B
+    r.company.iso_certifications = ["ISO 14001"]              # etape B
+    r.company.selected_sdgs = [7, 13]                         # etape B
+
+    pdf = _textes_des_livrables(r)["pdf"]
+    attendus = ["42", "SBTi", "ISO 14001", "2019"]
+    attendus.append("ODD 7" if lang == "fr" else "SDG 7")
+    for attendu in attendus:
+        assert attendu in pdf, (
+            f"{attendu!r} a ete DECLARE par le consultant mais n'apparait pas "
+            f"dans le rapport {lang} : donnee collectee, jamais imprimee.")
+
+
+@pytest.mark.skip(reason=_MOTIF_SKIP)
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_provenance_avec_la_donnee_lobjectif_de_parite_est_cite(lang):
+    """Idem pour l'objectif de parite : « cible 40 % » est faux tant que
+    personne ne l'a declare, VRAI des que le client le declare -- c'est
+    meme ce que la recommandation « Definir des objectifs chiffres de
+    parite » lui demande de produire."""
+    r = make_request(lang)
+    r.governance.female_board_percent = 33
+    r.governance.gender_parity_target_percent = 40            # etape B
+
+    pdf = _textes_des_livrables(r)["pdf"]
+    attendu = "cible 40 %" if lang == "fr" else "40% target"
+    assert attendu in pdf, (
+        f"{attendu!r} a ete DECLARE comme objectif du client mais n'apparait "
+        f"pas dans le rapport {lang}.")

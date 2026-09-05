@@ -236,6 +236,70 @@ phrase historique qu'ils visent, doublé de
 marqueur mort, aucun qui morde le texte vivant. Coût : 0,30 s.
 Le score du § « règle d'admission » passe donc de **1 sur 76 à 30 sur 76**.
 
+### Passe 3 (2026-09-05) — différentiel de provenance, chantier clos
+
+L'invariant des marqueurs de provenance n'est pas « cette chaîne
+n'apparaît jamais » mais « elle apparaît **si et seulement si** le champ
+amont est renseigné ». Il est désormais exprimé en deux moitiés.
+
+- **Moitié « sans la donnée » — active.**
+  `test_provenance_sans_donnee_aucun_engagement_dans_les_livrables`,
+  sur les fixtures partagées, FR/EN × `base`/`ca_sous_seuil`. Le
+  recadrage est sémantique autant que technique : le message d'échec dit
+  désormais « apparaît alors que ce dossier ne porte AUCUNE donnée qui le
+  justifie — ce n'est pas un mot interdit, c'est une affirmation sans
+  source », et non plus « marqueur présent ».
+- **Moitié « avec la donnée » — écrite, `skip`, jamais `xfail`.** Les
+  champs n'existent pas : les affecter lève une erreur de validation
+  Pydantic, pas un échec d'assertion. Un `xfail` non strict passerait sur
+  cette erreur et donnerait un vert qui ne mesure rien. Le corps est écrit
+  en entier ; retirer le décorateur suffira.
+- **Anti-oubli — le cœur du dispositif.**
+  `test_anti_oubli_letape_b_rallume_le_differentiel` vérifie qu'aucun des
+  62 champs du modèle ne correspond aux motifs de l'étape B (`sbti`,
+  `iso_?\d`, `sdg`, `odd`, `base(line)?_year`, `(parity|gender)_target`…).
+  Le jour où l'étape B atterrit, **ce test casse** et force la
+  réactivation. Motifs choisis contre les champs réels : `target` nu et
+  `framework` sont exclus à dessein (`CompanyInfo.target_year` et
+  `ESGRequest.reporting_framework` existent déjà).
+- **Scission par famille** : `ENGAGEMENTS_FABRIQUES` est scindée en
+  `ENGAGEMENTS_SANS_DONNEE_COLLECTEE` (21, provenance) et
+  `AFFIRMATIONS_ODD_INTERDITES` (2, formulation — « ancrée dans les ODD »
+  reste interdit quelle que soit la donnée, le § 0ter imposant « thèmes
+  couverts par les indicateurs »). Avec `PARITE_SANS_DONNEE_COLLECTEE`
+  (4), la famille provenance compte **25 marqueurs dans le code**.
+
+**`include_benchmarks` (§ 6) : le dispositif ne l'attrape PAS.** Vérifié
+plutôt que supposé — générer le PDF avec le drapeau à `True` puis à
+`False` donne un texte **strictement identique** (17 267 caractères dans
+les deux cas), et **aucun** des 25 marqueurs de provenance n'apparaît
+dans la section Positionnement. Trois raisons distinctes :
+(i) le différentiel fait varier des **champs de saisie** de l'étape B, pas
+un **drapeau de sortie** déjà présent ; (ii) aucun marqueur de provenance
+n'est émis par la section que le drapeau est censé piloter, donc il n'y
+aurait rien à asserter ; (iii) l'invariant du § 6 — « la section
+s'affiche si et seulement si le drapeau est vrai » — est **écrivable dès
+aujourd'hui**, le drapeau existant : il n'est pas bloqué par l'étape B et
+relève du § 6, pas de ce chantier. Le patron se généralise ; ce
+dispositif-ci ne le couvre pas.
+
+### État des trois familles à la clôture du chantier
+
+| Famille | Marqueurs | État |
+|---|---|---|
+| **forme** | ~8 (assertions isolées) | Inchangés, conformes. `EAU` reste un sentinelle de fixture fragile — non renommé, hors périmètre. |
+| **formulation** | 27 sains + 19 réécrits + 2 non réécrits | Réécrits en passe 2 contre la phrase historique. Les 2 non réécrits (`40 % de femmes dans les effectifs` et variante EN) visent une **ligne de tableau**, pas une phrase : signalés, laissés. |
+| **provenance** | 25 | Différentiel posé. Moitié « sans » active, moitié « avec » écrite et skippée, anti-oubli armé. |
+
+**Score de la règle d'admission : 30 / 76, inchangé depuis la passe 2.**
+Et c'est le point honnête de cette passe : le différentiel **construit la
+machine à prouver** les 25 marqueurs de provenance, mais ne peut pas
+encore la faire tourner. Ces 25 ne passeront de « non prouvés » à
+« prouvés » que le jour où la moitié « avec la donnée » sera rallumée —
+c'est-à-dire à l'étape B. La passe 3 n'améliore donc pas le score : elle
+garantit qu'il s'améliorera automatiquement, et qu'on ne pourra pas
+l'oublier.
+
 ### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
 
 | Marqueur | Où | Portée | Pourquoi il est exposé |
