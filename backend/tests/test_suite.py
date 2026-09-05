@@ -426,6 +426,72 @@ def test_pack_contains_five_deliverables(client):
 
 # ── Glossaire ─────────────────────────────────────────────────────────────
 
+# ── Fixture partagée des livrables gelés ──────────────────────────────────
+
+# Les quatre tests de gel bout-en-bout regeneraient chacun le meme jeu de
+# livrables a partir du meme dossier : ~19 s de generation redondante sur une
+# suite de 66 s. Ils partagent desormais une fabrique memoisee, ce qui paie la
+# generation une fois par cle (langue, variante) et finance l'axe EN a cout
+# constant.
+#
+# Deux variantes, parce que le test des attributions legales a besoin d'un
+# conseil sous le seuil pour que la clause CA soit emise :
+#   "base"          -> make_request(lang)
+#   "ca_sous_seuil" -> idem + female_board_percent = 33
+
+
+def _textes_des_livrables(r):
+    """PDF, one-pager, PPTX et Word d'un meme dossier, rendus en texte brut.
+
+    Les deux PDF passent par PyMuPDF ; PPTX et Word sont lus comme archives
+    OOXML, ce qui capture aussi les titres et legendes.
+    """
+    import re
+    import fitz
+    from report_generator import generate_pdf_report
+    from ppt_generator import generate_pptx
+    from docx_generator import generate_word_report
+    from onepager_generator import generate_onepager_pdf
+    from main import build_advanced_charts
+
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    ch_l = build_advanced_charts(r, s, light_bg=True)
+
+    textes = {}
+    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
+                      ("onepager", generate_onepager_pdf(r, s))):
+        doc = fitz.open(stream=data, filetype="pdf")
+        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
+                      ("docx", generate_word_report(r, s, c, ch_l))):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            textes[nom] = " ".join(
+                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
+    return textes
+
+
+@pytest.fixture(scope="session")
+def livrables_geles():
+    """Fabrique memoisee : (lang, variante) -> {format: texte}.
+
+    Portee session : chaque cle n'est generee qu'une fois pour toute la
+    suite, quel que soit l'ordre d'execution des tests.
+    """
+    cache = {}
+
+    def _pour(lang="fr", variante="base"):
+        cle = (lang, variante)
+        if cle not in cache:
+            r = make_request(lang)
+            if variante == "ca_sous_seuil":
+                r.governance.female_board_percent = 33   # sinon la clause CA ne sort pas
+            cache[cle] = _textes_des_livrables(r)
+        return cache[cle]
+
+    return _pour
+
+
 # ── Engagements fabriques : trajectoire, cibles, alignements ──────────────
 
 # Le code ne collecte AUCUN objectif chiffre. Il en fabriquait pourtant :
@@ -504,35 +570,12 @@ def test_ligne_esrs_e1_4_est_non_renseignee_jamais_conforme():
     assert "42" not in str(lignes[0])
 
 
-def test_aucun_engagement_fabrique_dans_les_livrables():
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucun_engagement_fabrique_dans_les_livrables(livrables_geles, lang):
     """Bout en bout sur les cinq livrables."""
-    import re
-    import fitz
-    from report_generator import generate_pdf_report
-    from ppt_generator import generate_pptx
-    from docx_generator import generate_word_report
-    from onepager_generator import generate_onepager_pdf
-    from main import build_advanced_charts
-
-    r = make_request()
-    s = calculate_esg_scores(r)
-    c = generate_esg_content(r, s)
-    ch_l = build_advanced_charts(r, s, light_bg=True)
-
-    textes = {}
-    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
-                      ("onepager", generate_onepager_pdf(r, s))):
-        doc = fitz.open(stream=data, filetype="pdf")
-        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
-    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, ch_l))):
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
-            textes[nom] = " ".join(
-                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
-
-    for nom, blob in textes.items():
+    for nom, blob in livrables_geles(lang).items():
         for marqueur in ENGAGEMENTS_FABRIQUES:
-            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
 
 
 def test_la_couverture_ne_porte_que_le_referentiel_vise():
@@ -581,37 +624,13 @@ def test_aucune_attribution_legale_fausse_dans_le_texte(lang):
         assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le texte {lang}"
 
 
-def test_aucune_attribution_legale_fausse_dans_les_livrables():
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucune_attribution_legale_fausse_dans_les_livrables(livrables_geles, lang):
     """Bout en bout sur les cinq livrables : le tableau d'ecarts
     reglementaires et le plan d'action passent par la aussi."""
-    import re
-    import fitz
-    from report_generator import generate_pdf_report
-    from ppt_generator import generate_pptx
-    from docx_generator import generate_word_report
-    from onepager_generator import generate_onepager_pdf
-    from main import build_advanced_charts
-
-    r = make_request()
-    r.governance.female_board_percent = 33   # sinon la clause CA ne sort pas
-    s = calculate_esg_scores(r)
-    c = generate_esg_content(r, s)
-    ch_l = build_advanced_charts(r, s, light_bg=True)
-
-    textes = {}
-    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
-                      ("onepager", generate_onepager_pdf(r, s))):
-        doc = fitz.open(stream=data, filetype="pdf")
-        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
-    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, ch_l))):
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
-            textes[nom] = " ".join(
-                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
-
-    for nom, blob in textes.items():
+    for nom, blob in livrables_geles(lang, "ca_sous_seuil").items():
         for marqueur in ATTRIBUTIONS_LEGALES_FAUSSES:
-            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
 
 
 def test_quota_du_conseil_attribue_a_cope_zimmermann():
@@ -778,35 +797,12 @@ def test_la_grille_interne_est_declaree(lang):
     assert DIVULGATION_GRILLE_INTERNE[lang].lower() in methodo.lower()
 
 
-def test_aucune_comparaison_sectorielle_dans_les_livrables():
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucune_comparaison_sectorielle_dans_les_livrables(livrables_geles, lang):
     """Bout en bout sur les cinq livrables : PDF, PPTX, Word, one-pager."""
-    import re
-    import fitz
-    from report_generator import generate_pdf_report
-    from ppt_generator import generate_pptx
-    from docx_generator import generate_word_report
-    from onepager_generator import generate_onepager_pdf
-    from main import build_advanced_charts
-
-    r = make_request()
-    s = calculate_esg_scores(r)
-    c = generate_esg_content(r, s)
-    ch_l = build_advanced_charts(r, s, light_bg=True)
-
-    textes = {}
-    for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
-                      ("onepager", generate_onepager_pdf(r, s))):
-        doc = fitz.open(stream=data, filetype="pdf")
-        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
-    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, ch_l))):
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
-            textes[nom] = " ".join(
-                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
-
-    for nom, blob in textes.items():
+    for nom, blob in livrables_geles(lang).items():
         for marqueur in MARQUEURS_BENCHMARK_INVENTE + MARQUEURS_COUVERTURE_ESRS:
-            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
 
 
 def test_positionnement_interne_est_vrai_et_coherent():
@@ -882,35 +878,20 @@ def test_materialite_dit_explicitement_ce_qu_elle_n_est_pas(lang):
         assert "esrs 1" in txt.lower()
 
 
-def test_materialite_absente_des_livrables_generes():
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_materialite_absente_des_livrables_generes(livrables_geles, lang):
     """Bout en bout : les marqueurs ne doivent apparaître dans AUCUN des
-    trois formats (PDF, PPTX, Word), titres et légendes compris."""
-    import re
-    import fitz
-    from report_generator import generate_pdf_report
-    from ppt_generator import generate_pptx
-    from docx_generator import generate_word_report
-    from main import build_advanced_charts
+    trois formats (PDF, PPTX, Word), titres et légendes compris.
 
-    r = make_request()
-    s = calculate_esg_scores(r)
-    c = generate_esg_content(r, s)
-
-    pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
-    doc = fitz.open(stream=pdf, filetype="pdf")
-    textes = {"pdf": re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))}
-
-    for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, build_advanced_charts(r, s, light_bg=True)))):
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
-            textes[nom] = " ".join(
-                z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".xml"))
-
+    Le one-pager est ecarte a dessein : il ne l'a jamais couvert, et cette
+    passe est a iso-comportement.
+    """
+    textes = {n: b for n, b in livrables_geles(lang).items() if n != "onepager"}
     for nom, blob in textes.items():
         for marqueur in MARQUEURS_METHODO_INVENTEE:
-            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom}"
+            assert marqueur.lower() not in blob.lower(), f"{marqueur!r} present dans le {nom} ({lang})"
         for affirmation in AFFIRMATIONS_INTERDITES:
-            assert affirmation.lower() not in blob.lower(), f"{affirmation!r} present dans le {nom}"
+            assert affirmation.lower() not in blob.lower(), f"{affirmation!r} present dans le {nom} ({lang})"
 
 
 def test_priorisation_ne_depend_pas_du_nom_de_lentreprise():
