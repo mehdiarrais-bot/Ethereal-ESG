@@ -92,6 +92,99 @@ formulation qui n'affirme pas une contribution.
 - **Inventaire des marqueurs encore exposés** : établi le 2026-09-05, non
   corrigé — voir la section « Marqueurs génériques restants » ci-dessous.
 
+### Périmètre exact (corrigé le 2026-09-05)
+
+Le premier chiffrage annonçait « 5 listes, 65 marqueurs ». **C'est faux :
+il y a 6 listes et 75 marqueurs.**
+
+| Liste | Marqueurs | Test bout-en-bout |
+|---|---|---|
+| `ENGAGEMENTS_FABRIQUES` | 23 | `test_aucun_engagement_fabrique_dans_les_livrables` |
+| `MARQUEURS_BENCHMARK_INVENTE` | 24 | `test_aucune_comparaison_sectorielle_dans_les_livrables` |
+| `ATTRIBUTIONS_LEGALES_FAUSSES` (`:557`) | 10 | `test_aucune_attribution_legale_fausse_dans_les_livrables` |
+| `MARQUEURS_METHODO_INVENTEE` | 8 | `test_materialite_absente_des_livrables_generes` |
+| `MARQUEURS_COUVERTURE_ESRS` | 6 | (partagé avec le test benchmark) |
+| `AFFIRMATIONS_INTERDITES` | 4 | (partagé avec le test matérialité) |
+| **Total** | **75** | **4 tests bout-en-bout** |
+
+`ATTRIBUTIONS_LEGALES_FAUSSES` et son test avaient été **omis** de
+l'inventaire initial : 65 était la somme des cinq autres listes.
+
+À quoi s'ajoutent ~19 chaînes bannies en **assertions isolées**, hors
+liste (`preuve`, `proof`, `42`, `module`, `optionnel`, `EAU`, `VSME/`,
+`(s)`, `http://`, `automatiq`, `de EcoGroup`…).
+
+**Doublon** : `"Rixain"` est banni **deux fois** — dans
+`ATTRIBUTIONS_LEGALES_FAUSSES` (`:558`) et en assertion isolée (`:629`).
+
+**Le patron d'assertion positive existe déjà** et n'est pas à inventer :
+`REMPLACEMENTS_ATTENDUS` (`:462`, exige que le texte de remplacement soit
+présent après un retrait) et `DIVULGATION_GRILLE_INTERNE` (exige que la
+nature interne de la grille reste divulguée). Toute réécriture de
+marqueur doit reprendre ce patron plutôt qu'en créer un autre.
+
+### Classification en trois familles (validée le 2026-09-05)
+
+La forme du garde-fou dépend de ce qui sépare la faute de l'énoncé
+légitime :
+
+- **forme** — la chaîne visée est un **artefact**, pas du vocabulaire
+  (`(s)` de publipostage, `http://`, `automatiq`, `de EcoGroup`,
+  `VSME/`, `EAU`). ~8 chaînes, toutes en assertions isolées : **aucune
+  des six listes ne relève de cette famille**. Rien à changer sur le
+  principe.
+- **formulation** — la faute et l'énoncé légitime **diffèrent par la
+  phrase**. Le patron validé s'applique : bannir la formulation fautive,
+  avec une assertion positive quand un remplacement doit rester présent.
+  - **27 bien écrits** : `AFFIRMATIONS_INTERDITES` (4),
+    `MARQUEURS_COUVERTURE_ESRS` (6), les 11 tournures comparatives de
+    `BENCHMARK`, 4 de `METHODO`, « ancrée dans les ODD » / « anchored in
+    the UN SDGs ». Rien à faire.
+  - **23 mal écrits** : 13 fragments génériques de `BENCHMARK`
+    (`de son secteur`, `référence sectorielle`, `standards sectoriels`,
+    `mid-market`, `leaders mondiaux`, `reference base for`…), 4 de
+    `METHODO` (`IRO-1`, `SBM-3`, `irrémédiab`, `irremediab`), 6 de
+    `LEGALES` (`Rixain`, `objectif légal 40`,
+    `40 % de femmes dans les effectifs`, `transparence salariale UE`…).
+- **provenance** — la faute et l'énoncé légitime sont **identiques au mot
+  près** et ne se distinguent que par **l'existence de la donnée en
+  amont**. Aucun test textuel ne peut trancher. **25 marqueurs** :
+
+| Marqueurs | Nb | Donnée amont qui les rendrait légitimes |
+|---|---|---|
+| `SBTi`, `Science Based Targets`, `trajectoire SBTi`, `SBTi pathway` | 4 | Cadre revendiqué (étape B) |
+| `-42 %`, `-42%`, `réduction de 42`, `42% reduction` | 4 | Cible % + année de base + année cible (étape B) |
+| `SFDR`, `ISO 14001`, `ISO 26000` | 3 | Certifications ISO / cadre revendiqué (étape B) |
+| `ODD 7`, `ODD 8`, `SDG 7`, `SDG 8` | 4 | ODD retenus (étape B) ou dérivation depuis les indicateurs (§ 0ter) |
+| `dans le respect du principe DNSH`, `in compliance with the DNSH principle` | 2 | Cadre revendiqué (étape B) |
+| `Cadres de Référence & Alignement ODD`, `Reporting Frameworks & SDG Alignment` | 2 | Titres de section, légitimes dès que la section a une donnée à afficher |
+| `Chaque pilier fait l'objet d'une cible`, `Each pillar is assigned a progression target` | 2 | Cibles par pilier (étape B) |
+| `objectif 40%`, `target 40%`, `cible 40 %`, `40% target` | 4 | Objectif de parité **déclaré par le client** (étape B). Viennent de `ATTRIBUTIONS_LEGALES_FAUSSES`, où ils étaient classés comme attribution légale fausse : ce sont en réalité des marqueurs de provenance. |
+
+### Règle d'admission : 1 garde-fou prouvé sur 76
+
+**Aucun des 75 marqueurs n'a jamais échoué sur la faute qu'il vise.** Ils
+ont tous été écrits **après** la suppression de la faute : ils sont nés
+verts et n'ont jamais rien discriminé. Le seul garde-fou du dépôt prouvé
+par mutation est `test_sommaire_numerotation_et_pagination` (§ 0sexies,
+commit `7eaeda4`), muté volontairement au moment de son écriture.
+
+**Score honnête : 1 sur 76.**
+
+Règle posée pour la suite : *un garde-fou n'est acquis qu'après avoir
+échoué au moins une fois sur la faute qu'il vise.* Régime d'application
+retenu, par famille — **non appliqué à ce jour** :
+
+- **provenance** : auto-prouvant, la moitié « avec la donnée » du test
+  différentiel *est* la mutation. Coût permanent nul.
+- **formulation** : méta-test paramétré passant chaque marqueur dans un
+  texte de synthèse qui le contient, pour vérifier que l'assertion casse.
+  Ne génère aucun livrable. Limite connue : prouve que l'assertion se
+  déclenche, pas que le générateur pourrait produire la chaîne.
+- **forme** : mutation manuelle une fois, SHA d'échec tracé en
+  commentaire.
+
+
 ### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
 
 | Marqueur | Où | Portée | Pourquoi il est exposé |
