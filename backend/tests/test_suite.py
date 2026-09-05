@@ -1544,3 +1544,98 @@ def test_le_gardefou_de_source_unique_discrimine():
         "le garde-fou ne retrouve pas la table qu'il vise"
     assert not any(i in usage_legitime for i in identifiants), \
         "le garde-fou mord un usage legitime de la couleur"
+
+
+# ── Le silence paie : temoin et invariant cible ───────────────────────────
+
+# Trois dossiers identiques a l'entreprise pres, qui different UNIQUEMENT par
+# ce que le consultant a declare. Ils servent de banc de mesure a tout le
+# chantier « exactitude du scoring » : chaque correction de bareme ulterieure
+# (bareme accidents, grille carbone, corruption_cases, seuils) se chiffrera
+# sur ces memes trois dossiers.
+_SOC_PME = dict(name="PME Temoin", sector="Industrie manufacturière",
+                country="France", revenue_eur=48_000_000, reporting_year=2025)
+
+
+def _dossier(env, soc, gov):
+    return ESGRequest(company=CompanyInfo(**_SOC_PME), environmental=env, social=soc,
+                      governance=gov, taxonomy=TaxonomyData(), language="fr")
+
+
+def dossier_a_transparente():
+    """(A) PME transparente : des chiffres honnetes, moyens, sur 15 champs."""
+    return _dossier(
+        EnvironmentalData(co2_emissions_tonnes=8200, scope1_emissions=1200,
+                          scope2_emissions=2100, scope3_emissions=4900,
+                          renewable_energy_percent=42, waste_recycled_percent=63,
+                          water_consumption_m3=120000, energy_consumption_mwh=21500),
+        SocialData(female_employees_percent=34, training_hours_per_employee=22,
+                   accident_frequency_rate=6.2, total_employees=320,
+                   employee_turnover_percent=11),
+        GovernanceData(esg_audit_conducted=False, sustainability_committee=True,
+                       data_breaches=1, ethics_violations=0,
+                       independent_board_percent=45, board_members=9,
+                       female_board_percent=44))
+
+
+def dossier_b_silencieuse():
+    """(B) La meme, qui ne declare presque rien : 3 champs."""
+    return _dossier(EnvironmentalData(co2_emissions_tonnes=8200),
+                    SocialData(total_employees=320),
+                    GovernanceData(sustainability_committee=True))
+
+
+def dossier_c_un_chiffre_honnete():
+    """(C) Identique a B, plus UN chiffre honnete mais mauvais (TF 6,2)."""
+    return _dossier(EnvironmentalData(co2_emissions_tonnes=8200),
+                    SocialData(total_employees=320, accident_frequency_rate=6.2),
+                    GovernanceData(sustainability_committee=True))
+
+
+def dossier_vide():
+    """(D) Aucun indicateur declare."""
+    return _dossier(EnvironmentalData(), SocialData(), GovernanceData())
+
+
+def test_temoin_le_silence_paie():
+    """TEMOIN, pas invariant. Fige l'etat du bareme AVANT le traitement T2/T1.
+
+    Son role est d'etre MODIFIE par le traitement : le diff du commit qui
+    corrige le bareme montrera alors noir sur blanc ce qu'il deplace. Ne pas
+    l'assouplir pour le faire passer -- le mettre a jour, en connaissance.
+
+    Etat mesure le 2026-09-06 :
+      A transparente (15 champs) = 66,0 (A)
+      B silencieuse  ( 3 champs) = 66,5 (A)   <- DEPASSE la transparente
+      C = B + 1 chiffre honnete  = 63,0 (BBB) <- l'honnetete coute 3,5 pts
+      D vide         ( 0 champ)  = 50,0 (BB)  <- une note lettree sans donnee
+    """
+    for dossier, total, note in ((dossier_a_transparente(), 66.0, "A"),
+                                 (dossier_b_silencieuse(), 66.5, "A"),
+                                 (dossier_c_un_chiffre_honnete(), 63.0, "BBB"),
+                                 (dossier_vide(), 50.0, "BB")):
+        s = calculate_esg_scores(dossier)
+        assert (s.total_esg_score, s.rating) == (total, note)
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "Defaut connu, corrige par le traitement T2/T1 : le silence est gratuit "
+    "(une donnee absente sort de la moyenne) et produit un jugement "
+    "(if not scores: return 50.0). Voir DETTE.md."))
+def test_le_silence_ne_doit_pas_surpasser_la_transparence():
+    """INVARIANT CIBLE, aujourd'hui faux.
+
+    POURQUOI `xfail(strict=True)` EST ICI LE BON OUTIL, alors qu'il etait le
+    MAUVAIS en passe 3 : la-bas, l'echec attendu etait une ValidationError
+    Pydantic sur un champ inexistant -- un xfail non strict l'aurait avalee
+    et aurait affiche un vert qui ne mesure rien. Ici l'echec attendu est une
+    VRAIE assertion sur un VRAI calcul. Et `strict` rend le garde-fou
+    auto-rearmant : le jour ou le traitement rend l'invariant vrai, le test
+    passe, `strict` transforme ce XPASS en ECHEC, et force a retirer le
+    marqueur. Il ne peut pas etre oublie.
+    """
+    a = calculate_esg_scores(dossier_a_transparente()).total_esg_score
+    b = calculate_esg_scores(dossier_b_silencieuse()).total_esg_score
+    assert a > b, (
+        f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "
+        f"declarer ses chiffres coute des points.")
