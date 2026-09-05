@@ -2027,7 +2027,14 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
 
 def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     """Analyse des écarts vs exigences CSRD/réglementaires (données déclarées).
-    Chaque ligne : {req, ref, status: 'ok'|'partial'|'no'|'na', note}. FR/EN."""
+    Chaque ligne : {req, ref, status, note, nature}. FR/EN.
+
+    `nature` (cf. gap_status.py) dit ce que la ligne constate REELLEMENT :
+    une publication, une position face a un seuil, ou une donnee que l'outil
+    ne collecte pas. Le libelle du statut en depend : un meme code `ok` se
+    dit « Publie » ou « Au-dessus du seuil » selon la nature. Avoir un chiffre
+    n'est pas etre conforme a une norme de publication."""
+    import gap_status as GS
     en = getattr(request, "language", "fr") == "en"
     vsme = getattr(request, "reporting_framework", "csrd") == "vsme"
     env, soc, gov = request.environmental, request.social, request.governance
@@ -2043,14 +2050,15 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     _VSME_OOS_FR = "Hors périmètre du référentiel VSME retenu"
     _VSME_OOS_EN = "Outside the scope of the selected VSME framework"
 
-    def R(req_fr, req_en, ref, status, note_fr, note_en, vsme_out_of_scope=False):
+    def R(req_fr, req_en, ref, status, note_fr, note_en, vsme_out_of_scope=False,
+          nature=GS.PUBLICATION):
         # La référence citée reste celle du texte dont l'exigence est issue :
         # aucune réécriture, sous peine de fabriquer des codes inexistants.
         if vsme and vsme_out_of_scope and status in ("no", "partial"):
             status = "oos"
             note_fr, note_en = _VSME_OOS_FR, _VSME_OOS_EN
         rows.append({"req": req_en if en else req_fr, "ref": ref, "status": status,
-                     "note": note_en if en else note_fr})
+                     "note": note_en if en else note_fr, "nature": nature})
 
     # Bilan GES Scopes 1 & 2
     s12 = env.scope1_emissions is not None and env.scope2_emissions is not None
@@ -2092,10 +2100,19 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
 
     # Indépendance du conseil
     bi = gov.independent_board_percent
-    R("Indépendance du conseil (seuil 50 %)", "Board independence (50% threshold)", "AFEP-MEDEF",
+    # Le code AFEP-MEDEF est un code de place VOLONTAIRE, en « appliquer ou
+    # expliquer » : s'en ecarter est licite si l'ecart est explique. Son
+    # intitule doit donc porter ce registre, sinon le vocabulaire est honnete
+    # et le libelle reste trompeur. Le seuil chiffre est retire de l'intitule :
+    # le code retient la moitie pour les societes non controlees et le tiers
+    # pour les societes controlees, information que l'outil ne collecte pas
+    # (cf. DETTE.md). Le bareme du code n'est PAS modifie ici.
+    R("Indépendance du conseil (AFEP-MEDEF, appliquer ou expliquer)",
+      "Board independence (AFEP-MEDEF code, apply or explain)", "AFEP-MEDEF",
       "na" if bi is None else ("ok" if bi >= 50 else ("partial" if bi >= 33 else "no")),
       "Donnée non renseignée" if bi is None else f"{bi:.0f} % d'administrateurs indépendants",
-      "Not reported" if bi is None else f"{bi:.0f}% independent directors")
+      "Not reported" if bi is None else f"{bi:.0f}% independent directors",
+      nature=GS.SEUIL)
 
     # Taxonomie UE
     has_tx = tx and any(v is not None for v in
@@ -2116,7 +2133,8 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
       "na",
       "Cibles climatiques non documentées dans ce reporting",
-      "Climate targets not documented in this reporting")
+      "Climate targets not documented in this reporting",
+      nature=GS.NON_COUVERT)
 
     return rows
 

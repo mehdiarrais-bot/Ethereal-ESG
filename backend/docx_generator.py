@@ -563,10 +563,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import compliance_assessment
     _ga = compliance_assessment(request, scores)
     add_heading(doc, TR["gap_title"], 2, colors["secondary"], style=style)
-    _st_hex = {"ok": "2E7D32", "partial": "D97706", "no": "E74C3C",
-               "na": "7F8C8D", "oos": "5A6572"}
-    _st_lbl = {"ok": TR["st_ok"], "partial": TR["st_partial"], "no": TR["st_no"],
-               "na": TR["st_na"], "oos": TR["st_oos"]}
+    # Conversion depuis gap_status (source unique) vers l'hexa sans « # ».
+    import gap_status as GS
     gtbl = doc.add_table(rows=len(_ga) + 1, cols=4)
     gtbl.style = "Table Grid"
     for ci, h in enumerate((TR["gap_req"], TR["gap_ref"], TR["gap_status"], TR["gap_note"])):
@@ -575,7 +573,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         shade_cell(c, colors["primary"])
     for ri, g in enumerate(_ga, 1):
-        vals = (g["req"], g["ref"], _st_lbl[g["status"]], g["note"])
+        vals = (g["req"], g["ref"], GS.libelle(TR, g["status"], g["nature"]), g["note"])
         for ci, v in enumerate(vals):
             run = gtbl.rows[ri].cells[ci].paragraphs[0].add_run(v)
             run.font.size = Pt(9)
@@ -583,7 +581,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                 run.bold = True
             if ci == 2:
                 run.bold = True
-                run.font.color.rgb = hex_to_rgb(_st_hex[g["status"]])
+                run.font.color.rgb = hex_to_rgb(GS.hex_sans_diese(g["status"], g["nature"]))
     doc.add_paragraph()
 
     add_heading(doc, TR["risks_head"], 2, "E74C3C", style=style)

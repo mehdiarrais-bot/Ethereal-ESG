@@ -2,7 +2,7 @@
 Lettre de mission / proposition d'accompagnement ESG (Word).
 
 Document commercial du consultant : contexte du prospect, constats issus
-du pré-diagnostic (écarts réglementaires, maturité), objectifs, phases de
+du pré-diagnostic (couverture des exigences, maturité), objectifs, phases de
 mission dérivées de la feuille de route réelle, livrables, prérequis.
 Aucune donnée inventée — les honoraires restent à compléter.
 """
@@ -80,7 +80,7 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     doc.add_paragraph(ctx)
 
     if gaps:
-        _st_lbl = {"no": TR["st_no"], "partial": TR["st_partial"]}
+        import gap_status as GS   # source unique : pas de table locale
         tbl = doc.add_table(rows=len(gaps) + 1, cols=3)
         tbl.style = "Table Grid"
         heads = (TR["gap_req"], TR["gap_status"], TR["gap_note"])
@@ -90,7 +90,9 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
             run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
             shade_cell(c, colors["primary"])
         for ri, g in enumerate(gaps, 1):
-            for ci, v in enumerate((g["req"], _st_lbl.get(g["status"], ""), g["note"])):
+            for ci, v in enumerate((g["req"],
+                                    GS.libelle(TR, g["status"], g["nature"]),
+                                    g["note"])):
                 run = tbl.rows[ri].cells[ci].paragraphs[0].add_run(v)
                 run.font.size = Pt(9)
                 if ci == 1:
@@ -126,11 +128,11 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
 
     # ── 4. Livrables ───────────────────────────────────────────────────────
     _h(doc, "4. " + ("Deliverables" if en else "Livrables"), 14, colors["primary"])
-    dels_fr = ["Rapport ESG complet (PDF) : diagnostic scoré par pilier, analyse des écarts réglementaires, plan d'action",
+    dels_fr = ["Rapport ESG complet (PDF) : diagnostic scoré par pilier, couverture des exigences de reporting, plan d'action",
                "Présentation de direction (PowerPoint) prête pour comité",
                "Rapport rédigé (Word) modifiable par vos équipes",
                "Feuille de route 12 mois priorisée (quick wins, responsables, échéances)"]
-    dels_en = ["Full ESG report (PDF): scored diagnosis by pillar, regulatory gap analysis, action plan",
+    dels_en = ["Full ESG report (PDF): scored diagnosis by pillar, reporting requirement coverage, action plan",
                "Board-ready management presentation (PowerPoint)",
                "Editable written report (Word)",
                "Prioritised 12-month roadmap (quick wins, owners, due dates)"]

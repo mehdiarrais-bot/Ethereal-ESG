@@ -1364,3 +1364,125 @@ def test_provenance_avec_la_donnee_lobjectif_de_parite_est_cite(lang):
     assert attendu in pdf, (
         f"{attendu!r} a ete DECLARE comme objectif du client mais n'apparait "
         f"pas dans le rapport {lang}.")
+
+
+# ── Vocabulaire du tableau de couverture : plus aucune conformite affirmee ─
+
+# Avant ce chantier, le statut etait attribue sur la PRESENCE d'un champ :
+# Scope 1 et Scope 2 renseignes -> « Conforme ESRS E1-6 ». Avoir un chiffre
+# n'est pas etre conforme a une norme de publication, et « conforme » a une
+# portee juridique dans un document qu'un cabinet remet a son client.
+#
+# Ces marqueurs sont des LIBELLES EXACTS, pas des mots nus : « conformite » et
+# « conformity » subsistent legitimement dans le rapport et ne sont pas mordus
+# (verifie : aucun n'est un sur-mot de « Conforme » ni de « Compliant »).
+VOCABULAIRE_DE_CONFORMITE_RETIRE = [
+    "Conforme", "Compliant", "Non conforme", "Non-compliant",
+    "Analyse des écarts réglementaires", "Regulatory gap analysis",
+]
+
+# Les quatre livrables qui consomment compliance_assessment(). Le one-pager et
+# le questionnaire ne l'appellent pas.
+LIVRABLES_AVEC_TABLEAU = ("pdf", "pptx", "docx", "lettre")
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucune_conformite_affirmee_dans_les_livrables(livrables_geles, lang):
+    """Propagation : ni l'ancien vocabulaire de statut, ni l'ancien titre ne
+    doivent subsister dans AUCUN des quatre livrables qui portent le tableau."""
+    textes = livrables_geles(lang)
+    for nom in LIVRABLES_AVEC_TABLEAU:
+        for marqueur in VOCABULAIRE_DE_CONFORMITE_RETIRE:
+            assert marqueur.lower() not in textes[nom].lower(), (
+                f"{marqueur!r} subsiste dans le {nom} ({lang}) : le tableau "
+                f"prononce une conformite que le code ne peut pas constater.")
+
+
+def _affirme_une_conformite(libelle):
+    """Un libelle de statut ne doit pas prononcer de conformite."""
+    return any(mot in libelle.lower() for mot in ("conforme", "compliant"))
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucun_libelle_de_statut_ne_prononce_une_conformite(lang):
+    """Structurel : on interroge la table des libelles, pas le texte rendu."""
+    import gap_status as GS
+    from i18n import L
+    TR = L(lang)
+    for nature in GS.NATURES:
+        for status in ("ok", "partial", "no", "na", "oos"):
+            if nature == GS.NON_COUVERT and status != "na":
+                continue
+            lbl = GS.libelle(TR, status, nature)
+            assert not _affirme_une_conformite(lbl), \
+                f"{lbl!r} prononce une conformite ({lang}/{nature}/{status})"
+
+
+def test_le_vert_a_disparu_des_lignes_de_publication():
+    """Une pastille verte se lit « conforme » meme quand le mot a change :
+    le changement de vocabulaire serait reste lettre morte si la couleur
+    avait continue de porter l'affirmation. Le vert reste admissible sur la
+    nature « seuil », ou franchir un seuil EST un constat positif."""
+    import gap_status as GS
+    for status in ("ok", "partial", "no"):
+        assert GS.couleur(status, GS.PUBLICATION) != GS.FRANCHI, \
+            f"le vert subsiste sur une ligne de publication ({status})"
+    assert GS.couleur("ok", GS.SEUIL) == GS.FRANCHI   # discrimine, n'interdit pas
+
+
+def test_les_deux_absences_restent_distinctes():
+    """« Non renseigne » (donnee manquante chez le client) et « Non couvert
+    par ce reporting » (donnee que l'outil ne collecte pas) ne doivent pas
+    fusionner : le rapport ne doit pas imputer au client une lacune de
+    l'outil. Idem pour « hors perimetre VSME », exigence connue mais non
+    requise par le referentiel retenu."""
+    import gap_status as GS
+    from i18n import L
+    for lang in ("fr", "en"):
+        TR = L(lang)
+        na = GS.libelle(TR, "na", GS.PUBLICATION)
+        non_couvert = GS.libelle(TR, "na", GS.NON_COUVERT)
+        oos = GS.libelle(TR, "oos", GS.PUBLICATION)
+        assert na != non_couvert != oos and na != oos, f"absences confondues ({lang})"
+
+
+def test_chaque_ligne_porte_une_nature_connue():
+    from content_generator import compliance_assessment
+    import gap_status as GS
+    r = make_request()
+    for ligne in compliance_assessment(r, calculate_esg_scores(r)):
+        assert ligne["nature"] in GS.NATURES, f"nature inconnue : {ligne}"
+
+
+def test_la_source_de_verite_des_couleurs_est_unique():
+    """Les trois tables dupliquees (report_generator, ppt_generator,
+    docx_generator) ont ete supprimees : les generateurs convertissent
+    depuis gap_status, ils ne redefinissent plus."""
+    import os
+    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # On vise les IDENTIFIANTS des tables supprimees, PAS la couleur : le vert
+    # #2E7D32 sert legitimement ailleurs (encart des actions engagees,
+    # pastilles lead/lag, one-pager). Bannir la valeur mordrait du code juste
+    # -- c'est le patron meme que ce chantier corrige.
+    for fichier in ("report_generator.py", "ppt_generator.py", "docx_generator.py",
+                    "proposal_generator.py"):
+        src = open(os.path.join(racine, fichier), encoding="utf-8").read()
+        for table in ("_st_col", "_stc = {", "_st_hex", "_st_lbl", "_stl = {"):
+            assert table not in src, f"{fichier} redefinit une table de statuts ({table})"
+        assert "import gap_status" in src, f"{fichier} ne lit pas la source unique"
+
+
+# -- Regle d'admission : les garde-fous ci-dessus cassent-ils sur la faute ?
+def test_les_gardefous_du_vocabulaire_cassent_sur_lancien_etat():
+    """Confronte chaque nouveau garde-fou a l'etat d'AVANT le chantier.
+    Un garde-fou qui ne casse pas sur l'ancien vocabulaire ne protege rien."""
+    import gap_status as GS
+    # 1. Les anciens libelles auraient ete refuses.
+    for ancien in ("Conforme", "Compliant", "Non conforme", "Non-compliant"):
+        assert _affirme_une_conformite(ancien), f"{ancien!r} passerait le garde-fou"
+    # 2. Les nouveaux passent.
+    for nouveau in ("Publié", "Disclosed", "Non publié", "Au-dessus du seuil"):
+        assert not _affirme_une_conformite(nouveau), f"{nouveau!r} est refuse a tort"
+    # 3. L'ancienne couleur de `ok` sur une publication aurait ete refusee.
+    assert GS.FRANCHI == "#2E7D32"
+    assert GS.couleur("ok", GS.PUBLICATION) != "#2E7D32"

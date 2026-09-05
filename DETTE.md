@@ -300,6 +300,52 @@ c'est-à-dire à l'étape B. La passe 3 n'améliore donc pas le score : elle
 garantit qu'il s'améliorera automatiquement, et qu'on ne pourra pas
 l'oublier.
 
+### Chantier « vocabulaire du tableau d'écarts » (2026-09-05)
+
+Le statut était attribué sur la **présence d'un champ** : Scope 1 et
+Scope 2 renseignés → « Conforme ESRS E1-6 ». Avoir un chiffre n'est pas
+être conforme à une norme de publication.
+
+- **Trois natures de ligne** désormais distinguées (`gap_status.py`) :
+  `publication` (5 lignes — la donnée est-elle publiée), `seuil`
+  (1 ligne — position face à un seuil nommé), `non_couvert` (1 ligne —
+  l'outil ne collecte pas la donnée). Le libellé du statut dépend de la
+  nature : un même code `ok` se dit « Publié » ou « Au-dessus du seuil ».
+- **`na` dédoublé** : « Non renseigné » quand l'absence est **côté
+  client**, « Non couvert par ce reporting » quand elle est **côté
+  produit** (ligne ESRS E1-4). Le rapport n'impute plus au client une
+  lacune de l'outil. `oos` devient « Hors périmètre VSME », l'ancien
+  « Hors périmètre » se lisant aussi « hors périmètre de la mission ».
+- **Titre** : « Analyse des écarts réglementaires » → « Couverture des
+  exigences de reporting ». La prose de la lettre de mission qui
+  énumérait l'ancien intitulé a suivi — sinon la contradiction se
+  déplaçait du tableau vers l'offre commerciale.
+- **Le vert `#2E7D32` a disparu des lignes de publication.** Une pastille
+  verte se lit « conforme » même quand le mot a changé. Il reste
+  admissible sur la nature `seuil`, où franchir un seuil est un constat
+  positif.
+- **Source de vérité unique créée** (`gap_status.py`). Les trois tables
+  dupliquées — `report_generator.py`, `ppt_generator.py`,
+  `docx_generator.py` — sont supprimées ; les générateurs convertissent
+  (hex, `RGBColor`, hex sans `#`) et ne redéfinissent plus.
+- **Périmètre réel : 4 consommateurs, tous rendant le vocabulaire.** Le
+  diagnostic initial disait que la lettre de mission ne lisait que les
+  codes : **c'était faux**, elle imprimait `st_no` / `st_partial`
+  (`proposal_generator.py:83`). Elle est branchée sur la source unique.
+  Le filtre `status in ("no","partial")` est **inchangé** — la nature
+  `non_couvert` ne modifie pas son décompte, la ligne E1-4 étant déjà
+  `na` (vérifié : 2 écarts avant et après).
+- **Règle d'admission appliquée** :
+  `test_les_gardefous_du_vocabulaire_cassent_sur_lancien_etat` confronte
+  chaque nouveau garde-fou à l'état d'avant — anciens libellés refusés,
+  nouveaux acceptés, ancienne couleur de `ok` refusée sur une publication.
+  Score : **30 / 76 → 36 / 76** (6 garde-fous prouvés ajoutés).
+- **Erreur commise et corrigée en cours de chantier** : le premier test
+  de source unique bannissait la chaîne `2E7D32` dans tout le fichier et
+  mordait des usages légitimes (encart des actions engagées, pastilles
+  lead/lag, one-pager) — le patron du § 0quater, reproduit. Il vise
+  désormais les **identifiants** des tables supprimées.
+
 ### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
 
 | Marqueur | Où | Portée | Pourquoi il est exposé |
@@ -445,6 +491,32 @@ en FR et en EN.
   `git status` redeviendrait un contrôle valable. À évaluer : ReportLab,
   python-pptx et python-docx n'exposent pas tous le même niveau de
   contrôle sur ces champs.
+
+## 0octies. Seuil d'indépendance du conseil : AFEP-MEDEF appliqué hors de son champ
+
+Constaté le 2026-09-05 en vérifiant la formulation du principe avant de
+l'imprimer (chantier « vocabulaire du tableau d'écarts »). **Non corrigé** —
+le barème n'a pas été touché, seul l'intitulé l'a été.
+
+- **Le principe s'appelle « appliquer ou expliquer »** dans le code
+  français ; « comply or explain » en est la traduction usuelle, pas le
+  libellé du texte. L'intitulé retenu emploie donc la forme française.
+- **Le seuil de 50 % n'est pas universel.** Le code retient **la moitié**
+  pour les sociétés à capital dispersé sans actionnaire de contrôle, et
+  **le tiers** pour les sociétés contrôlées. `esg_calculator` /
+  `compliance_assessment` appliquent 50 % (et 33 % comme borne `partial`)
+  **uniformément**, sans savoir si la société est contrôlée — information
+  que le modèle ne collecte pas.
+- **Le code AFEP-MEDEF vise les sociétés cotées.** Le produit cible des
+  PME/ETI souvent non cotées, pour lesquelles il ne s'applique pas.
+- **Mesure prise** : le seuil chiffré a été **retiré de l'intitulé**, qui
+  porte désormais le registre (« AFEP-MEDEF, appliquer ou expliquer »).
+  Le barème reste inchangé et continue de piloter le statut.
+- **Source** : guide d'application du Haut Comité de gouvernement
+  d'entreprise et documents hébergés par le MEDEF. **Le texte primaire du
+  code n'a pas été atteint directement** — même réserve qu'au § 3bis.
+- **À faire** : décider si le tableau doit continuer de porter une ligne
+  AFEP-MEDEF pour un client non coté, et si oui avec quel seuil.
 
 ## 1. `accident_frequency_rate` — barème non recalibré
 

@@ -783,11 +783,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         slide = content_slide(prs, blank_layout, theme, style,
                               t["gap_title"], header_color, kicker=t["benchmark_kicker"])
         _dk = style["dark_slides"]
-        _stc = {"ok": RGBColor(0x2E, 0x7D, 0x32), "partial": RGBColor(0xD9, 0x77, 0x06),
-                "no": RGBColor(0xE7, 0x4C, 0x3C), "na": RGBColor(0x7F, 0x8C, 0x8D),
-                "oos": RGBColor(0x5A, 0x65, 0x72)}
-        _stl = {"ok": t["st_ok"], "partial": t["st_partial"], "no": t["st_no"],
-                "na": t["st_na"], "oos": t["st_oos"]}
+        # Conversion depuis gap_status (source unique) vers RGBColor.
+        import gap_status as GS
         row_h = Inches(0.68)
         for i, g in enumerate(_ga[:8]):
             gy = Inches(1.45) + i * row_h
@@ -799,8 +796,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                      font_size=10, color=theme["muted"], font=fb)
             chip_w = Inches(1.75)
             add_shape(slide, ROUNDED_RECT, Inches(7.85), gy + Inches(0.14), chip_w, Inches(0.4),
-                      fill=_stc[g["status"]])
-            add_text(slide, _stl[g["status"]], Inches(7.85), gy + Inches(0.2), chip_w, Inches(0.3),
+                      fill=RGBColor(*GS.rgb_triplet(g["status"], g["nature"])))
+            add_text(slide, GS.libelle(t, g["status"], g["nature"]), Inches(7.85), gy + Inches(0.2), chip_w, Inches(0.3),
                      font_size=10.5, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
                      align=PP_ALIGN.CENTER, font=fb)
             add_text(slide, g["note"], Inches(9.8), gy + Inches(0.07), Inches(3.2), Inches(0.58),
