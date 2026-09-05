@@ -96,7 +96,7 @@ formulation qui n'affirme pas une contribution.
 
 | Marqueur | Où | Portée | Pourquoi il est exposé |
 |---|---|---|---|
-| `"preuve"` / `"proof"` | `test_suite.py:204,216,246` | **PDF entier** | Mot nu, et sous-chaîne d'« épreuve ». Interdit la mise en garde honnête que le projet ajoute par ailleurs (« le cabinet n'a pas collecté d'éléments de preuve »). Le plus exposé de la liste. |
+| `"preuve"` / `"proof"` | `test_suite.py:204,216,246` | **PDF entier** | Mot nu, et sous-chaîne d'« épreuve ». **Mord le vocabulaire de mise en garde que le projet emploie partout ailleurs** : la ligne de conduite constante depuis le 2026-09-01 est que l'outil *reporte une déclaration et ne prouve rien* — mais toute phrase qui le dit (« le cabinet n'a pas collecté d'éléments de preuve », « aucune preuve n'a été demandée ») casse le test. Le marqueur interdit donc exactement l'énoncé qu'il défend. Le plus exposé de la liste. |
 | `"de son secteur"` | `MARQUEURS_BENCHMARK_INVENTE` | texte + 4 livrables | Fragment générique : « les obligations réglementaires de son secteur » est vrai et non comparatif. |
 | `"référence sectorielle"` | idem | idem | Banni nu en FR alors que son équivalent EN « sector reference » est explicitement épargné pour pouvoir **nier** la comparaison. Asymétrie FR/EN non justifiée. |
 | `"standards sectoriels"` / `"sector standards"` | idem | idem | Les normes sectorielles ESRS sont un objet réglementaire réel ; le marqueur interdit de les citer. |
@@ -109,6 +109,35 @@ formulation qui n'affirme pas une contribution.
 | `"module"` / `"optionnel"` | `test_suite.py:321-322` | note d'audit | VSME est structuré en modules (Basic / Comprehensive) : le marqueur interdit de décrire correctement le référentiel. |
 | `"EAU"` | `test_bands.py:413` | section composée | Sous-chaîne de NIVEAU, BUREAU, RÉSEAU, TABLEAU. Contenu aujourd'hui par des clauses de test maîtrisées, structurellement fragile. |
 | `"VSME/"` | `test_suite.py:292` | `row["ref"]` | Bannit une forme de référence ; à confirmer contre les refs VSME réelles (B1-B11, C1-C9). |
+| `"SBTi"` / `"Science Based Targets"` / `"trajectoire SBTi"` | `ENGAGEMENTS_FABRIQUES` | 4 livrables | Nom nu d'une initiative réelle. Interdit l'énoncé honnête « l'entreprise n'a pas d'objectif validé SBTi ». **Collision programmée — voir ci-dessous.** |
+| `"SFDR"` / `"ISO 14001"` / `"ISO 26000"` | idem | idem | Acronymes nus de référentiels réels : interdit de les citer, y compris pour dire qu'ils ne sont pas revendiqués. **Collision programmée.** |
+| `"ODD 7"` / `"ODD 8"` / `"SDG 7"` / `"SDG 8"` | idem | idem | Références nues à des ODD réels. **Collision programmée.** |
+
+**Deux collisions programmées avec des chantiers déjà inscrits ici.** Ce
+ne sont pas des risques théoriques : les marqueurs casseront le jour où
+ces chantiers démarreront, et c'est le test qui aura tort.
+
+1. **`"SBTi"` / `"Science Based Targets"` × étape B (§ 0bis).** L'étape A
+   a retiré la trajectoire « -42 % à 2030 (SBTi) » que l'outil
+   fabriquait, et a banni le terme avec l'affirmation. Mais l'étape B
+   rendra une cible **saisissable par le client** : dès qu'un consultant
+   renseignera un objectif validé SBTi, le livrable devra le citer comme
+   engagement du client — et le test de gel le refusera. Le marqueur
+   visait un objectif *inventé par l'outil*, pas un objectif *déclaré par
+   l'entreprise* ; il ne sait pas faire la différence.
+2. **`"ISO 14001"` / `"ISO 26000"` / `"ODD n"` × étape B et § 0ter.**
+   L'étape B prévoit explicitement de collecter les **certifications
+   ISO** et les **ODD retenus** (champs multi-sélection, cf. le tableau
+   du § 0bis). Le § 0ter prévoit, lui, de **dériver les ODD des
+   indicateurs réellement collectés** — un mapping défendable imprimerait
+   « ODD 7 » dès qu'une part d'énergie renouvelable est renseignée. Les
+   trois marqueurs interdisent ces deux sorties, qui sont pourtant la
+   forme *corrigée* de ce que l'étape A a retiré.
+
+**Conséquence pour l'ordonnancement** : le chantier « listes noires »
+n'est pas seulement du nettoyage, il est **bloquant pour l'étape B**. Le
+faire après l'étape B garantit de découvrir les collisions sous forme de
+tests rouges au milieu d'un chantier de saisie.
 
 **Contrôlés et jugés SAINS** (à ne pas ré-inventorier) : `"CSRD"` et
 `"Taxonomie européenne"` (`:942-943`) et `"Vérification du reporting par un
@@ -180,6 +209,34 @@ en FR et en EN.
   contrôle par page.
 - **À faire** : rendre `_toc_parts` extractible (constante de module ou
   fonction) pour supprimer la duplication et couvrir l'entrée fantôme.
+
+## 0septies. Génération non déterministe — `examples/` indistinguable d'un état périmé
+
+- **Constat (2026-09-05)** : régénérer les livrables d'exemple **sans le
+  moindre changement de code** produit six binaires modifiés aux yeux de
+  Git, pour un **contenu textuel strictement identique**. Vérifié par
+  extraction du texte des six livrables avant et après régénération :
+  `diff` vide, md5 tous différents.
+- **Cause** : les générateurs PDF / PPTX / DOCX écrivent des
+  **métadonnées variables** — horodatage de création, identifiants
+  d'objets internes, ordre d'entrées dans les archives ZIP pour les
+  formats OOXML.
+- **Ce que ça coûte** : `git status` **ne permet pas de savoir si
+  `examples/` est à jour**. Un dossier propre ne prouve pas que les
+  exemples reflètent le code, et un dossier modifié ne prouve pas
+  l'inverse. Le seul contrôle fiable aujourd'hui est de comparer le
+  **texte extrait**, pas les fichiers.
+- **Ça a déjà coûté un commit** : `7f4a5c9` a régénéré les exemples en
+  affirmant qu'ils étaient périmés depuis les deux purges — alors que
+  `33fae44` et `f5c616a` les avaient régénérés. Le commit ne changeait
+  aucun contenu. Annulé par `git revert` (commit `56a7eab`).
+- **Piste, non traitée** : figer ces métadonnées à la génération —
+  horodatage fixe (ou dérivé de l'exercice du dossier plutôt que de
+  l'heure courante), identifiants déterministes, écriture ZIP à ordre et
+  dates constants. La génération deviendrait reproductible et
+  `git status` redeviendrait un contrôle valable. À évaluer : ReportLab,
+  python-pptx et python-docx n'exposent pas tous le même niveau de
+  contrôle sur ces champs.
 
 ## 1. `accident_frequency_rate` — barème non recalibré
 
