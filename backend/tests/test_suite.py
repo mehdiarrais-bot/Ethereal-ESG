@@ -1639,3 +1639,101 @@ def test_le_silence_ne_doit_pas_surpasser_la_transparence():
     assert a > b, (
         f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "
         f"declarer ses chiffres coute des points.")
+
+
+# ── Lot 0 : la couche des derives sait s'abstenir ─────────────────────────
+
+# Ces six fonctions sont des AMPLIFICATEURS : une seule absence de pilier y
+# engendre six jugements derives (un stade de maturite, une bande, un point
+# fort, une priorite, une accroche, une cotation d'enjeu). Tant qu'elles ne
+# savent pas s'abstenir, chaque site appelant doit les contourner un par un.
+#
+# Le calculateur ne produit PAS encore d'absence (les trois
+# `if not scores: return 50.0` sont intacts) : le lot 0 rend les derives
+# robustes AVANT que l'absence n'existe. Les tests leur passent donc
+# directement un score absent, sans passer par le calculateur.
+from types import SimpleNamespace
+
+
+def _scores_partiels(env=None, social=None, gov=None, total=None, rating=None):
+    """Double de ESGScores : seuls les attributs lus par les derives."""
+    return SimpleNamespace(environmental_score=env, social_score=social,
+                           governance_score=gov, total_esg_score=total,
+                           rating=rating, strengths=[], weaknesses=[],
+                           recommendations=[], completude={})
+
+
+def test_band_sabstient_sur_un_score_absent():
+    """`_band(None)` rendait « low » : la bande la plus severe, attribuee a
+    un pilier dont rien n'est declare. Elle doit s'abstenir."""
+    from content_generator import _band
+    assert _band(None) is None
+    assert _band(80) == "high"          # discrimine, n'interdit pas
+
+
+def test_perf_desc_sabstient_sur_une_note_absente():
+    """`PERF_DESC.get(rating, "performance mesuree")` ne LEVE PAS : son
+    defaut rend une qualification plausible pour une note inexistante.
+    C'est le plus insidieux des deux cas de cette couche."""
+    from content_generator import _perf_desc
+    assert _perf_desc(None, en=False) is None
+    assert _perf_desc(None, en=True) is None
+    assert _perf_desc("A", en=False)                     # discrimine
+
+
+def test_classement_piliers_ecarte_les_piliers_absents():
+    """Le classement par max/min designait un « point fort » et une
+    « priorite » en comparant des valeurs absentes. Un pilier sans
+    indicateur n'a pas de rang : il sort du classement."""
+    from content_generator import _classement_piliers
+    s = _scores_partiels(env=70.0, social=None, gov=55.0)
+    cles = [k for k, _ in _classement_piliers(s)]
+    assert "social" not in cles and set(cles) == {"env", "gov"}
+    assert _classement_piliers(_scores_partiels()) == []
+
+
+def test_score_verdict_sabstient_sans_score_global():
+    """Le verdict cite le score et la note : sans eux il ne doit rien dire."""
+    from content_generator import score_verdict
+    r = make_request()
+    assert score_verdict(r, _scores_partiels()) is None
+
+
+def test_pillar_headline_sabstient_pilier_par_pilier():
+    """Les trois cles restent rendues -- les appelants les indexent -- mais
+    un pilier absent ne recoit AUCUNE conclusion."""
+    from content_generator import pillar_headline
+    r = make_request()
+    out = pillar_headline(r, _scores_partiels(env=70.0, social=None, gov=55.0))
+    assert set(out) == {"env", "social", "gov"}
+    assert out["social"] is None
+    assert out["env"] and out["gov"]
+
+
+def test_benchmark_verdict_sabstient_sous_deux_piliers():
+    """Classer suppose au moins deux piliers a comparer."""
+    from content_generator import benchmark_verdict
+    r = make_request()
+    assert benchmark_verdict(r, _scores_partiels(env=70.0)) is None
+    assert benchmark_verdict(r, _scores_partiels()) is None
+
+
+def test_esg_maturity_sabstient_sans_score_global():
+    """La maturite est DERIVEE du score global : sans lui, le stade 0
+    (« initiated ») serait un jugement sans source."""
+    from esg_advanced import esg_maturity
+    r = make_request()
+    m = esg_maturity(r, _scores_partiels())
+    assert m["stage"] is None and m["key"] is None and m["next"] is None
+
+
+def test_materiality_topics_ecarte_les_sujets_sans_base():
+    """La cartographie est « derivee des indicateurs declares » : un sujet
+    dont la base chiffree manque en sort, au lieu d'etre cote au milieu de
+    l'echelle -- ce qui serait une cotation inventee."""
+    from esg_advanced import materiality_topics
+    r = make_request()
+    r.environmental.renewable_energy_percent = None
+    r.environmental.waste_recycled_percent = None
+    sujets = materiality_topics(r, _scores_partiels(env=None, social=None, gov=None))
+    assert all(t["impact"] is not None for t in sujets)

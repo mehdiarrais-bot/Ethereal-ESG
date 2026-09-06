@@ -48,6 +48,13 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     ML = _MAT_LABELS.get(lang, _MAT_LABELS["fr"])
 
     def inv(score):  # score bas -> priorité haute
+        # ABSTENTION : sans base chiffree, l'enjeu n'a pas de cotation. On
+        # rend None et le sujet est ECARTE de la cartographie, plutot que
+        # place au milieu de l'echelle -- ce qui serait une cotation
+        # inventee. La cartographie est « derivee des indicateurs
+        # declares » : elle ne doit contenir que les sujets qui en ont un.
+        if score is None:
+            return None
         return _clamp(9.5 - (score / 100.0) * 6.0)
 
     topics = []
@@ -88,7 +95,8 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     topics.append({"label": ML[8],
                    "impact": _clamp(6.0 + (gov.data_breaches or 0) * 1.5),
                    "financial": _clamp(7.5), "pillar": "gov"})
-    return topics
+    # Les sujets dont la base chiffree manque sortent de la cartographie.
+    return [t for t in topics if t["impact"] is not None]
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -143,9 +151,28 @@ _MATURITY = [
 ]
 
 
+def _signaux_structurants(request) -> list:
+    """Ce qui fait passer un cap de maturite. Ne depend d'AUCUN score : ces
+    signaux restent observables meme quand la maturite ne l'est pas."""
+    gaps = []
+    if request.environmental.scope3_emissions is None:
+        gaps.append("scope3")
+    if not request.governance.esg_audit_conducted:
+        gaps.append("audit")
+    if not request.governance.sustainability_committee:
+        gaps.append("committee")
+    return gaps
+
+
 def esg_maturity(request: ESGRequest, scores: ESGScores) -> dict:
     """Niveau de maturité ESG (5 stades) + progression vers le suivant."""
     sc = scores.total_esg_score
+    # ABSTENTION : la maturite est DERIVEE du score global. Sans lui, le
+    # stade 0 (« initiated ») serait un jugement sans source -- et le plus
+    # severe des cinq. Les appelants testent `stage is None`.
+    if sc is None:
+        return {"stage": None, "key": None, "next": None, "progress": None,
+                "gaps": _signaux_structurants(request)}
     stage = 0
     for i, (lo, hi, key) in enumerate(_MATURITY):
         if lo <= sc < hi:
@@ -154,13 +181,6 @@ def esg_maturity(request: ESGRequest, scores: ESGScores) -> dict:
     lo, hi, key = _MATURITY[stage]
     nxt = _MATURITY[stage + 1][2] if stage < 4 else None
     progress = (sc - lo) / max(1, hi - lo)
-    # signaux structurants (ce qui fait passer un cap)
-    gaps = []
-    if request.environmental.scope3_emissions is None:
-        gaps.append("scope3")
-    if not request.governance.esg_audit_conducted:
-        gaps.append("audit")
-    if not request.governance.sustainability_committee:
-        gaps.append("committee")
     return {"stage": stage, "key": key, "next": nxt,
-            "progress": round(min(1.0, progress), 2), "gaps": gaps}
+            "progress": round(min(1.0, progress), 2),
+            "gaps": _signaux_structurants(request)}

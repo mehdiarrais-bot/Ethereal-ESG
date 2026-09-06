@@ -752,8 +752,16 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     s = _seed(name)
 
     sector_long, sector_priority = _ctx(company.sector)
-    perf = PERF_DESC.get(scores.rating, "performance mesurée")
+    # LOT 0 : le helper sait s'abstenir, PAS cet appelant. Si `perf` est
+    # None il s'imprimerait tel quel dans la phrase. Adaptation du site
+    # appelant = lot 1. Aucune absence ne peut survenir aujourd'hui : le
+    # calculateur rend toujours une note.
+    perf = _perf_desc(scores.rating, en=False)
 
+    # LOT 0 NE COUVRE PAS CE SITE : classement inline de la couche
+    # narrative, pas de la couche des derives. A reprendre au lot 1 avec
+    # _classement_piliers, comme score_verdict / pillar_headline /
+    # benchmark_verdict.
     best = max(
         ("Environnemental", scores.environmental_score),
         ("Social", scores.social_score),
@@ -1236,9 +1244,17 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     year, name = company.reporting_year, company.name
     s = _seed(name)
     sector_long, sector_priority = _ctx_en(company.sector)
-    perf = PERF_DESC_EN.get(scores.rating, "measured performance")
+    # LOT 0 : le helper sait s'abstenir, PAS cet appelant. Si `perf` est
+    # None il s'imprimerait tel quel dans la phrase. Adaptation du site
+    # appelant = lot 1. Aucune absence ne peut survenir aujourd'hui : le
+    # calculateur rend toujours une note.
+    perf = _perf_desc(scores.rating, en=True)
 
     labels = {"Environnemental": "Environmental", "Social": "Social", "Gouvernance": "Governance"}
+    # LOT 0 NE COUVRE PAS CE SITE : classement inline de la couche
+    # narrative, pas de la couche des derives. A reprendre au lot 1 avec
+    # _classement_piliers, comme score_verdict / pillar_headline /
+    # benchmark_verdict.
     best = max(("Environmental", scores.environmental_score), ("Social", scores.social_score),
                ("Governance", scores.governance_score), key=lambda x: x[1])
     worst = min(("Environmental", scores.environmental_score), ("Social", scores.social_score),
@@ -1579,7 +1595,48 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
 # INSIGHTS MÉTIER — message principal de chaque slide (lisible en < 5 s)
 # ══════════════════════════════════════════════════════════════════════════
 
+# ── Couche des derives : deux helpers qui savent s'abstenir ──────────────
+#
+# Ces fonctions concentrent les deux patrons les plus dangereux de la couche.
+# Elles rendent None quand la donnee manque ; c'est aux appelants de le voir.
+
+def _perf_desc(rating, en=False):
+    """Qualification derivee de la note lettree. ABSTENTION sans note.
+
+    Le patron d'origine, `PERF_DESC.get(rating, "performance mesuree")`, NE
+    LEVE PAS : son defaut rendait une qualification plausible pour une note
+    inexistante. C'est le plus insidieux des deux cas -- un `.get` avec
+    defaut transforme silencieusement une absence en jugement.
+    """
+    if rating is None:
+        return None
+    return (PERF_DESC_EN if en else PERF_DESC).get(
+        rating, "measured performance" if en else "performance mesurée")
+
+
+def _classement_piliers(scores, libelles=None):
+    """[(cle, score)] des seuls piliers CALCULABLES, ordre env/social/gov.
+
+    Le patron d'origine -- `max(pil, key=...)` / `min(...)` sur les trois
+    piliers -- designait un « point fort » et une « priorite » en comparant
+    des valeurs absentes. Un pilier sans indicateur n'a pas de rang : il
+    n'est ni le meilleur ni le pire, il sort du classement. Un classement de
+    moins de deux piliers n'a pas de sens : les appelants doivent le tester.
+    """
+    cles = libelles or ("env", "social", "gov")
+    paires = zip(cles, (scores.environmental_score, scores.social_score,
+                        scores.governance_score))
+    return [(c, v) for c, v in paires if v is not None]
+
+
 def _band(score):
+    """Bande de lecture d'un score. ABSTENTION sur un score absent.
+
+    Lot 0 : un pilier sans indicateur n'a pas de bande. Rendre « low » --
+    la plus severe -- pour une absence de donnee etait un jugement sans
+    source. Les appelants testent None.
+    """
+    if score is None: return None
     if score >= 75: return "high"
     if score >= 60: return "good"
     if score >= 45: return "mid"
@@ -1640,17 +1697,24 @@ def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     }
 
 
-def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
-    """Message d'ouverture du tableau de bord — l'idée principale en une phrase."""
+def score_verdict(request: ESGRequest, scores: ESGScores):
+    """Message d'ouverture du tableau de bord — l'idée principale en une phrase.
+
+    ABSTENTION : rend None si le score global ou le classement des piliers
+    n'est pas etabli. La phrase cite le score, la note et deux piliers
+    classes ; sans eux elle ne peut rien dire de vrai. Les appelants
+    doivent tester None (adaptation prevue aux lots 1 et 2).
+    """
     en = getattr(request, "language", "fr") == "en"
     name = request.company.name
-    pillars = [("env", scores.environmental_score), ("social", scores.social_score),
-               ("gov", scores.governance_score)]
     labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
               "en": {"env": "environment", "social": "social", "gov": "governance"}}
     lab = labels["en" if en else "fr"]
-    best = max(pillars, key=lambda x: x[1]); worst = min(pillars, key=lambda x: x[1])
+    classables = _classement_piliers(scores)
     band = _band(scores.total_esg_score)
+    if band is None or scores.rating is None or len(classables) < 2:
+        return None
+    best = max(classables, key=lambda x: x[1]); worst = min(classables, key=lambda x: x[1])
     if en:
         qual = {"high": "a leading", "good": "a solid", "mid": "a developing", "low": "an early-stage"}[band]
         return (f"{name} shows {qual} ESG profile ({scores.total_esg_score:.0f}/100, {scores.rating}), "
@@ -1671,11 +1735,15 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
     """Sous-titre-conclusion par pilier, ancré sur une donnée concrète. FR/EN."""
     en = getattr(request, "language", "fr") == "en"
     env, soc, gov = request.environmental, request.social, request.governance
-    pil = [("env", scores.environmental_score), ("social", scores.social_score),
-           ("gov", scores.governance_score)]
-    best = max(pil, key=lambda x: x[1])[0]
-    worst = min(pil, key=lambda x: x[1])[0]
-    same = len({p[1] for p in pil}) == 1
+    # ABSTENTION pilier par pilier : les trois cles restent TOUJOURS rendues
+    # -- les appelants les indexent directement -- mais un pilier sans
+    # indicateur recoit None au lieu d'une conclusion fabriquee.
+    tous = [("env", scores.environmental_score), ("social", scores.social_score),
+            ("gov", scores.governance_score)]
+    pil = _classement_piliers(scores)
+    best = max(pil, key=lambda x: x[1])[0] if pil else None
+    worst = min(pil, key=lambda x: x[1])[0] if pil else None
+    same = (len({p[1] for p in pil}) == 1) if pil else False
 
     def num(v):  # entier sans décimale
         return f"{v:.0f}"
@@ -1754,7 +1822,7 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
             return "A trajectory to consolidate" if en else "Une trajectoire à consolider"
         return "A priority area for action" if en else "Un chantier prioritaire"
 
-    return {k: phrase(k, sc) for k, sc in pil}
+    return {k: (phrase(k, sc) if sc is not None else None) for k, sc in tous}
 
 
 def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
@@ -1851,7 +1919,7 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
 # VERDICT BENCHMARK & MATURITÉ (diagnostic personnalisé)
 # ══════════════════════════════════════════════════════════════════════════
 
-def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
+def benchmark_verdict(request: ESGRequest, scores: ESGScores):
     """Titre-conclusion + lecture du positionnement INTERNE des piliers.
 
     Ne compare plus l'entreprise à un secteur : la table de référence
@@ -1868,9 +1936,15 @@ def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
            "gov": scores.governance_score}
     labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
               "en": {"env": "environment", "social": "social", "gov": "governance"}}[("en" if en else "fr")]
-    lead = max(pil, key=lambda k: pil[k])
-    lag = min(pil, key=lambda k: pil[k])
-    ecart = pil[lead] - pil[lag]
+    # ABSTENTION : classer suppose au moins deux piliers a comparer. Sous ce
+    # seuil, il n'y a ni point fort ni priorite -- la fonction rend None
+    # plutot que de designer un gagnant par comparaison de valeurs absentes.
+    classables = dict(_classement_piliers(scores))
+    if len(classables) < 2:
+        return None
+    lead = max(classables, key=lambda k: classables[k])
+    lag = min(classables, key=lambda k: classables[k])
+    ecart = classables[lead] - classables[lag]
 
     if en:
         title = (f"{labels[lead].capitalize()} is {name}'s strong point, "
@@ -1885,14 +1959,18 @@ def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
                    f"fragile — l'écart interne à réduire en priorité.")
         lect = {"lead": "Point fort", "lag": "Priorité", "mid": "Consolidé"}
 
-    meilleur = pil[lead]
+    meilleur = classables[lead]
     rows = []
     for cle in ("env", "social", "gov"):
+        if pil[cle] is None:              # pilier hors classement
+            rows.append({"key": cle, "score": None, "delta": None,
+                         "reading": None, "role": None})
+            continue
         role = "lead" if cle == lead else ("lag" if cle == lag else "mid")
         rows.append({"key": cle, "score": pil[cle],
                      "delta": pil[cle] - meilleur,   # 0 pour le meilleur pilier
                      "reading": lect[role], "role": role})
-    rows.sort(key=lambda r: -r["score"])
+    rows.sort(key=lambda r: (r["score"] is None, -(r["score"] or 0)))
     if not en:                       # l'anglais n'élide pas
         title, insight = elider(title, name), elider(insight, name)
     return {"title": title, "insight": insight, "rows": rows,
