@@ -77,18 +77,6 @@ LABELS = {
         "quad_fill": "Gains d'appoint", "quad_avoid": "À réévaluer",
         "prio_kicker": "PRIORISATION", "prio_title": "Par où commencer : l'effort au regard de l'impact",
         "cap_prio": "Matrice de priorisation — effort de mise en œuvre vs impact ESG et valeur",
-        # T2/T1 : calculabilite et completude du score.
-        "score_non_calculable": "Score non calculable",
-        "note_non_calculable": "Non calculable",
-        "sans_indicateur": "Aucun indicateur déclaré sur ce pilier",
-        "completude_courte": "calculé sur {n} des {m} indicateurs du barème",
-        "completude_methodo": ("Le questionnaire collecte {collectes} indicateurs ; "
-                               "{notes} entrent dans le calcul du score, les {hors} autres "
-                               "sont publiés dans le rapport sans y contribuer."),
-        "non_calculable_explication": ("Au moins un pilier ne comporte aucun indicateur "
-                                       "déclaré. Le score n'est pas calculé plutôt que "
-                                       "d'être fixé à une valeur par défaut : une note "
-                                       "produite sans donnée n'aurait aucune source."),
         "gap_title": "Couverture des exigences de reporting", "gap_req": "Exigence", "gap_ref": "Référence",
         "gap_status": "Statut", "gap_note": "Constat",
         # Libelles choisis selon la NATURE de la ligne (cf. gap_status.py) :
@@ -242,17 +230,6 @@ LABELS = {
         "quad_fill": "Fill-ins", "quad_avoid": "To reassess",
         "prio_kicker": "PRIORITISATION", "prio_title": "Where to start: effort versus impact",
         "cap_prio": "Prioritisation matrix — implementation effort vs ESG and value impact",
-        "score_non_calculable": "Score not computable",
-        "note_non_calculable": "Not computable",
-        "sans_indicateur": "No indicator reported for this pillar",
-        "completude_courte": "computed from {n} of the {m} scored indicators",
-        "completude_methodo": ("The questionnaire collects {collectes} indicators; "
-                               "{notes} feed the score, the other {hors} are disclosed "
-                               "in the report without contributing to it."),
-        "non_calculable_explication": ("At least one pillar has no reported indicator. "
-                                       "The score is left uncomputed rather than set to a "
-                                       "default value: a rating produced without data would "
-                                       "have no source."),
         "gap_title": "Reporting requirement coverage", "gap_req": "Requirement", "gap_ref": "Reference",
         "gap_status": "Status", "gap_note": "Finding",
         "st_pub_ok": "Disclosed", "st_pub_partial": "Partially disclosed",

@@ -314,9 +314,7 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
     try:
         comp = {"env": scores.environmental_score, "social": scores.social_score,
                 "gov": scores.governance_score, "global": scores.total_esg_score}
-        _bench = benchmark_chart(comp, theme, light_bg=light_bg, lang=lang, brand=brand)
-        if _bench:                    # None si aucun pilier n'est calculable
-            out["benchmark"] = _bench
+        out["benchmark"] = benchmark_chart(comp, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Benchmark chart error: {e}")
     try:

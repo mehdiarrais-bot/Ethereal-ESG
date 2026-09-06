@@ -69,19 +69,9 @@ describe('computeSparklinePoints — structure', () => {
     assert.equal(descendante.up, false)
   })
 
-  // T2 (2026-09-06) : ce test figeait `h.total || 0`, qui plaçait un exercice
-  // non calculable à zéro — lisible comme un score de zéro, c'est-à-dire
-  // l'affirmation sans source que T2 retire. Le comportement attendu est
-  // désormais d'ÉCARTER le point, pas de le ramener à zéro.
-  test('exercice non calculable écarté, jamais ramené à zéro', () => {
-    // Un seul exercice chiffré : pas assez de points pour une courbe.
-    assert.equal(computeSparklinePoints([{ total: null }, { total: 40 }]), null)
-    // Deux exercices chiffrés encadrant un exercice non calculable :
-    // la courbe se trace sur les deux points réels, sans creux à zéro.
-    const pts = computeSparklinePoints([{ total: 50 }, { total: null }, { total: 60 }])
-    assert.ok(pts)
-    assert.equal(pts.xs.length, 2)
-    assert.ok(pts.ys.every(y => Number.isFinite(y)))
+  test('valeur absente traitée comme 0 (h.total || 0)', () => {
+    const pts = computeSparklinePoints([{ total: null }, { total: 40 }])
+    assert.ok(pts) // ne plante pas, produit bien 2 points
   })
 })
 

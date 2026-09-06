@@ -1598,44 +1598,34 @@ def dossier_vide():
 
 
 def test_temoin_le_silence_paie():
-    """TEMOIN du bareme, mis a jour par le traitement T2/T1 du 2026-09-06.
+    """TEMOIN, pas invariant. Fige l'etat du bareme AVANT le traitement T2/T1.
 
-    Etat AVANT (fige au commit 9bc2439, conserve ici comme reference) :
+    Son role est d'etre MODIFIE par le traitement : le diff du commit qui
+    corrige le bareme montrera alors noir sur blanc ce qu'il deplace. Ne pas
+    l'assouplir pour le faire passer -- le mettre a jour, en connaissance.
+
+    Etat mesure le 2026-09-06 :
       A transparente (15 champs) = 66,0 (A)
-      B silencieuse  ( 3 champs) = 66,5 (A)   <- DEPASSAIT la transparente
-      C = B + 1 chiffre honnete  = 63,0 (BBB) <- l'honnetete coutait 3,5 pts
+      B silencieuse  ( 3 champs) = 66,5 (A)   <- DEPASSE la transparente
+      C = B + 1 chiffre honnete  = 63,0 (BBB) <- l'honnetete coute 3,5 pts
       D vide         ( 0 champ)  = 50,0 (BB)  <- une note lettree sans donnee
-
-    Etat APRES T2 : un pilier sans aucun indicateur n'est plus calculable,
-    et la note globale ne l'est plus des qu'un pilier ne l'est pas.
-      A inchangee : les dossiers qui ont des chiffres gardent leur note.
-      B et D n'ont plus de note du tout -- le A gratuit a disparu.
-      C conserve 63,0 : ses trois piliers ont chacun au moins un indicateur.
     """
-    a = calculate_esg_scores(dossier_a_transparente())
-    assert (a.total_esg_score, a.rating) == (66.0, "A")
-    assert a.completude == {"env": 4, "social": 4, "gov": 6}      # 14 / 18
-
-    b = calculate_esg_scores(dossier_b_silencieuse())
-    assert b.social_score is None and b.total_esg_score is None and b.rating is None
-
-    c = calculate_esg_scores(dossier_c_un_chiffre_honnete())
-    assert (c.total_esg_score, c.rating) == (63.0, "BBB")
-
-    d = calculate_esg_scores(dossier_vide())
-    assert (d.environmental_score, d.social_score, d.governance_score) == (None, None, None)
-    assert d.total_esg_score is None and d.rating is None
+    for dossier, total, note in ((dossier_a_transparente(), 66.0, "A"),
+                                 (dossier_b_silencieuse(), 66.5, "A"),
+                                 (dossier_c_un_chiffre_honnete(), 63.0, "BBB"),
+                                 (dossier_vide(), 50.0, "BB")):
+        s = calculate_esg_scores(dossier)
+        assert (s.total_esg_score, s.rating) == (total, note)
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "Defaut connu, corrige par le traitement T2/T1 : le silence est gratuit "
+    "(une donnee absente sort de la moyenne) et produit un jugement "
+    "(if not scores: return 50.0). Voir DETTE.md."))
 def test_le_silence_ne_doit_pas_surpasser_la_transparence():
-    """INVARIANT, satisfait depuis le traitement T2 du 2026-09-06.
+    """INVARIANT CIBLE, aujourd'hui faux.
 
-    Il a vecu en `xfail(strict=True)` entre 9bc2439 et le traitement. Le
-    marqueur a ete retire parce que `strict` a fait exactement son office :
-    des que T2 a rendu l'invariant vrai, le XPASS a casse la suite et a
-    force sa suppression.
-
-    POURQUOI `xfail(strict=True)` ETAIT ICI LE BON OUTIL, alors qu'il etait le
+    POURQUOI `xfail(strict=True)` EST ICI LE BON OUTIL, alors qu'il etait le
     MAUVAIS en passe 3 : la-bas, l'echec attendu etait une ValidationError
     Pydantic sur un champ inexistant -- un xfail non strict l'aurait avalee
     et aurait affiche un vert qui ne mesure rien. Ici l'echec attendu est une
@@ -1646,108 +1636,6 @@ def test_le_silence_ne_doit_pas_surpasser_la_transparence():
     """
     a = calculate_esg_scores(dossier_a_transparente()).total_esg_score
     b = calculate_esg_scores(dossier_b_silencieuse()).total_esg_score
-    assert a is not None, "le dossier transparent doit rester calculable"
-    assert b is None or a > b, (
+    assert a > b, (
         f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "
         f"declarer ses chiffres coute des points.")
-
-
-# ── T2 / T1 : garde-fous du silence ───────────────────────────────────────
-
-@pytest.mark.parametrize("lang", ["fr", "en"])
-@pytest.mark.parametrize("nom", ["A", "B", "C", "D"])
-def test_les_livrables_se_generent_meme_sans_score(nom, lang):
-    """Robustesse : la generation ne doit JAMAIS echouer parce qu'un pilier
-    n'est pas calculable -- gracieux en production (CLAUDE.md). Les quatre
-    dossiers temoins, dans les deux langues, sur les cinq livrables."""
-    fabrique = {"A": dossier_a_transparente, "B": dossier_b_silencieuse,
-                "C": dossier_c_un_chiffre_honnete, "D": dossier_vide}[nom]
-    r = fabrique()
-    r.language = lang
-    s = calculate_esg_scores(r)
-    textes = _textes_des_livrables(r)          # les cinq livrables
-    assert set(textes) == {"pdf", "onepager", "pptx", "docx", "lettre"}
-    assert all(t for t in textes.values())
-
-
-@pytest.mark.parametrize("lang", ["fr", "en"])
-def test_aucune_note_lettree_quand_le_score_nest_pas_calculable(lang):
-    """T2 : le cas limite de la couverture. Le rapport ne doit pas imprimer
-    de note lettree ni de score par defaut quand un pilier est vide -- il
-    doit dire que le score n'est pas calculable."""
-    import score_display as SD
-    from i18n import L
-    r = dossier_vide()
-    r.language = lang
-    s = calculate_esg_scores(r)
-    assert not SD.est_calculable(s)
-    TR = L(lang)
-    pdf = _textes_des_livrables(r)["pdf"]
-    assert TR["score_non_calculable"] in pdf, "la couverture n'annonce pas la non-calculabilite"
-    # La completude est publiee a cote, et elle dit sur quoi elle porte.
-    assert SD.texte_completude(s, TR) in pdf.replace("\u00a0", " ") or \
-        str(SD.TOTAL_INDICATEURS) in pdf
-
-
-@pytest.mark.parametrize("lang", ["fr", "en"])
-def test_completude_publiee_et_denominateur_explicite(lang):
-    """T1 : le ratio doit dire sur quoi il porte. « 14 sur 18 » sans preciser
-    que le questionnaire collecte 29 indicateurs serait trompeur : la note
-    methodologique porte la phrase complete, une fois."""
-    import score_display as SD
-    from i18n import L
-    r = dossier_a_transparente()
-    r.language = lang
-    s = calculate_esg_scores(r)
-    methodo = generate_esg_content(r, s)["methodology"]
-    assert str(SD.NB_CHAMPS_COLLECTES) in methodo          # 29 collectes
-    assert str(SD.TOTAL_INDICATEURS) in methodo            # 18 notes
-    assert str(SD.NB_CHAMPS_HORS_BAREME) in methodo        # 11 hors bareme
-    # La phrase courte est capitalisee en tete de phrase : comparaison
-    # insensible a la casse, c'est le contenu qui est gele, pas la typographie.
-    assert SD.texte_completude(s, L(lang)).lower() in methodo.lower()
-
-
-def test_le_denominateur_correspond_au_bareme_reel():
-    """Le denominateur imprime doit etre celui du bareme, pas un chiffre
-    ecrit a la main : un dossier qui renseigne TOUT doit atteindre le
-    maximum annonce par NB_INDICATEURS."""
-    import score_display as SD
-    complet = _dossier(
-        EnvironmentalData(co2_emissions_tonnes=8200, scope1_emissions=1, scope2_emissions=1,
-                          scope3_emissions=1, renewable_energy_percent=42,
-                          waste_recycled_percent=63, biodiversity_initiatives=3),
-        SocialData(female_employees_percent=34, employee_turnover_percent=11,
-                   training_hours_per_employee=22, accident_frequency_rate=6.2,
-                   customer_satisfaction_score=8, community_investment_eur=50000),
-        GovernanceData(female_board_percent=44, independent_board_percent=45,
-                       ethics_violations=0, data_breaches=0, esg_audit_conducted=True,
-                       sustainability_committee=True, csr_budget_eur=250000))
-    s = calculate_esg_scores(complet)
-    assert s.completude == SD.NB_INDICATEURS, (
-        f"le bareme produit {s.completude}, NB_INDICATEURS annonce "
-        f"{SD.NB_INDICATEURS} : le denominateur imprime serait faux.")
-    assert SD.indicateurs_notes(s) == SD.TOTAL_INDICATEURS == 18
-
-
-# -- Regle d'admission : ces garde-fous cassent-ils sur l'etat d'AVANT ?
-def test_les_gardefous_du_silence_cassent_sur_lancien_etat():
-    """Confronte les garde-fous T2/T1 a l'etat d'avant le traitement.
-
-    AVANT, chaque pilier vide rendait 50.0 et get_rating(50.0) donnait
-    « BB » : un dossier sans aucune donnee sortait avec une note lettree en
-    couverture. Le garde-fou est utile exactement parce que cette valeur
-    etait produisible -- on le verifie plutot que de l'affirmer.
-    """
-    from esg_calculator import get_rating
-    import score_display as SD
-    # 1. L'ancien defaut aurait bien donne une note lettree.
-    assert get_rating(50.0) == "BB"
-    # 2. Il ne peut plus etre atteint : un pilier vide rend None, pas 50.
-    vide = calculate_esg_scores(dossier_vide())
-    assert vide.environmental_score is None and vide.rating is None
-    # 3. Et le garde-fou de calculabilite refuse bien ce dossier.
-    assert not SD.est_calculable(vide)
-    # 4. Un dossier qui a des donnees reste calculable : le garde-fou
-    #    DISCRIMINE, il n'interdit pas.
-    assert SD.est_calculable(calculate_esg_scores(dossier_a_transparente()))

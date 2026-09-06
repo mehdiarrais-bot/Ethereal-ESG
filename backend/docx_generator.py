@@ -1,4 +1,3 @@
-import score_display as SD
 import io
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor, Cm
@@ -155,17 +154,12 @@ def add_kpi_table(doc, kpi_list, colors):
         doc.add_paragraph()
 
 
-def add_score_block(doc, label, score, color_hex, TR=None):
+def add_score_block(doc, label, score, color_hex):
     p = doc.add_paragraph()
     run = p.add_run(f"{label} : ")
     run.font.size = Pt(11)
     run.bold = True
-    # T2 : un pilier non calculable ne s'ecrit pas « /100 ».
-    if score is None:
-        txt = (TR or {}).get("note_non_calculable", "—")
-    else:
-        txt = f"{score:.1f}/100"
-    score_run = p.add_run(txt)
+    score_run = p.add_run(f"{score:.1f}/100")
     score_run.font.size = Pt(14)
     score_run.bold = True
     score_run.font.color.rgb = hex_to_rgb(color_hex)
@@ -326,8 +320,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
         val_cell = summary_table.rows[1].cells[i]
         val_cell.paragraphs[0].clear()
-        rv = val_cell.paragraphs[0].add_run(SD.texte_pilier(val, TR))
-        rv.font.size = Pt(24 if val is not None else 9)
+        rv = val_cell.paragraphs[0].add_run(f"{val:.1f}")
+        rv.font.size = Pt(24)
         rv.bold = True
         rv.font.color.rgb = hex_to_rgb(col)
         val_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -335,7 +329,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     doc.add_paragraph()
 
     rating_p = doc.add_paragraph()
-    rating_run = rating_p.add_run(f"{TR['note']} : {SD.texte_note(scores, TR)}")
+    rating_run = rating_p.add_run(f"{TR['note']} : {scores.rating}")
     rating_run.font.size = Pt(16)
     rating_run.bold = True
     rating_run.font.color.rgb = hex_to_rgb(colors["accent"])
@@ -372,7 +366,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_hr(doc, colors["secondary"])
     exec_text = content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
-        f"avec un score global de {SD.texte_score(scores, TR)}/100 (note {SD.texte_note(scores, TR)}).")
+        f"avec un score global de {scores.total_esg_score}/100 (note {scores.rating}).")
     doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
     _notes = getattr(request, "consultant_notes", None) or {}
     if _notes.get("global"):
@@ -384,7 +378,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_conclusion(_hl["env"], colors["env"])
     if _notes.get("env"):
         add_consultant_note(doc, _notes["env"], colors, TR)
-    add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"], TR)
+    add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"])
 
     env_text = content.get("environmental", "Analyse des données environnementales.")
     doc.add_paragraph(env_text).paragraph_format.space_after = Pt(8)
@@ -407,7 +401,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_conclusion(_hl["social"], colors["social"])
     if _notes.get("social"):
         add_consultant_note(doc, _notes["social"], colors, TR)
-    add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"], TR)
+    add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"])
 
     soc_text = content.get("social", "Analyse des données sociales.")
     doc.add_paragraph(soc_text).paragraph_format.space_after = Pt(8)
@@ -428,7 +422,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_conclusion(_hl["gov"], colors["gov"])
     if _notes.get("gov"):
         add_consultant_note(doc, _notes["gov"], colors, TR)
-    add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"], TR)
+    add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"])
 
     gov_text = content.get("governance", "Analyse des données de gouvernance.")
     doc.add_paragraph(gov_text).paragraph_format.space_after = Pt(8)
@@ -534,10 +528,10 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_delta_col"], TR["bench_reading_col"])]
     for row in _bv["rows"]:
         d = row["delta"]
-        rows.append((_pil_lbl[row["key"]], SD.texte_pilier(row["score"], TR),
-                     "—" if d is None or d == 0 else f"{d:.0f} pts", row["reading"]))
-    rows.append((TR.get("score_global_short", "Global"), f"{SD.texte_score(scores, TR)}",
-                 "", SD.texte_note(scores, TR)))
+        rows.append((_pil_lbl[row["key"]], f"{row['score']:.0f}",
+                     "—" if d == 0 else f"{d:.0f} pts", row["reading"]))
+    rows.append((TR.get("score_global_short", "Global"), f"{scores.total_esg_score:.0f}",
+                 "", scores.rating))
     tbl = doc.add_table(rows=len(rows), cols=4)
     tbl.style = "Table Grid"
     for ci, val in enumerate(rows[0]):
@@ -559,7 +553,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     ins.add_run(_bv["insight"]).font.size = Pt(10)
     shade_paragraph(ins, colors.get("light", "F0F2F5"))
 
-    _mat_lbl = TR.get("mat_" + (_mt.get("key") or ""), TR["note_non_calculable"])
+    _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
     mp = doc.add_paragraph(); mp.paragraph_format.space_before = Pt(8)
     mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {_mat_lbl} ({_mt["stage"]}/5)')
     mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)

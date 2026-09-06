@@ -146,19 +146,10 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
     ax.set_facecolor(bg)
 
-    # T2 : une barre a zero se lirait comme un score de zero. Les piliers non
-    # calculables sortent du graphique -- la legende dit combien manquent.
-    _tous = [(LB['chart_env'], scores.environmental_score, colors["env"]),
-             (LB['chart_soc'], scores.social_score, colors["social"]),
-             (LB['chart_gov'], scores.governance_score, colors["gov"]),
-             (LB['chart_global'], scores.total_esg_score, colors["accent"])]
-    _traces = [(c, v, col) for c, v, col in _tous if v is not None]
-    if not _traces:
-        plt.close(fig)
-        return None
-    categories = [c for c, _, _ in _traces]
-    values = [v for _, v, _ in _traces]
-    bar_colors = [col for _, _, col in _traces]
+    categories = [LB['chart_env'], LB['chart_soc'], LB['chart_gov'], LB['chart_global']]
+    values = [scores.environmental_score, scores.social_score,
+              scores.governance_score, scores.total_esg_score]
+    bar_colors = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
 
     bars = ax.barh(categories, values, color=bar_colors, height=0.5, alpha=0.9)
 
@@ -545,28 +536,18 @@ def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, l
     fig, ax = plt.subplots(figsize=(7.4, 4.6), facecolor=bg)
     ax.set_facecolor(bg)
 
-    # T2 : un pilier non calculable n'a pas de barre -- une barre a zero se
-    # lirait comme un score de zero. Il sort du graphique.
-    _tous = list(zip([LB["chart_env"], LB["chart_soc"], LB["chart_gov"], LB["chart_global"]],
-                     ["env", "social", "gov", "global"],
-                     [colors["env"], colors["social"], colors["gov"], colors["accent"]]))
-    _gardes = [(c, k, col) for c, k, col in _tous if comp.get(k) is not None]
-    if not _gardes:
-        plt.close(fig)
-        return None
-    cats = [c for c, _, _ in _gardes]
-    vals = [comp[k] for _, k, _ in _gardes]
-    _est_pilier = [k != "global" for _, k, _ in _gardes]
+    cats = [LB["chart_env"], LB["chart_soc"], LB["chart_gov"], LB["chart_global"]]
+    keys = ["env", "social", "gov", "global"]
+    vals = [comp[k] for k in keys]
     ypos = list(range(len(cats)))
-    bar_cols = [col for _, _, col in _gardes]
+    bar_cols = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
 
     ax.barh(ypos, vals, height=0.5, color=bar_cols, zorder=3)
-    _piliers = [v for v, p in zip(vals, _est_pilier) if p]
-    meilleur = max(_piliers) if _piliers else None
+    meilleur = max(vals[:3])          # meilleur des trois piliers, hors global
     for y, v in enumerate(vals):
         ax.text(v + 1.5, y, f"{v:.0f}", va="center", fontsize=11,
                 fontweight="bold", color=colors["text"])
-        if _est_pilier[y] and meilleur is not None:   # ecart interne : piliers seuls
+        if y < 3:                     # écart interne : sur les piliers seulement
             d = v - meilleur
             ax.text(107, y, LB["bench_best"] if d == 0 else f"{d:.0f} pts",
                     va="center", ha="right", fontsize=9.5,

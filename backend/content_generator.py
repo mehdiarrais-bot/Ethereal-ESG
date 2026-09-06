@@ -4,8 +4,6 @@ Produit des textes professionnels uniques par entreprise via variation
 lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
-import score_display as SD
-from i18n import L
 from models import ESGRequest, ESGScores
 
 
@@ -307,17 +305,6 @@ PERF_DESC = {
 }
 
 
-# T2 : un pilier sans aucun indicateur declare n'est pas calculable. Il n'a
-# donc pas de rang -- il n'est ni le meilleur ni le pire, il est absent du
-# classement. Les phrases qui comparent les piliers ne sortent que s'il reste
-# au moins deux piliers a comparer.
-def _piliers_classables(scores, libelles):
-    """[(libelle, score)] pour les seuls piliers calculables, ordre d'entree."""
-    paires = zip(libelles, (scores.environmental_score, scores.social_score,
-                            scores.governance_score))
-    return [(lbl, v) for lbl, v in paires if v is not None]
-
-
 def generate_esg_content(request: ESGRequest, scores: ESGScores) -> dict:
     """Dispatche vers le générateur FR ou EN selon request.language."""
     if getattr(request, "language", "fr") == "en":
@@ -549,7 +536,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     if en:
         content["executive_summary"] += (
             f" Overall, ESG maturity is assessed as "
-            f"{stage_en.get(mat.get('key') or '', 'not computable')}" + (f" ({mat['stage']}/5). " if mat['stage'] is not None else ". ")
+            f"{stage_en.get(mat.get('key', 'structured'), 'structured')} ({mat['stage']}/5). "
             + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
                f"secure CSRD readiness and strengthen investor confidence." if gaps else
                f"Reporting coverage is complete on the structural CSRD datapoints, an asset for "
@@ -558,7 +545,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     else:
         content["executive_summary"] += (
             f" Au global, la maturité ESG est évaluée comme "
-            f"{stage_fr.get(mat.get('key') or '', 'non déterminable')}" + (f" ({mat['stage']}/5). " if mat['stage'] is not None else ". ")
+            f"{stage_fr.get(mat.get('key', 'structured'), 'structurée')} ({mat['stage']}/5). "
             + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
                f"{gaps[0]} — constitue le levier le plus rapide pour sécuriser la conformité CSRD "
                f"et renforcer la confiance des investisseurs." if gaps else
@@ -568,8 +555,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
 
     # ── 4ter. Évolution année sur année (historique du dossier client) ───
     prev = getattr(request, "previous_scores", None)
-    # T2 : sans score courant, aucun ecart a l'exercice precedent n'est calculable.
-    if prev and SD.est_calculable(scores):
+    if prev:
         dt = scores.total_esg_score - prev["total"]
         de = scores.environmental_score - prev["env"]
         ds = scores.social_score - prev["social"]
@@ -670,13 +656,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"constitutes neither third-party assurance, nor a declaration of conformity with a "
             f"reporting framework, nor a commitment by the organisation. "
             f"Limitations: some indicators rely on declarative data "
-            f"and estimates; they are refined as measurement systems mature. "
-            # T1 : le denominateur du ratio de completude, dit UNE FOIS.
-            # Sans cette phrase, « 14 sur 18 » laisserait croire que le
-            # questionnaire ne collecte que 18 indicateurs.
-            f"{SD.phrase_completude(L('en'))} "
-            f"{SD.texte_completude(scores, L('en')).capitalize()} "
-            f"for this reporting year.{gap_txt}"
+            f"and estimates; they are refined as measurement systems mature.{gap_txt}"
         )
     else:
         content["methodology"] = (
@@ -702,10 +682,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"conformité à un cadre de reporting, ni un engagement de l'organisation. "
             f"Limites : certains indicateurs reposent sur des données "
             f"déclaratives et des estimations ; ils sont affinés à mesure que les dispositifs de mesure "
-            f"gagnent en maturité. "
-            # T1 : le denominateur du ratio de completude, dit UNE FOIS.
-            f"{SD.phrase_completude(L('fr'))} "
-            f"Pour cet exercice, le score est {SD.texte_completude(scores, L('fr'))}.{gap_txt}"
+            f"gagnent en maturité.{gap_txt}"
         )
 
     return content
@@ -758,7 +735,7 @@ def _environnement_par_clauses(request: ESGRequest, scores: ESGScores):
     }
     contexte = {
         "n": company.name,
-        "score": SD.texte_pilier(scores.environmental_score, L(getattr(request, "language", "fr"))),
+        "score": f"{scores.environmental_score:.0f}",
         "an": company.reporting_year,
     }
     return composer_paragraphe("environmental", donnees, CLAUSES,
@@ -777,25 +754,25 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     sector_long, sector_priority = _ctx(company.sector)
     perf = PERF_DESC.get(scores.rating, "performance mesurée")
 
-    _classables = _piliers_classables(
-        scores, ("Environnemental", "Social", "Gouvernance"))
-    best = max(_classables, key=lambda x: x[1]) if _classables else None
-    worst = min(_classables, key=lambda x: x[1]) if _classables else None
+    best = max(
+        ("Environnemental", scores.environmental_score),
+        ("Social", scores.social_score),
+        ("Gouvernance", scores.governance_score),
+        key=lambda x: x[1]
+    )
+    worst = min(
+        ("Environnemental", scores.environmental_score),
+        ("Social", scores.social_score),
+        ("Gouvernance", scores.governance_score),
+        key=lambda x: x[1]
+    )
 
     # ── Executive summary ──────────────────────────────────────────────────
     opening = _pick(s, 0, EXEC_OPENINGS).format(n=name, y=year, ctx=sector_long)
-    if SD.est_calculable(scores):
-        score_ph = _pick(s, 1, EXEC_SCORE_PHRASES).format(
-            n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
-    else:
-        # T2 : pas de score fabrique. On dit pourquoi il n'y en a pas.
-        score_ph = (f"Le score ESG global de {name} n'est pas calculable pour cet "
-                    f"exercice : {L('fr')['non_calculable_explication'][0].lower()}"
-                    f"{L('fr')['non_calculable_explication'][1:]} "
-                    f"{SD.texte_completude(scores, L('fr')).capitalize()}.")
-    pillar_ph = (_pick(s, 2, EXEC_PILLAR_PHRASES).format(
+    score_ph = _pick(s, 1, EXEC_SCORE_PHRASES).format(
+        n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
+    pillar_ph = _pick(s, 2, EXEC_PILLAR_PHRASES).format(
         bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
-        if len(_classables) >= 2 else "")
     # Contexte sectoriel déjà dans l'ouverture, priorité déjà dans la section
     # environnement : pas de répétition dans la synthèse.
     sector_note = ""
@@ -807,8 +784,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     # _environnement_par_clauses).
     environmental = _environnement_par_clauses(request, scores)
 
-    env_intro = ("" if scores.environmental_score is None else
-                 _pick(s, 3, ENV_INTROS).format(n=name, sc=f"{scores.environmental_score:.0f}"))
+    env_intro = _pick(s, 3, ENV_INTROS).format(n=name, sc=f"{scores.environmental_score:.0f}")
     env_items = []
 
     if env.co2_emissions_tonnes:
@@ -856,11 +832,8 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         environmental = f"{env_intro} {env_detail} {env_outlook}"
 
     # ── Social ─────────────────────────────────────────────────────────────
-    if scores.social_score is None:
-        soc_intro = L("fr")["sans_indicateur"] + "."
-    else:
-        trend = "en progression" if scores.social_score >= 60 else "avec des axes de renforcement prioritaires"
-        soc_intro = _pick(s, 7, SOC_INTROS).format(n=name, sc=f"{scores.social_score:.0f}", trend=trend)
+    trend = "en progression" if scores.social_score >= 60 else "avec des axes de renforcement prioritaires"
+    soc_intro = _pick(s, 7, SOC_INTROS).format(n=name, sc=f"{scores.social_score:.0f}", trend=trend)
     soc_items = []
 
     if soc.total_employees:
@@ -899,8 +872,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     social = f"{soc_intro} {soc_detail} {soc_strategy}"
 
     # ── Gouvernance ────────────────────────────────────────────────────────
-    gov_intro = (L("fr")["sans_indicateur"] + "." if scores.governance_score is None else
-                 _pick(s, 0, GOV_INTROS).format(n=name, sc=f"{scores.governance_score:.0f}"))
+    gov_intro = _pick(s, 0, GOV_INTROS).format(n=name, sc=f"{scores.governance_score:.0f}")
     gov_items = []
 
     if gov.board_members:
@@ -948,12 +920,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     n_w = len(scores.weaknesses)
     n_r = len(scores.recommendations)
 
-    _sc = scores.total_esg_score
-    if _sc is None:
-        traj_list = CONCLUSION_MID          # trajectoire neutre, le texte ne cite aucun score
-    elif _sc >= 70:
+    if scores.total_esg_score >= 70:
         traj_list = CONCLUSION_HIGH
-    elif _sc >= 50:
+    elif scores.total_esg_score >= 50:
         traj_list = CONCLUSION_MID
     else:
         traj_list = CONCLUSION_LOW
@@ -966,11 +935,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     w_txt = _agree(n_w, "axe d'amélioration prioritaire", "axes d'amélioration prioritaires") if n_w else "des axes de progrès identifiés"
 
     conclusion = (
-        (f"Fort d'un score ESG de {scores.total_esg_score:.1f}/100 ({scores.rating}), "
-         f"{name} {trajectory}. " if SD.est_calculable(scores) else
-         f"Le score ESG global n'etant pas calculable pour cet exercice, "
-         f"{name} {trajectory}. ")
-        + f"L'analyse met en lumière {s_txt} et {w_txt}. "
+        f"Fort d'un score ESG de {scores.total_esg_score:.1f}/100 ({scores.rating}), "
+        f"{name} {trajectory}. "
+        f"L'analyse met en lumière {s_txt} et {w_txt}. "
         f"{bridge} {name} {forward}, "
         f"en s'appuyant sur les {n_r} recommandations formulées comme feuille de route opérationnelle. "
         f"L'organisation réaffirme son engagement envers un reporting transparent et rigoureux, {ref}"
@@ -1272,32 +1239,21 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     perf = PERF_DESC_EN.get(scores.rating, "measured performance")
 
     labels = {"Environnemental": "Environmental", "Social": "Social", "Gouvernance": "Governance"}
-    _classables = _piliers_classables(
-        scores, ("Environmental", "Social", "Governance"))
-    best = max(_classables, key=lambda x: x[1]) if _classables else None
-    worst = min(_classables, key=lambda x: x[1]) if _classables else None
+    best = max(("Environmental", scores.environmental_score), ("Social", scores.social_score),
+               ("Governance", scores.governance_score), key=lambda x: x[1])
+    worst = min(("Environmental", scores.environmental_score), ("Social", scores.social_score),
+                ("Governance", scores.governance_score), key=lambda x: x[1])
 
     opening = _pick(s, 0, EXEC_OPENINGS_EN).format(n=name, y=year, ctx=sector_long)
-    if SD.est_calculable(scores):
-        score_ph = _pick(s, 1, EXEC_SCORE_EN).format(
-            n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
-    else:
-        # T2 : no fabricated score. State why there is none.
-        score_ph = (f"The overall ESG score for {name} is not computable for this "
-                    f"reporting year: {L('en')['non_calculable_explication'][0].lower()}"
-                    f"{L('en')['non_calculable_explication'][1:]} "
-                    f"{SD.texte_completude(scores, L('en')).capitalize()}.")
-    pillar_ph = (_pick(s, 2, EXEC_PILLAR_EN).format(
-        bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
-        if len(_classables) >= 2 else "")
+    score_ph = _pick(s, 1, EXEC_SCORE_EN).format(n=name, sc=f"{scores.total_esg_score:.1f}", r=scores.rating, p=perf)
+    pillar_ph = _pick(s, 2, EXEC_PILLAR_EN).format(bn=best[0], bs=f"{best[1]:.0f}", wn=worst[0], ws=f"{worst[1]:.0f}")
     # Sector context already in the opening and the priority in the environment
     # section: no repetition in the summary.
     sector_note = ""
     executive_summary = f"{opening} {score_ph} {pillar_ph}{sector_note}"
 
     # Environment
-    env_intro = ("" if scores.environmental_score is None else
-                 _pick(s, 3, ENV_INTROS_EN).format(n=name, sc=f"{scores.environmental_score:.0f}"))
+    env_intro = _pick(s, 3, ENV_INTROS_EN).format(n=name, sc=f"{scores.environmental_score:.0f}")
     items = []
     if env.co2_emissions_tonnes:
         inten = ""
@@ -1324,11 +1280,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     environmental = f"{env_intro} {env_detail} {_pick(s, 6, ENV_OUTLOOK_EN).format(p=sector_priority)}"
 
     # Social
-    if scores.social_score is None:
-        soc_intro = L("en")["sans_indicateur"] + "."
-    else:
-        trend = "improving" if scores.social_score >= 60 else "with priority areas to strengthen"
-        soc_intro = _pick(s, 7, SOC_INTROS_EN).format(n=name, sc=f"{scores.social_score:.0f}", trend=trend)
+    trend = "improving" if scores.social_score >= 60 else "with priority areas to strengthen"
+    soc_intro = _pick(s, 7, SOC_INTROS_EN).format(n=name, sc=f"{scores.social_score:.0f}", trend=trend)
     items = []
     if soc.total_employees:
         items.append(f"{soc.total_employees:,} employees ({company.country})")
@@ -1352,8 +1305,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     social = f"{soc_intro} {soc_detail} {_pick(s, 9, SOC_STRATEGIES_EN)}"
 
     # Governance
-    gov_intro = (L("en")["sans_indicateur"] + "." if scores.governance_score is None else
-                 _pick(s, 0, GOV_INTROS_EN).format(n=name, sc=f"{scores.governance_score:.0f}"))
+    gov_intro = _pick(s, 0, GOV_INTROS_EN).format(n=name, sc=f"{scores.governance_score:.0f}")
     items = []
     if gov.board_members:
         items.append(f"{gov.board_members}-member Board")
@@ -1442,12 +1394,9 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     )
 
     n_r = len(scores.recommendations)
-    _sc = scores.total_esg_score
-    if _sc is None:
-        traj_list = CONCLUSION_MID_EN
-    elif _sc >= 70:
+    if scores.total_esg_score >= 70:
         traj_list = CONCLUSION_HIGH_EN
-    elif _sc >= 50:
+    elif scores.total_esg_score >= 50:
         traj_list = CONCLUSION_MID_EN
     else:
         traj_list = CONCLUSION_LOW_EN
@@ -1457,10 +1406,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     s_txt = _agree(len(scores.strengths), "consolidated strength", "consolidated strengths", en=True) if scores.strengths else "emerging strengths"
     w_txt = _agree(len(scores.weaknesses), "priority area for improvement", "priority areas for improvement", en=True) if scores.weaknesses else "identified areas for progress"
     conclusion = (
-        (f"With an ESG score of {scores.total_esg_score:.1f}/100 ({scores.rating}), {name} {trajectory}. "
-         if SD.est_calculable(scores) else
-         f"As the overall ESG score is not computable for this reporting year, {name} {trajectory}. ")
-        + f"The analysis highlights {s_txt} and {w_txt}. {bridge} {name} {forward}, drawing on the "
+        f"With an ESG score of {scores.total_esg_score:.1f}/100 ({scores.rating}), {name} {trajectory}. "
+        f"The analysis highlights {s_txt} and {w_txt}. {bridge} {name} {forward}, drawing on the "
         f"{n_r} recommendations set out as an operational roadmap. The organisation reaffirms its "
         f"commitment to transparent, rigorous reporting, {ref}"
     )
@@ -1633,10 +1580,6 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
 # ══════════════════════════════════════════════════════════════════════════
 
 def _band(score):
-    # T2 : un pilier non calculable n'a pas de bande -- il n'est ni « high »
-    # ni « low ». Les appelants doivent tester None plutot que recevoir une
-    # bande par defaut, qui serait un jugement sans source.
-    if score is None: return None
     if score >= 75: return "high"
     if score >= 60: return "good"
     if score >= 45: return "mid"
@@ -1690,13 +1633,11 @@ _PILLAR_INSIGHT = {
 def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     lang = "en" if getattr(request, "language", "fr") == "en" else "fr"
     P = _PILLAR_INSIGHT[lang]
-    valeurs = {"env": scores.environmental_score, "social": scores.social_score,
-               "gov": scores.governance_score}
-    # Un pilier sans indicateur n'a pas d'insight : on le dit plutot que
-    # d'imprimer le commentaire d'une bande fabriquee.
-    TR = L(lang)
-    return {k: (P[k][_band(v)] if v is not None else TR["sans_indicateur"] + ".")
-            for k, v in valeurs.items()}
+    return {
+        "env": P["env"][_band(scores.environmental_score)],
+        "social": P["social"][_band(scores.social_score)],
+        "gov": P["gov"][_band(scores.governance_score)],
+    }
 
 
 def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
@@ -1708,10 +1649,6 @@ def score_verdict(request: ESGRequest, scores: ESGScores) -> str:
     labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
               "en": {"env": "environment", "social": "social", "gov": "governance"}}
     lab = labels["en" if en else "fr"]
-    pillars = [(k, v) for k, v in pillars if v is not None]
-    if not SD.est_calculable(scores) or not pillars:
-        TR = L("en" if en else "fr")
-        return f"{TR['score_non_calculable']} — {SD.texte_completude(scores, TR)}."
     best = max(pillars, key=lambda x: x[1]); worst = min(pillars, key=lambda x: x[1])
     band = _band(scores.total_esg_score)
     if en:
@@ -1736,14 +1673,9 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
     env, soc, gov = request.environmental, request.social, request.governance
     pil = [("env", scores.environmental_score), ("social", scores.social_score),
            ("gov", scores.governance_score)]
-    # T2 : les trois cles sont TOUJOURS rendues -- les consommateurs les
-    # indexent directement. Un pilier non calculable recoit la mention
-    # d'absence, pas une conclusion fabriquee.
-    tous = pil
-    pil = [(k, v) for k, v in pil if v is not None]
-    best = max(pil, key=lambda x: x[1])[0] if pil else None
-    worst = min(pil, key=lambda x: x[1])[0] if pil else None
-    same = len({p[1] for p in pil}) == 1 if pil else False
+    best = max(pil, key=lambda x: x[1])[0]
+    worst = min(pil, key=lambda x: x[1])[0]
+    same = len({p[1] for p in pil}) == 1
 
     def num(v):  # entier sans décimale
         return f"{v:.0f}"
@@ -1822,8 +1754,7 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
             return "A trajectory to consolidate" if en else "Une trajectoire à consolider"
         return "A priority area for action" if en else "Un chantier prioritaire"
 
-    _absent = L("en" if en else "fr")["sans_indicateur"] + "."
-    return {k: (phrase(k, sc) if sc is not None else _absent) for k, sc in tous}
+    return {k: phrase(k, sc) for k, sc in pil}
 
 
 def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
@@ -1861,12 +1792,7 @@ def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
                 "statement": ("Un levier direct sur les coûts et l'empreinte carbone." if not en
                               else "A direct lever on costs and carbon footprint.")}
 
-    # 5) Repli ultime : score global -- sauf s'il n'est pas calculable.
-    if not SD.est_calculable(scores):
-        TR = L("en" if en else "fr")
-        return {"value": "—", "unit": "",
-                "label": TR["score_non_calculable"],
-                "statement": SD.texte_completude(scores, TR).capitalize() + "."}
+    # 5) Repli ultime : score global
     return {"value": f"{scores.total_esg_score:.0f}", "unit": "/100",
             "label": "score ESG global" if not en else "overall ESG score",
             "statement": ("Une base mesurée pour piloter la trajectoire durable." if not en
@@ -1942,23 +1868,9 @@ def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
            "gov": scores.governance_score}
     labels = {"fr": {"env": "l'environnement", "social": "le social", "gov": "la gouvernance"},
               "en": {"env": "environment", "social": "social", "gov": "governance"}}[("en" if en else "fr")]
-    # T2 : le classement interne ne porte que sur les piliers CALCULABLES.
-    # Un pilier sans indicateur n'est ni le point fort ni la priorite : il est
-    # absent du classement, et le tableau le dit ligne par ligne.
-    pil_notes = {k: v for k, v in pil.items() if v is not None}
-    if len(pil_notes) < 2:
-        TR = L("en" if en else "fr")
-        rows = [{"key": k, "score": v, "delta": None,
-                 "reading": TR["note_non_calculable"] if v is None else "",
-                 "role": "mid"} for k, v in pil.items()]
-        titre = (f"Internal positioning not available for {name}" if en
-                 else f"Positionnement interne indisponible pour {name}")
-        return {"title": titre if en else elider(titre, name),
-                "insight": TR["sans_indicateur"] + ".",
-                "rows": rows, "lead": None, "lag": None, "gap": None}
-    lead = max(pil_notes, key=lambda k: pil_notes[k])
-    lag = min(pil_notes, key=lambda k: pil_notes[k])
-    ecart = pil_notes[lead] - pil_notes[lag]
+    lead = max(pil, key=lambda k: pil[k])
+    lag = min(pil, key=lambda k: pil[k])
+    ecart = pil[lead] - pil[lag]
 
     if en:
         title = (f"{labels[lead].capitalize()} is {name}'s strong point, "
@@ -1973,19 +1885,14 @@ def benchmark_verdict(request: ESGRequest, scores: ESGScores) -> dict:
                    f"fragile — l'écart interne à réduire en priorité.")
         lect = {"lead": "Point fort", "lag": "Priorité", "mid": "Consolidé"}
 
-    meilleur = pil_notes[lead]
+    meilleur = pil[lead]
     rows = []
     for cle in ("env", "social", "gov"):
-        if pil[cle] is None:          # pilier hors classement
-            rows.append({"key": cle, "score": None, "delta": None,
-                         "reading": L("en" if en else "fr")["note_non_calculable"],
-                         "role": "mid"})
-            continue
         role = "lead" if cle == lead else ("lag" if cle == lag else "mid")
         rows.append({"key": cle, "score": pil[cle],
                      "delta": pil[cle] - meilleur,   # 0 pour le meilleur pilier
                      "reading": lect[role], "role": role})
-    rows.sort(key=lambda r: (r["score"] is None, -(r["score"] or 0)))
+    rows.sort(key=lambda r: -r["score"])
     if not en:                       # l'anglais n'élide pas
         title, insight = elider(title, name), elider(insight, name)
     return {"title": title, "insight": insight, "rows": rows,
@@ -2002,10 +1909,7 @@ def maturity_text(request: ESGRequest, scores: ESGScores) -> dict:
                "en": {"scope3": "measure Scope 3", "audit": "get the reporting audited",
                       "committee": "set up a sustainability committee"}}[("en" if en else "fr")]
     levers = [gap_txt[g] for g in m["gaps"][:2]]
-    if m["stage"] is None:
-        nxt = ("Maturity cannot be assessed without a computable score." if en
-               else "La maturité n'est pas évaluable sans score calculable.")
-    elif m["next"] and levers:
+    if m["next"] and levers:
         joiner = " and " if en else " et "
         nxt = (f"To reach the next level: {joiner.join(levers)}." if en
                else f"Pour franchir le cap suivant : {joiner.join(levers)}.")
@@ -2093,7 +1997,7 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     risks.sort(key=lambda r: r.get("priority", "P3"))
 
     opps = []
-    if (scores.governance_score or 0) >= 70 or (gov.esg_audit_conducted and gov.sustainability_committee):
+    if scores.governance_score >= 70 or (gov.esg_audit_conducted and gov.sustainability_committee):
         opps.append(T("Gouvernance solide : accès facilité aux financements ESG (green bonds, prêts indexés)", "Financement",
                       "Strong governance: easier access to ESG financing (green bonds, linked loans)", "Financing"))
     if tx and any(v is not None for v in (tx.turnover_aligned_percent, tx.capex_aligned_percent, tx.opex_aligned_percent)):
@@ -2102,7 +2006,7 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     if env.renewable_energy_percent is not None and env.renewable_energy_percent >= 40:
         opps.append(T("Mix renouvelable engagé : réduction des coûts énergétiques à terme", "Coûts",
                       "Renewable mix under way: lower energy costs over time", "Costs"))
-    if soc.training_hours_per_employee and soc.training_hours_per_employee >= 20 or (scores.social_score or 0) >= 65:
+    if soc.training_hours_per_employee and soc.training_hours_per_employee >= 20 or scores.social_score >= 65:
         opps.append(T("Politique sociale : marque employeur et rétention des talents renforcées", "Talents",
                       "Social policy: stronger employer brand and talent retention", "Talent"))
     if env.waste_recycled_percent is not None and env.waste_recycled_percent >= 60:

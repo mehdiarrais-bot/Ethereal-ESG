@@ -6,7 +6,6 @@ du pré-diagnostic (couverture des exigences, maturité), objectifs, phases de
 mission dérivées de la feuille de route réelle, livrables, prérequis.
 Aucune donnée inventée — les honoraires restent à compléter.
 """
-import score_display as SD
 import io
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
@@ -42,7 +41,7 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
 
     gaps = [g for g in compliance_assessment(request, scores) if g["status"] in ("no", "partial")]
     mat = maturity_text(request, scores)
-    mat_lbl = TR.get("mat_" + (mat.get("key") or ""), TR["note_non_calculable"])
+    mat_lbl = TR.get("mat_" + mat.get("key", "structured"), "")
     phases = roadmap_12m(request, scores)
 
     doc = Document()
@@ -68,13 +67,13 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
        14, colors["primary"])
     if en:
         ctx = (f"A preliminary review of {name}'s ESG data yields an overall score of "
-               f"{SD.texte_score(scores, TR)}/100 (indicative internal scale), with an ESG maturity "
+               f"{scores.total_esg_score:.0f}/100 (indicative internal scale), with an ESG maturity "
                f"assessed as {mat_lbl.lower()} ({mat['stage']}/5). In view of the CSRD/VSME requirements "
                f"applicable to the SME/mid-cap market, the review identifies "
                f"{len(gaps)} coverage gap(s) to address.")
     else:
         ctx = (f"Une revue préliminaire des données ESG de {name} aboutit à un score global de "
-               f"{SD.texte_score(scores, TR)}/100 (échelle interne indicative), pour une maturité ESG "
+               f"{scores.total_esg_score:.0f}/100 (échelle interne indicative), pour une maturité ESG "
                f"évaluée comme {mat_lbl.lower()} ({mat['stage']}/5). Au regard des exigences CSRD/VSME "
                f"applicables au marché PME/ETI, cette revue identifie "
                f"{len(gaps)} écart(s) de couverture à traiter.")

@@ -66,23 +66,20 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
         + "  |  " + (TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" else TR["cover_refs"]),
         f, 9, colors.HexColor("#C6CFDE"))
     # Maturité
-    _mat_lbl = TR.get("mat_" + (mat.get("key") or ""), TR["note_non_calculable"])
-    _mat_txt = (f"{_mat_lbl} ({mat['stage']}/5)" if mat["stage"] is not None else _mat_lbl)
-    txt(M, H - 3.75 * cm, (("ESG maturity: " if en else "Maturité ESG : ") + _mat_txt),
+    _mat_lbl = TR.get("mat_" + mat.get("key", "structured"), "")
+    txt(M, H - 3.75 * cm, (("ESG maturity: " if en else "Maturité ESG : ") + f"{_mat_lbl} ({mat['stage']}/5)"),
         fb, 10, colors.white)
 
     # Score hero (droite du bandeau)
-    # T2 : pas de score fabrique en gros sur le one-pager.
-    import score_display as SD
-    sc = SD.texte_score(scores, TR)
-    c.setFont(fb, 54 if SD.est_calculable(scores) else 15); c.setFillColor(pal["accent"])
+    sc = f"{scores.total_esg_score:.0f}"
+    c.setFont(fb, 54); c.setFillColor(pal["accent"])
     c.drawRightString(W - M - 2.5 * cm, H - 3.1 * cm, sc)
     txt(W - M - 2.3 * cm, H - 3.1 * cm, "/100", f, 12, colors.HexColor("#C6CFDE"))
     # Note
     c.setFillColor(pal["accent"])
     c.roundRect(W - M - 1.85 * cm, H - 2.0 * cm, 1.85 * cm, 0.85 * cm, 5, fill=1, stroke=0)
     c.setFont(fb, 20); c.setFillColor(pal["primary"])
-    c.drawCentredString(W - M - 0.925 * cm, H - 1.78 * cm, pdf_txt(SD.texte_note(scores, TR)))
+    c.drawCentredString(W - M - 0.925 * cm, H - 1.78 * cm, pdf_txt(scores.rating))
     # Évolution N-1
     prev = getattr(request, "previous_scores", None)
     if prev:
@@ -106,12 +103,9 @@ def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
         txt(M, by + 0.06 * cm, lab, fb, 9, pal["text"])
         bx = M + 3.2 * cm
         c.setFillColor(colors.HexColor("#E8EDF3")); c.roundRect(bx, by, bw, 0.32 * cm, 3, fill=1, stroke=0)
-        # T2 : un pilier non calculable n'a pas de barre -- une barre a zero
-        # se lirait comme un score de zero.
-        if v is not None:
-            c.setFillColor(col); c.roundRect(bx, by, bw * min(100, v) / 100, 0.32 * cm, 3, fill=1, stroke=0)
+        c.setFillColor(col); c.roundRect(bx, by, bw * min(100, v) / 100, 0.32 * cm, 3, fill=1, stroke=0)
         c.setFont(fb, 9); c.setFillColor(col)
-        c.drawString(bx + bw + 0.15 * cm, by + 0.04 * cm, SD.texte_pilier(v, TR))
+        c.drawString(bx + bw + 0.15 * cm, by + 0.04 * cm, f"{v:.0f}")
 
     # ── Digest 2×2 ────────────────────────────────────────────────────────
     gy = y0 - 4.35 * cm

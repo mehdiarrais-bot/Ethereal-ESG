@@ -48,13 +48,6 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     ML = _MAT_LABELS.get(lang, _MAT_LABELS["fr"])
 
     def inv(score):  # score bas -> priorité haute
-        # T2 : sans base chiffree, l'enjeu n'a pas de cotation. On rend None
-        # et le sujet est ECARTE de la cartographie, plutot que place au
-        # milieu de l'echelle -- ce qui serait une cotation inventee. La
-        # cartographie est « derivee des indicateurs declares » : elle ne
-        # doit contenir que les sujets qui en ont un.
-        if score is None:
-            return None
         return _clamp(9.5 - (score / 100.0) * 6.0)
 
     topics = []
@@ -95,8 +88,7 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     topics.append({"label": ML[8],
                    "impact": _clamp(6.0 + (gov.data_breaches or 0) * 1.5),
                    "financial": _clamp(7.5), "pillar": "gov"})
-    # Les sujets sans base chiffree sortent de la cartographie.
-    return [t for t in topics if t["impact"] is not None]
+    return topics
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -154,19 +146,6 @@ _MATURITY = [
 def esg_maturity(request: ESGRequest, scores: ESGScores) -> dict:
     """Niveau de maturité ESG (5 stades) + progression vers le suivant."""
     sc = scores.total_esg_score
-    # T2 : la maturite est DERIVEE du score global. Si le score n'est pas
-    # calculable, la maturite ne l'est pas non plus -- lui donner le stade 0
-    # (« initiated ») serait un jugement sans source. Les consommateurs
-    # testent `stage is None`.
-    if sc is None:
-        gaps = []
-        if request.environmental.scope3_emissions is None:
-            gaps.append("scope3")
-        if not request.governance.esg_audit_conducted:
-            gaps.append("audit")
-        if not request.governance.sustainability_committee:
-            gaps.append("committee")
-        return {"stage": None, "key": None, "next": None, "progress": None, "gaps": gaps}
     stage = 0
     for i, (lo, hi, key) in enumerate(_MATURITY):
         if lo <= sc < hi:

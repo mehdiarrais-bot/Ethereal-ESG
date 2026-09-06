@@ -346,49 +346,6 @@ Scope 2 renseignés → « Conforme ESRS E1-6 ». Avoir un chiffre n'est pas
   lead/lag, one-pager) — le patron du § 0quater, reproduit. Il vise
   désormais les **identifiants** des tables supprimées.
 
-### Chantier « exactitude du scoring — le silence » (2026-09-06)
-
-Deux défauts distincts, deux traitements, un différé.
-
-- **T2 — le silence produisait un jugement.** Les trois
-  `if not scores: return 50.0` fabriquaient une note à partir d'aucune
-  donnée — affirmation sans source, même famille que l'étape A. Un pilier
-  sans indicateur est désormais **non calculable**, et la note globale
-  l'est **dès qu'un pilier l'est** : pondérer 40/35/25 sur deux piliers
-  refabriquerait le troisième.
-- **T1 — la complétude est publiée** à côté du score, avec son
-  dénominateur explicité une fois dans la note méthodologique (§ 0nonies).
-- **T3 — pondération par nombre d'indicateurs : DIFFÉRÉ.** C'est le seul
-  qui supprime la **gratuité** du silence, donc il faudra le faire. Mais
-  il déplace **tous** les scores et rend toute série historique
-  incomparable : à décider avec une réponse préalable à « que fait-on des
-  historiques déjà stockés ? ».
-
-**Mesure avant / après**, sur les quatre dossiers témoins figés au commit
-`9bc2439` :
-
-| Dossier | Avant | Après |
-|---|---|---|
-| A — transparente, 15 champs | 66,0 (A) | **66,0 (A)** — inchangée |
-| B — silencieuse, 3 champs | 66,5 (A) — *dépassait A* | **non calculable** |
-| C — B + 1 chiffre honnête | 63,0 (BBB) | **63,0 (BBB)** — inchangée |
-| D — vide, 0 champ | 50,0 (BB) | **non calculable** |
-
-Aucun dossier portant des chiffres n'a changé de note : T2 ne modifie que
-ce qui n'était pas calculé.
-
-**Historiques stockés : incomparabilité limitée et assumée.**
-`client_store.py` persiste des scores **figés**, jamais recalculés, et
-`main.py:330-335` mêle sur la même courbe les exercices stockés et
-l'exercice courant recalculé. Sous T2, seuls les points qui valaient 50
-par défaut deviennent non calculables : un dossier peut passer de « BB »
-(stocké) à « non calculable » (recalculé) **sans que rien n'ait changé
-chez le client**. C'est visible, et c'est la vérité qui apparaît — mais
-**le consultant doit pouvoir le comprendre sans croire à un bug**. La
-signalétique de cette bascule reste à concevoir (portefeuille et page
-trajectoire) : proposée le 2026-09-06, **non codée**, en attente
-d'arbitrage.
-
 ### Marqueurs génériques restants (inventaire du 2026-09-05, NON corrigés)
 
 | Marqueur | Où | Portée | Pourquoi il est exposé |
@@ -577,39 +534,6 @@ le barème n'a pas été touché, seul l'intitulé l'a été.
   code n'a pas été atteint directement** — même réserve qu'au § 3bis.
 - **À faire** : décider si le tableau doit continuer de porter une ligne
   AFEP-MEDEF pour un client non coté, et si oui avec quel seuil.
-
-## 0nonies. Onze champs collectés qui n'entrent dans aucun score
-
-Traité en partie le 2026-09-06 (chantier « le silence ») : le **fait** est
-désormais publié, la **cause** ne l'est pas.
-
-Le questionnaire collecte **29 indicateurs**, **18 seulement** entrent
-dans le calcul du score. Les **11 autres** sont saisis par le consultant,
-imprimés dans le rapport, et ne pèsent rien :
-
-| Pilier | Champs collectés | Notés | Collectés sans effet sur le score |
-|---|---|---|---|
-| Environnement | 10 | **5** | `energy_consumption_mwh`, `water_consumption_m3`, `waste_generated_tonnes` |
-| Social | 10 | **6** | `disabled_employees_percent`, `local_suppliers_percent`, `total_employees`, `work_accidents` |
-| Gouvernance | 9 | **7** | `corruption_cases` (§ 2), `board_members` |
-
-- **Ce qui a été fait** : `score_display.phrase_completude()` le dit
-  explicitement dans la note méthodologique, en FR et en EN. Publier
-  « calculé sur 14 des 18 indicateurs » sans cette phrase aurait laissé
-  croire que le questionnaire ne collecte que 18 choses.
-- **Ce qui reste** : décider, champ par champ, s'il doit **entrer dans le
-  barème** ou **sortir du questionnaire**. Un champ qu'on demande au
-  client et qui ne sert à rien coûte du temps de saisie sans contrepartie.
-  `energy_consumption_mwh` est le cas le plus net : il alimente
-  `details["energy_intensity"]` et n'est jamais noté.
-
-**Conséquence à connaître avant de corriger le § 2.** Faire entrer
-`corruption_cases` dans le score de gouvernance déplacera le dénominateur
-publié de **18 à 19**, et donc le ratio imprimé dans **tous** les
-rapports (« 14 sur 18 » → « 14 sur 19 »). Ce n'est pas un obstacle, mais
-c'est une modification visible de chaque livrable : à annoncer, et à
-faire dans le même commit que le changement de barème — comme pour les
-§ 1 et 1bis, score et texte ensemble.
 
 ## 1. `accident_frequency_rate` — barème non recalibré
 
