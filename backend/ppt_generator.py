@@ -1,3 +1,4 @@
+import score_display as SD
 import io
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -314,8 +315,13 @@ def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3), 
 # ── Covers ────────────────────────────────────────────────────────────────
 
 def _cover_tag(TR, scores):
-    b = "high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60 \
-        else "mid" if scores.total_esg_score >= 45 else "low"
+    # T2 : bande purement VISUELLE. Sans score calculable on prend la
+    # mediane ; aucun texte n'affirme de niveau.
+    b = ("mid" if not SD.est_calculable(scores) else
+         "high" if scores.total_esg_score >= 75 else
+         "good" if scores.total_esg_score >= 60 else
+         "mid" if scores.total_esg_score >= 45 else "low")
+
     return TR["cover_tag_" + b]
 
 
@@ -339,12 +345,12 @@ def cover_classic(slide, theme, style, request, scores, subtitle, TR):
     add_text(slide, f"{TR['exercise']} {request.company.reporting_year}   |   {request.company.sector}   |   {request.company.country}",
              Inches(0.65), Inches(6.55), Inches(8), Inches(0.5),
              font_size=13, color=theme["subtitle"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
+    add_text(slide, SD.texte_score(scores, TR), Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
              font_size=82, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
     add_text(slide, "/100", Inches(8.55), Inches(6.75), Inches(2.4), Inches(0.4),
              font_size=14, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=fb)
     add_shape(slide, ROUNDED_RECT, Inches(11.2), Inches(5.55), Inches(1.55), Inches(0.95), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
+    add_text(slide, SD.texte_note(scores, TR), Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
              font_size=32, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
@@ -369,10 +375,10 @@ def cover_organic(slide, theme, style, request, scores, subtitle, TR):
              Inches(1.15), Inches(5.65), Inches(7), Inches(0.5), font_size=13, color=theme["subtitle"], font=fb)
     add_text(slide, f"{TR['chart_global']}", Inches(1.15), Inches(6.15), Inches(7), Inches(0.5),
              font_size=13, bold=True, color=theme["text_light"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.7), Inches(5.42), Inches(2.2), Inches(1.4),
+    add_text(slide, SD.texte_score(scores, TR), Inches(8.7), Inches(5.42), Inches(2.2), Inches(1.4),
              font_size=54, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
     add_shape(slide, OVAL, Inches(11.15), Inches(5.62), Inches(1.0), Inches(1.0), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(11.15), Inches(5.78), Inches(1.0), Inches(0.6),
+    add_text(slide, SD.texte_note(scores, TR), Inches(11.15), Inches(5.78), Inches(1.0), Inches(0.6),
              font_size=24, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
@@ -395,7 +401,7 @@ def cover_luxe(slide, theme, style, request, scores, subtitle, TR):
     add_text(slide, _cover_tag(TR, scores), Inches(1), Inches(3.75), Inches(11.33), Inches(0.6),
              font_size=17, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
     # Note mise en scène (le grand signe de qualité)
-    add_text(slide, scores.rating, Inches(1), Inches(4.6), Inches(11.33), Inches(1.3),
+    add_text(slide, SD.texte_note(scores, TR), Inches(1), Inches(4.6), Inches(11.33), Inches(1.3),
              font_size=64, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, f"{TR['chart_global']}  {scores.total_esg_score:.0f} / 100", Inches(1), Inches(6.0),
              Inches(11.33), Inches(0.5), font_size=15, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
@@ -422,9 +428,9 @@ def cover_minimal(slide, theme, style, request, scores, subtitle, TR):
              font_size=13, color=theme["muted"], font=fb)
     add_text(slide, request.company.country, Inches(0.7), Inches(5.95), Inches(5), Inches(0.4),
              font_size=13, color=theme["muted"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.3), Inches(5.0), Inches(2.6), Inches(1.6),
+    add_text(slide, SD.texte_score(scores, TR), Inches(8.3), Inches(5.0), Inches(2.6), Inches(1.6),
              font_size=88, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
-    add_text(slide, f"/100  —  {TR['note']} {scores.rating}", Inches(6.9), Inches(6.5), Inches(4.0), Inches(0.4),
+    add_text(slide, f"/100  —  {TR['note']} " + SD.texte_note(scores, TR), Inches(6.9), Inches(6.5), Inches(4.0), Inches(0.4),
              font_size=15, bold=True, color=theme["text_dark"], align=PP_ALIGN.RIGHT, font=fb)
 
 
@@ -463,13 +469,17 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
              font_size=_fit_title(24, subtitle), bold=True, color=white, font=ft)
 
     # Anneau de score en bas du héros
-    try:
-        ring = ring_png(score, 320, _hexstr(theme["accent"]))
-        add_image_from_bytes(slide, ring, Inches(1.4), Inches(4.75), Inches(1.75), Inches(1.75))
-    except Exception:
-        pass
-    add_text(slide, f"{score:.0f}", Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
-             font_size=38, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
+    # T2 : pas d'anneau ni de chiffre pour un pilier non calculable -- un
+    # anneau vide se lirait comme un score de zero.
+    if score is not None:
+        try:
+            ring = ring_png(score, 320, _hexstr(theme["accent"]))
+            add_image_from_bytes(slide, ring, Inches(1.4), Inches(4.75), Inches(1.75), Inches(1.75))
+        except Exception:
+            pass
+    add_text(slide, SD.texte_pilier(score, t), Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
+             font_size=38 if score is not None else 11, bold=True, color=white,
+             align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, t["score_100_caps"], Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
              font_size=11, bold=True, color=white, align=PP_ALIGN.CENTER, font=fb)
 
@@ -661,13 +671,13 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     add_text(slide, t["exec_kicker"].format(y=request.company.reporting_year),
              Inches(0.55), Inches(0.75), Inches(3.9), Inches(0.5),
              font_size=13, bold=True, color=theme["accent"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(0.2), Inches(1.85), Inches(4.35), Inches(2.1),
+    add_text(slide, SD.texte_score(scores, t), Inches(0.2), Inches(1.85), Inches(4.35), Inches(2.1),
              font_size=125, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, "/ 100", Inches(0.2), Inches(3.95), Inches(4.35), Inches(0.55),
              font_size=22, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
     # badge note
     add_shape(slide, ROUNDED_RECT, Inches(1.55), Inches(4.75), Inches(1.65), Inches(0.85), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(1.55), Inches(4.9), Inches(1.65), Inches(0.6),
+    add_text(slide, SD.texte_note(scores, t), Inches(1.55), Inches(4.9), Inches(1.65), Inches(0.6),
              font_size=30, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, t["global_score_caption"], Inches(0.2), Inches(5.85), Inches(4.35), Inches(0.4),
              font_size=12, bold=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
@@ -701,11 +711,15 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         y = Inches(4.05) + i * Inches(0.92)
         add_text(slide, label, RX, y, Inches(3.4), Inches(0.32),
                  font_size=12.5, bold=True, color=theme["text_dark"], font=fb)
-        add_text(slide, f"{sc:.0f}", RX + bar_w - Inches(0.6), y, Inches(0.6), Inches(0.32),
-                 font_size=13, bold=True, color=col, align=PP_ALIGN.RIGHT, font=ft)
+        add_text(slide, SD.texte_pilier(sc, t), RX + bar_w - Inches(0.6), y, Inches(0.6), Inches(0.32),
+                 font_size=13 if sc is not None else 8, bold=True, color=col,
+                 align=PP_ALIGN.RIGHT, font=ft)
         add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), bar_w, Inches(0.17), fill=track)
-        fill_w = max(Inches(0.17), Inches(3.4) * max(0, min(100, sc)) / 100)
-        add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), fill_w, Inches(0.17), fill=col)
+        # T2 : pas de barre pour un pilier non calculable -- une barre a zero
+        # se lirait comme un score de zero.
+        if sc is not None:
+            fill_w = max(Inches(0.17), Inches(3.4) * max(0, min(100, sc)) / 100)
+            add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), fill_w, Inches(0.17), fill=col)
 
     if "radar" in chart_images:
         add_image_from_bytes(slide, chart_images["radar"],
@@ -762,7 +776,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
             add_text(slide, str(i + 1), sx, Inches(4.9), seg_w, Inches(0.4),
                      font_size=14, bold=True, align=PP_ALIGN.CENTER,
                      color=(theme["bg_primary"] if active else theme["muted"]), font=ft)
-        add_text(slide, stages[_mat["stage"]], cx, Inches(5.5), cw, Inches(0.4),
+        add_text(slide, stages[_mat["stage"]] if _mat["stage"] is not None
+                 else t["note_non_calculable"], cx, Inches(5.5), cw, Inches(0.4),
                  font_size=16, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=ft)
         add_text(slide, _mat["next_hint"], cx, Inches(5.95), cw, Inches(0.7),
                  font_size=12.5, color=theme["text_dark"], font=fb)

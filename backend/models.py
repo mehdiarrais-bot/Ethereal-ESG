@@ -337,16 +337,21 @@ class ESGRequest(BaseModel):
 
 
 class ESGScores(BaseModel):
-    environmental_score: float
-    social_score: float
-    governance_score: float
-    total_esg_score: float
+    # T2 (2026-09-06) : un pilier sans aucun indicateur declare n'est pas
+    # calculable ; il ne vaut pas 50. La note globale l'est des qu'un pilier
+    # ne l'est pas. `completude` porte le nombre d'indicateurs REELLEMENT
+    # notes par pilier (cf. score_display.NB_INDICATEURS pour les maxima).
+    environmental_score: Optional[float]
+    social_score: Optional[float]
+    governance_score: Optional[float]
+    total_esg_score: Optional[float]
+    completude: dict = {}
     carbon_intensity: Optional[float] = None
     energy_intensity: Optional[float] = None
     gender_parity_index: Optional[float] = None
     safety_index: Optional[float] = None
     governance_quality: Optional[float] = None
-    rating: str
+    rating: Optional[str]
     strengths: list[str]
     weaknesses: list[str]
     recommendations: list[str]

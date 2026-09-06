@@ -116,6 +116,14 @@ intensité vaut 40/100 dans les services, 60 dans l'industrie, 70 dans l'énergi
 lettrée est explicitement présentée comme *indicative* et documentée dans une note
 méthodologique qui déclare aussi les limites et les points de données manquants.
 
+**Le silence n'est pas noté.** Un pilier dont aucun indicateur n'est renseigné n'est pas
+calculable — il ne vaut pas 50 sur 100. Et la note globale n'est pas calculée dès qu'un pilier
+ne l'est pas : pondérer les deux autres reviendrait à refabriquer le troisième. Le rapport
+imprime alors « Score non calculable » à la place de la note, et non un score par défaut.
+Chaque score publié est accompagné du **nombre d'indicateurs qui l'ont produit** — « calculé
+sur 14 des 18 indicateurs du barème ». Le questionnaire collecte 29 indicateurs : 18 entrent
+dans le calcul, les 11 autres sont publiés sans y contribuer, et la note méthodologique le dit.
+
 Un mode **VSME** (norme volontaire PME de l'EFRAG) requalifie les exigences optionnelles
 au lieu de les compter comme non conformes.
 
@@ -128,7 +136,7 @@ de conseil indépendante.
 
 ![Vue portefeuille](docs/img/03-portefeuille.png)
 
-*La vue portefeuille : statut de mission, dernier score et trajectoire de chaque client.*
+*La vue portefeuille : statut de mission, dernier score (ou « score non calculable ») et trajectoire de chaque client.*
 
 | Étape | Dans l'application |
 |---|---|

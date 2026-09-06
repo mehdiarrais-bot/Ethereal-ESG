@@ -81,7 +81,7 @@ export default function PortfolioView({ onClose, onLoad }) {
                         <span className="pf-score-num">{Math.round(c.last_score)}</span>
                         <span className="pf-score-sub">/100 · {c.last_rating}</span>
                       </>
-                    ) : <span className="pf-score-sub">non scoré</span>}
+                    ) : <span className="pf-score-sub" title="Au moins un pilier ne comporte aucun indicateur déclaré : le score n'est pas calculé plutôt que fixé à une valeur par défaut.">score non calculable</span>}
                   </div>
                   <Sparkline history={c.history} />
                 </div>

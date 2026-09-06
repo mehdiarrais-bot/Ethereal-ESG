@@ -95,8 +95,12 @@ def calculate_environmental_score(env: EnvironmentalData, revenue: float = None,
     if env.biodiversity_initiatives is not None:
         scores["biodiversity"] = min(100, env.biodiversity_initiatives * 20)
 
+    details["indicateurs_notes"] = len(scores)
     if not scores:
-        return 50.0, details
+        # T2 : aucun indicateur declare sur ce pilier. Rendre 50 fabriquerait
+        # un jugement a partir d'aucune donnee -- meme famille que les
+        # engagements retires a l'etape A. Non calculable, et on le dit.
+        return None, details
 
     env_score = sum(scores.values()) / len(scores)
     return round(env_score, 1), details
@@ -145,8 +149,9 @@ def calculate_social_score(social: SocialData) -> Tuple[float, dict]:
     if social.community_investment_eur is not None and social.community_investment_eur > 0:
         scores["community"] = min(100, (social.community_investment_eur / 100000) * 20)
 
+    details["indicateurs_notes"] = len(scores)
     if not scores:
-        return 50.0, details
+        return None, details          # T2 : cf. calculate_environmental_score
 
     social_score = sum(scores.values()) / len(scores)
     return round(social_score, 1), details
@@ -193,8 +198,9 @@ def calculate_governance_score(gov: GovernanceData) -> Tuple[float, dict]:
     if gov.csr_budget_eur is not None and gov.csr_budget_eur > 0:
         scores["csr_budget"] = min(100, (gov.csr_budget_eur / 500000) * 100)
 
+    details["indicateurs_notes"] = len(scores)
     if not scores:
-        return 50.0, details
+        return None, details          # T2 : cf. calculate_environmental_score
 
     gov_score = sum(scores.values()) / len(scores)
     return round(gov_score, 1), details
@@ -389,16 +395,29 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     social_score, social_details = calculate_social_score(request.social)
     gov_score, gov_details = calculate_governance_score(request.governance)
 
-    total = round((env_score * 0.40 + social_score * 0.35 + gov_score * 0.25), 1)
-    rating = get_rating(total)
+    # T2 : la note globale devient non calculable des qu'UN pilier l'est.
+    # Ponderer 40/35/25 sur deux piliers refabriquerait le troisieme, donc
+    # reintroduirait exactement ce que T2 retire.
+    if None in (env_score, social_score, gov_score):
+        total, rating = None, None
+    else:
+        total = round((env_score * 0.40 + social_score * 0.35 + gov_score * 0.25), 1)
+        rating = get_rating(total)
 
+    # Les generateurs de points forts/faibles comparent des scores a des
+    # seuils : un pilier non calculable ne doit pas y entrer. On leur passe
+    # une valeur neutre HORS de toute plage de declenchement (-1), qui ne
+    # produit ni point fort ni point faible pour ce pilier.
+    _e = env_score if env_score is not None else -1.0
+    _s = social_score if social_score is not None else -1.0
+    _g = gov_score if gov_score is not None else -1.0
     if lang == "en":
-        strengths = generate_strengths_en(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
-        weaknesses = generate_weaknesses_en(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        strengths = generate_strengths_en(_e, _s, _g, request.environmental, request.social, request.governance)
+        weaknesses = generate_weaknesses_en(_e, _s, _g, request.environmental, request.social, request.governance)
         recommendations = generate_recommendations_en(request.environmental, request.social, request.governance)
     else:
-        strengths = generate_strengths(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
-        weaknesses = generate_weaknesses(env_score, social_score, gov_score, request.environmental, request.social, request.governance)
+        strengths = generate_strengths(_e, _s, _g, request.environmental, request.social, request.governance)
+        weaknesses = generate_weaknesses(_e, _s, _g, request.environmental, request.social, request.governance)
         recommendations = generate_recommendations(request.environmental, request.social, request.governance)
 
     return ESGScores(
@@ -411,6 +430,9 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
         gender_parity_index=social_details.get("female_percent"),
         safety_index=social_details.get("accident_rate"),
         governance_quality=gov_score,
+        completude={"env": env_details.get("indicateurs_notes", 0),
+                    "social": social_details.get("indicateurs_notes", 0),
+                    "gov": gov_details.get("indicateurs_notes", 0)},
         rating=rating,
         strengths=strengths,
         weaknesses=weaknesses,

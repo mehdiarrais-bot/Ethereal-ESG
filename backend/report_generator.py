@@ -12,6 +12,7 @@ import os
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from models import ESGRequest, ESGScores, AestheticTheme, ReportType
+import score_display as SD
 from i18n import L
 
 # ── Enregistrement de polices TrueType système (Windows) ────────────────────
@@ -204,7 +205,11 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
     from reportlab.pdfbase.pdfmetrics import stringWidth
     from reportlab.lib.utils import ImageReader
     fb, fi, f = ts["font_bold"], ts["font_italic"], ts["font"]
-    band = ("high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60
+    # T2 : la bande ne pilote qu'un choix VISUEL (accroche de couverture).
+    # Sans score calculable on prend la bande mediane, et le texte de la
+    # couverture dira lui-meme que le score n'est pas calculable.
+    band = ("mid" if not SD.est_calculable(scores) else
+            "high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60
             else "mid" if scores.total_esg_score >= 45 else "low")
     tagline = pdf_txt(TR["cover_tag_" + band])
     name = pdf_txt(request.company.name.upper())
@@ -231,9 +236,14 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
         canvas.setFillColor(light); canvas.setFont(fi, 15)
         canvas.drawString(M, h - 7.35 * cm, tagline)
         # Score mis en scène (bas gauche)
-        sc = f"{scores.total_esg_score:.0f}"
-        canvas.setFillColor(pal["accent"]); canvas.setFont(fb, 76)
+        # T2 : « Score non calculable » a la place de la note, completude en
+        # sous-titre. Le score n'est PAS imprime a 50.
+        sc = pdf_txt(SD.texte_score(scores, TR))
+        canvas.setFillColor(pal["accent"])
+        canvas.setFont(fb, 76 if SD.est_calculable(scores) else 20)
         canvas.drawString(M, 4.2 * cm, sc)
+        canvas.setFont(f, 8.5); canvas.setFillColor(colors.HexColor("#C6CFDE"))
+        canvas.drawString(M, 3.55 * cm, pdf_txt(SD.texte_completude(scores, TR).capitalize()))
         canvas.setFont(f, 16); canvas.setFillColor(light)
         canvas.drawString(M + stringWidth(sc, fb, 76) + 6, 4.45 * cm, "/100")
         # Libellé du chiffre-clé (lisibilité immédiate)
@@ -257,7 +267,7 @@ def pdf_cover(pal, ts, request, scores, TR, type_label, logo_bytes):
         bx, by = w - 2 * cm - bw, 3.55 * cm
         canvas.setFillColor(pal["accent"]); canvas.roundRect(bx, by, bw, bh, 8, fill=1, stroke=0)
         canvas.setFillColor(pal["primary"]); canvas.setFont(fb, 36)
-        rt = pdf_txt(scores.rating)
+        rt = pdf_txt(SD.texte_note(scores, TR))
         canvas.drawString(bx + (bw - stringWidth(rt, fb, 36)) / 2, by + bh / 2 - 13, rt)
         # Logo (haut droite)
         if logo_bytes:
@@ -583,21 +593,21 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
          Paragraph(TR["score_global_short"], ParagraphStyle(
              "kpi_label_w", fontSize=9, textColor=colors.white,
              fontName=ts["font_bold"], alignment=TA_CENTER))],
-        [Paragraph(f"<font color='#{pal['env'].hexval()[2:]}'><b>{scores.environmental_score:.1f}</b></font>",
+        [Paragraph(f"<font color='#{pal['env'].hexval()[2:]}'><b>{SD.texte_pilier(scores.environmental_score, TR)}</b></font>",
                    ParagraphStyle("sv", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
-         Paragraph(f"<font color='#{pal['social'].hexval()[2:]}'><b>{scores.social_score:.1f}</b></font>",
+         Paragraph(f"<font color='#{pal['social'].hexval()[2:]}'><b>{SD.texte_pilier(scores.social_score, TR)}</b></font>",
                    ParagraphStyle("sv2", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
-         Paragraph(f"<font color='#{pal['gov'].hexval()[2:]}'><b>{scores.governance_score:.1f}</b></font>",
+         Paragraph(f"<font color='#{pal['gov'].hexval()[2:]}'><b>{SD.texte_pilier(scores.governance_score, TR)}</b></font>",
                    ParagraphStyle("sv3", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER)),
-         Paragraph(f"<font color='#{pal['accent'].hexval()[2:]}'><b>{scores.total_esg_score:.1f}</b></font>",
+         Paragraph(f"<font color='#{pal['accent'].hexval()[2:]}'><b>{SD.texte_score(scores, TR)}</b></font>",
                    ParagraphStyle("sv4", fontSize=24, leading=28, fontName=ts["font_bold"],
                                   alignment=TA_CENTER))],
         [Paragraph("/100", styles["caption"]), Paragraph("/100", styles["caption"]),
          Paragraph("/100", styles["caption"]),
-         Paragraph(f"{TR['note']} : {scores.rating}", ParagraphStyle(
+         Paragraph(f"{TR['note']} : {SD.texte_note(scores, TR)}", ParagraphStyle(
              "rating", fontSize=12, leading=14, fontName=ts["font_bold"],
              textColor=colors.white, alignment=TA_CENTER))],
     ]
@@ -693,12 +703,20 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Executive Summary ──────────────────────────────────────────────────
     section_header(story, TR["pdf_s1"], pal["secondary"], pal, styles, ts)
 
-    exec_text = content.get("executive_summary",
-        f"{request.company.name} présente son rapport ESG pour l'exercice {request.company.reporting_year}. "
-        f"L'analyse des données extra-financières révèle un score ESG global de {scores.total_esg_score}/100, "
-        f"correspondant à une notation {scores.rating}. Ce résultat reflète les engagements de l'entreprise "
-        "en matière de responsabilité environnementale, sociale et de gouvernance d'entreprise."
-    )
+    # Repli si le contenu n'a pas produit de synthese : T2 impose de ne pas
+    # citer un score qui n'existe pas.
+    if SD.est_calculable(scores):
+        _constat = (f"L'analyse des données extra-financières révèle un score ESG global de "
+                    f"{SD.texte_score(scores, TR)}/100, correspondant à une notation {SD.texte_note(scores, TR)}. ")
+    else:
+        _constat = (f"L'analyse des données extra-financières ne permet pas de calculer un score "
+                    f"ESG global : {SD.texte_completude(scores, TR)}. ")
+    _exec_defaut = (
+        f"{request.company.name} présente son rapport ESG pour l'exercice "
+        f"{request.company.reporting_year}. " + _constat +
+        "Ce résultat reflète les engagements de l'entreprise en matière de responsabilité "
+        "environnementale, sociale et de gouvernance d'entreprise.")
+    exec_text = content.get("executive_summary", _exec_defaut)
     story.append(Paragraph(esc(exec_text), styles["body"]))
     story.append(Spacer(1, 0.35 * cm))
 
@@ -751,7 +769,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Environnement ─────────────────────────────────────────────────────
     section_header(story, TR["pdf_s2"], pal["env"], pal, styles, ts, icon="leaf")
     story.append(Paragraph(
-        f"{TR['score_env_label']} : <b>{scores.environmental_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_env_label']} : <b>{SD.texte_pilier(scores.environmental_score, TR)}/100</b>", styles["h2"]))
     insight_callout(story, _pi["env"], pal["env"], pal, ts)
     if _notes.get("env"):
         consultant_callout(story, _notes["env"], pal, ts, TR)
@@ -806,7 +824,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Social ────────────────────────────────────────────────────────────
     section_header(story, TR["pdf_s3"], pal["social"], pal, styles, ts, icon="people")
     story.append(Paragraph(
-        f"{TR['score_soc_label']} : <b>{scores.social_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_soc_label']} : <b>{SD.texte_pilier(scores.social_score, TR)}/100</b>", styles["h2"]))
     insight_callout(story, _pi["social"], pal["social"], pal, ts)
     if _notes.get("social"):
         consultant_callout(story, _notes["social"], pal, ts, TR)
@@ -845,7 +863,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
     # ── Gouvernance ──────────────────────────────────────────────────────
     section_header(story, TR["pdf_s4"], pal["gov"], pal, styles, ts, icon="scale")
     story.append(Paragraph(
-        f"{TR['score_gov_label']} : <b>{scores.governance_score:.1f}/100</b>", styles["h2"]))
+        f"{TR['score_gov_label']} : <b>{SD.texte_pilier(scores.governance_score, TR)}/100</b>", styles["h2"]))
     insight_callout(story, _pi["gov"], pal["gov"], pal, ts)
     if _notes.get("gov"):
         consultant_callout(story, _notes["gov"], pal, ts, TR)
@@ -953,19 +971,19 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                    Paragraph(TR["bench_delta_col"], _hstyle), Paragraph(TR["bench_reading_col"], _hstyle)]]
     for row in _bv["rows"]:
         d = row["delta"]
-        dtxt = "—" if d == 0 else f"{d:.0f} pts"
+        dtxt = "—" if d is None or d == 0 else f"{d:.0f} pts"
         rcol = "#2E7D32" if row["role"] == "lead" else ("#E74C3C" if row["role"] == "lag" else pal["text"])
         bench_rows.append([
             Paragraph(esc(_pil_lbl[row["key"]]), _lstyle),
-            Paragraph(f"{row['score']:.0f}", _cstyle),
+            Paragraph(SD.texte_pilier(row["score"], TR), _cstyle),
             Paragraph(dtxt, _cstyle),
             Paragraph(f'<font color="{rcol}"><b>{esc(row["reading"])}</b></font>', _cstyle),
         ])
     bench_rows.append([
         Paragraph(esc(TR.get("score_global_short", "Global")), _lstyle),
-        Paragraph(f"{scores.total_esg_score:.0f}", _cstyle),
+        Paragraph(SD.texte_score(scores, TR), _cstyle),
         Paragraph("", _cstyle),
-        Paragraph(esc(scores.rating), _cstyle),
+        Paragraph(esc(SD.texte_note(scores, TR)), _cstyle),
     ])
     bt = Table(bench_rows, colWidths=[6 * cm, 2.8 * cm, 3.2 * cm, 4.5 * cm])
     bt.setStyle(TableStyle([
@@ -995,7 +1013,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
         except Exception as e:
             print(f"Trend image error: {e}")
 
-    _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
+    _mat_lbl = TR.get("mat_" + (_mt.get("key") or ""), TR["note_non_calculable"])
     story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : <b>{esc(_mat_lbl)}</b> '
                            f'({_mt["stage"]}/5)', styles["h2"]))
     story.append(Paragraph(esc(_mt["next_hint"]), styles["body"]))
@@ -1250,7 +1268,7 @@ def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     conclusion = content.get("conclusion",
         f"{request.company.name} démontre une démarche ESG globale avec un score de "
-        f"{scores.total_esg_score}/100 (note {scores.rating}). L'organisation s'engage "
+        f"{SD.texte_score(scores, TR)}/100 (note {SD.texte_note(scores, TR)}). L'organisation s'engage "
         "à poursuivre ses efforts de transformation durable et à maintenir une transparence "
         "totale dans son reporting extra-financier, conformément aux meilleures pratiques internationales."
     )
