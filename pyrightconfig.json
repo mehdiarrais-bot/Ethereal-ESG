@@ -1,0 +1,7 @@
+{
+  "include": ["backend"],
+  "exclude": ["**/__pycache__", "**/node_modules", "**/.git"],
+  "extraPaths": ["backend"],
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.14"
+}
