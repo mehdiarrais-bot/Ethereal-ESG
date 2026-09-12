@@ -36,6 +36,11 @@ def _gradient(width: int, height: int, top: tuple[int, ...],
               bottom: tuple[int, ...]) -> Image.Image:
     img = Image.new("RGB", (width, height))
     px = img.load()
+    if px is None:  # contrat Pillow : load() -> PixelAccess | None
+        # Inatteignable sur une image tout juste creee par Image.new : le
+        # None de Pillow vise les images non chargeables. Garde explicite
+        # plutot qu'un cast ou un type: ignore.
+        raise RuntimeError("Pillow n'a pas pu allouer l'accès aux pixels")
     for y in range(height):
         row = _lerp(top, bottom, y / max(1, height - 1))
         for x in range(width):

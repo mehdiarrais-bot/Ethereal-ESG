@@ -238,6 +238,8 @@ def pillar_hero(pillar: str, palette: dict, width: int = 900, height: int = 1400
     W, H = width * 2, height * 2  # supersample x2 (grande image)
     img = Image.new("RGB", (W, H), top)
     px = img.load()
+    if px is None:  # contrat Pillow : load() -> PixelAccess | None
+        raise RuntimeError("Pillow n'a pas pu allouer l'accès aux pixels")
     for y in range(H):
         row = _lerp(top, bottom, y / (H - 1))
         for x in range(W):

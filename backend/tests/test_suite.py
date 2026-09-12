@@ -12,6 +12,7 @@ import os
 import zipfile
 
 import pytest
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -1737,3 +1738,95 @@ def test_materiality_topics_ecarte_les_sujets_sans_base():
     r.environmental.waste_recycled_percent = None
     sujets = materiality_topics(r, _scores_partiels(env=None, social=None, gov=None))
     assert all(t["impact"] is not None for t in sujets)
+
+
+# ── Import XLSX : classeur sans feuille active ────────────────────────────
+
+# Trou de couverture comble le 2026-09-12 : aucun test ne couvrait le chemin
+# XLSX de l'import (seul le CSV l'etait). Pyright avait signale
+# `wb.active` -> Optional ; le cas s'est revele reellement atteignable.
+def _xlsx_sans_feuille_active() -> bytes:
+    """Classeur VALIDE dont `activeTab` pointe au-dela des feuilles.
+
+    Cas reel d'un .xlsx produit par un autre outil : openpyxl rend alors
+    `wb.active is None`. On forge le fichier en reecrivant workbook.xml,
+    parce qu'openpyxl refuse d'enregistrer un tel classeur lui-meme.
+    """
+    import re as _re
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    feuille = wb.active
+    assert feuille is not None          # le classeur neuf en a bien une
+    feuille["A1"] = "Champ"
+    feuille["B1"] = "Valeur"
+    brut = io.BytesIO()
+    wb.save(brut)
+    brut.seek(0)
+
+    source = zipfile.ZipFile(brut)
+    sortie = io.BytesIO()
+    with zipfile.ZipFile(sortie, "w") as z:
+        for nom in source.namelist():
+            contenu = source.read(nom)
+            if nom == "xl/workbook.xml":
+                txt = contenu.decode("utf-8")
+                txt = _re.sub(r"<workbookView[^/]*/>",
+                              '<workbookView activeTab="7"/>', txt)
+                if "activeTab" not in txt:
+                    txt = txt.replace(
+                        "<sheets>",
+                        '<bookViews><workbookView activeTab="7"/></bookViews><sheets>')
+                contenu = txt.encode("utf-8")
+            z.writestr(nom, contenu)
+    return sortie.getvalue()
+
+
+def test_xlsx_sans_feuille_active_leve_une_erreur_explicite() -> None:
+    """Le fichier EST lisible : le dire precisement, pas « illisible ».
+
+    Sans le garde, `wb.active` valant None faisait remonter un
+    AttributeError que l'endpoint traduisait en « Fichier illisible :
+    verifiez le format » -- message faux, qui renvoyait l'utilisateur vers
+    un probleme de format inexistant.
+    """
+    import pytest as _pytest
+    from import_data import parse_xlsx
+    with _pytest.raises(ValueError) as exc:
+        parse_xlsx(_xlsx_sans_feuille_active())
+    assert "aucune feuille active" in str(exc.value)
+
+
+def test_xlsx_sans_feuille_active_renvoie_400_avec_le_message_exact(
+        client: TestClient) -> None:
+    """Bout en bout : l'endpoint doit rendre le message precis, et non le
+    repli generique « Fichier illisible »."""
+    # LIMITE EXTERNE, non contournable sans masquage : starlette resout
+    # `httpx` par un import conditionnel (httpx2), ce qui rend TestClient
+    # partiellement inconnu a Pyright -- y compris le type de retour de
+    # .post(), pourtant declare httpx.Response. Annoter la variable ne suffit
+    # pas. Les 8 tests d'endpoint preexistants portent le meme cout.
+    r = client.post("/api/import", files={
+        "file": ("classeur.xlsx", _xlsx_sans_feuille_active(),
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert "aucune feuille active" in detail
+    assert "illisible" not in detail
+
+
+def test_xlsx_normal_reste_importable(client: TestClient) -> None:
+    """Contrat general de l'import inchange : un .xlsx ordinaire passe."""
+    from openpyxl import Workbook
+    wb = Workbook()
+    feuille = wb.active
+    assert feuille is not None
+    feuille["A1"] = "Champ"; feuille["B1"] = "Valeur"
+    feuille["A2"] = "Raison sociale"; feuille["B2"] = "Acme"
+    feuille["A3"] = "Chiffre d'affaires (€)"; feuille["B3"] = 48000000
+    buf = io.BytesIO(); wb.save(buf)
+    r = client.post("/api/import", files={
+        "file": ("ok.xlsx", buf.getvalue(),
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+    assert r.status_code == 200, r.json()
+    assert r.json()["sections"]["company"]["revenue_eur"] == 48000000

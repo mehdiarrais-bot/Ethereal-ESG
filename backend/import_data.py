@@ -169,6 +169,18 @@ def parse_xlsx(data: bytes):
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     ws = wb.active
+    if ws is None:
+        # openpyxl rend None quand l'index de feuille active sort des bornes
+        # (`activeTab` pointant au-dela des feuilles) — cas reel d'un .xlsx
+        # produit par un autre outil. Le fichier EST lisible : sans ce garde,
+        # l'AttributeError remontait et l'endpoint le traduisait en
+        # « Fichier illisible : verifiez le format », message faux qui
+        # renvoyait l'utilisateur vers un probleme inexistant.
+        # AUCUN repli sur worksheets[0] : accepter un fichier aujourd'hui
+        # refuse serait un changement de contrat, a decider pour lui-meme.
+        wb.close()
+        raise ValueError("Le classeur ne désigne aucune feuille active — "
+                         "ouvrez-le et enregistrez-le à nouveau, ou exportez en CSV")
     rows = []
     for row in ws.iter_rows(values_only=True):
         rows.append(["" if c is None else c for c in row])
