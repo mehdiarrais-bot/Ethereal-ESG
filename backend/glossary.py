@@ -7,6 +7,8 @@ sont filtrées selon ce que le rapport contient réellement — inutile de
 définir la Taxonomie si l'entreprise ne publie aucun indicateur aligné.
 """
 
+from models import ESGRequest, ESGScores
+
 # (clé, terme FR, définition FR, terme EN, définition EN)
 _TERMS = [
     ("csrd", "CSRD",
@@ -104,7 +106,8 @@ _TERMS = [
 ]
 
 
-def glossary_entries(request, scores=None) -> list:
+def glossary_entries(request: ESGRequest,
+                     scores: ESGScores | None = None) -> list[dict[str, str]]:
     """Entrées du glossaire pertinentes pour ce rapport précis.
 
     Retourne [{term, definition}] dans l'ordre de lecture. Les termes qui ne

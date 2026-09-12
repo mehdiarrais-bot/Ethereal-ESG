@@ -284,7 +284,8 @@ CIBLES = {
 }
 
 
-def classer(indicateur: str, valeur, secteur: str = None):
+def classer(indicateur: str, valeur: float | None,
+            secteur: str | None = None) -> str | None:
     """Retourne le nom de tranche (une valeur de SEUILS[...]["bornes"]),
     ou None si :
     - la valeur est absente (None) ;

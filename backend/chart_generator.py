@@ -237,7 +237,7 @@ def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, lig
     return buf.read()
 
 
-def _pillar_hex(colors, pillar):
+def _pillar_hex(colors: dict[str, str], pillar: str) -> str:
     return colors.get(pillar, colors["secondary"])
 
 

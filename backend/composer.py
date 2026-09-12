@@ -44,18 +44,18 @@ class _ContexteTolerant(dict):
     planter la génération (CLAUDE.md : échouer gracieusement en
     production). Le marqueur laissé en clair ({xxx}) reste repérable au
     test ou à la relecture, sans jamais interrompre un livrable en cours."""
-    def __missing__(self, key):
+    def __missing__(self, key: str) -> str:
         return "{" + key + "}"
 
 
-def _substituer(gabarit: str, contexte: dict) -> str:
+def _substituer(gabarit: str, contexte: dict[str, object]) -> str:
     """Remplace les placeholders {n}/{score}/{an}/{value}/... d'une clause
     par les valeurs du contexte fourni. Tolérant : jamais d'exception sur
     une clé manquante (voir _ContexteTolerant)."""
     return gabarit.format_map(_ContexteTolerant(contexte))
 
 
-def _formater_valeur(v):
+def _formater_valeur(v: float | bool | str | None) -> str | bool | None:
     """Met en forme une valeur numérique pour insertion dans une clause.
 
     Pydantic type la plupart des champs en float : sans mise en forme,
@@ -81,7 +81,9 @@ def _formater_valeur(v):
     return v
 
 
-def _valeur_indicateur(indicateur: str, donnees: dict):
+def _valeur_indicateur(indicateur: str,
+                       donnees: dict[str, float | bool | str | None]
+                       ) -> float | bool | str | None:
     """Lit la valeur brute d'un indicateur dans le dict de données aplati
     fourni par l'appelant (voir composer_section). Ne fait aucun calcul
     métier ici (l'intensité carbone, par ex., doit être précalculée par
@@ -89,7 +91,8 @@ def _valeur_indicateur(indicateur: str, donnees: dict):
     return donnees.get(indicateur)
 
 
-def _tranche_categorielle(indicateur: str, valeur):
+def _tranche_categorielle(indicateur: str,
+                          valeur: float | bool | str | None) -> str | None:
     """Pour un indicateur de CATEGORIES, renvoie la clé de clause à utiliser
     ("vrai"/"faux" pour un booléen, "zero"/"nonzero" pour un compteur), en
     fonction de la VALEUR RÉELLE — jamais un index fixe. C'est cette
@@ -138,8 +141,10 @@ def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = N
     return candidats
 
 
-def composer_section(section: str, donnees: dict, clauses_lang: dict,
-                      contexte: dict = None, secteur: str = None) -> str:
+def composer_section(section: str, donnees: dict[str, float | bool | str | None],
+                     clauses_lang: dict[str, object],
+                     contexte: dict[str, object] | None = None,
+                     secteur: str | None = None) -> str:
     """Compose le paragraphe d'une section, dans cet ordre :
     1. les 2-3 indicateurs à grille (SEUILS) les plus graves — l'analyse ;
     2. au plus NB_BRUTS_PAR_PARAGRAPHE indicateur "brut" — l'ancrage

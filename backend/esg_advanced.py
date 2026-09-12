@@ -11,7 +11,7 @@ Tout est dérivé localement des données saisies — aucune donnée externe.
 from models import ESGRequest, ESGScores
 
 
-def _clamp(v, lo=0.5, hi=9.5):
+def _clamp(v: float, lo: float = 0.5, hi: float = 9.5) -> float:
     return max(lo, min(hi, v))
 
 
@@ -47,7 +47,7 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     env, soc, gov = request.environmental, request.social, request.governance
     ML = _MAT_LABELS.get(lang, _MAT_LABELS["fr"])
 
-    def inv(score):  # score bas -> priorité haute
+    def inv(score: float | None) -> float | None:  # score bas -> priorité haute
         # ABSTENTION : sans base chiffree, l'enjeu n'a pas de cotation. On
         # rend None et le sujet est ECARTE de la cartographie, plutot que
         # place au milieu de l'echelle -- ce qui serait une cotation
@@ -115,7 +115,7 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
 # ══════════════════════════════════════════════════════════════════════════
 
 
-def taxonomy_summary(request: ESGRequest):
+def taxonomy_summary(request: ESGRequest) -> dict[str, object] | None:
     """Synthèse Taxonomie UE si au moins un KPI est renseigné, sinon None."""
     t = request.taxonomy
     if t is None:
@@ -151,7 +151,7 @@ _MATURITY = [
 ]
 
 
-def _signaux_structurants(request) -> list:
+def _signaux_structurants(request: ESGRequest) -> list[str]:
     """Ce qui fait passer un cap de maturite. Ne depend d'AUCUN score : ces
     signaux restent observables meme quand la maturite ne l'est pas."""
     gaps = []

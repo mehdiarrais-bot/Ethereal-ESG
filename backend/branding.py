@@ -10,6 +10,7 @@ piliers E/S/G restent sémantiques (vert/bleu/violet) pour la lisibilité.
 nom du client : trois clients ont ainsi trois identités visuelles distinctes
 sans aucune saisie.
 """
+from collections.abc import Sequence
 import colorsys
 import hashlib
 import re
@@ -17,7 +18,7 @@ import re
 _HEX_RE = re.compile(r"^#?([0-9a-fA-F]{6})$")
 
 
-def _parse(hexstr):
+def _parse(hexstr: str | None) -> tuple[int, ...] | None:
     m = _HEX_RE.match((hexstr or "").strip())
     if not m:
         return None
@@ -25,26 +26,26 @@ def _parse(hexstr):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def _to_hex(rgb):
+def _to_hex(rgb: Sequence[float]) -> str:
     return "#{:02X}{:02X}{:02X}".format(*[max(0, min(255, int(round(c)))) for c in rgb])
 
 
-def _luminance(rgb):
+def _luminance(rgb: Sequence[float]) -> float:
     r, g, b = [c / 255 for c in rgb]
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
-def _adjust_l(rgb, l_target):
+def _adjust_l(rgb: Sequence[float], l_target: float) -> tuple[float, float, float]:
     h, l, s = colorsys.rgb_to_hls(*[c / 255 for c in rgb])
     r, g, b = colorsys.hls_to_rgb(h, l_target, s)
     return (r * 255, g * 255, b * 255)
 
 
-def _mix(rgb, other, t):
+def _mix(rgb: Sequence[float], other: Sequence[float], t: float) -> tuple[float, ...]:
     return tuple(a + (b - a) * t for a, b in zip(rgb, other))
 
 
-def validate_colors(custom: dict):
+def validate_colors(custom: object) -> tuple[Sequence[float], Sequence[float]] | None:
     """Retourne (primary_rgb, accent_rgb) normalisés, ou None si invalide.
     La primaire est assombrie si trop claire (elle porte du texte blanc)."""
     if not isinstance(custom, dict):

@@ -2,13 +2,15 @@ import io
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.slide import Slide
+from pptx.shapes.autoshape import Shape
 from pptx.enum.text import PP_ALIGN
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
 from visual_kit import pillar_hero, icon_png, ring_png
 from i18n import L
 
 
-def _hexstr(rgb) -> str:
+def _hexstr(rgb: RGBColor) -> str:
     """RGBColor -> '#RRGGBB' pour visual_kit."""
     return "#" + str(rgb)
 
@@ -154,8 +156,10 @@ ROUNDED_RECT = 5
 OVAL = 9
 
 
-def add_shape(slide, shape_type, left, top, width, height, fill: RGBColor = None,
-              line_color: RGBColor = None, line_width_pt: float = None):
+def add_shape(slide: Slide, shape_type: int, left: int, top: int,
+              width: int, height: int, fill: RGBColor | None = None,
+              line_color: RGBColor | None = None,
+              line_width_pt: float | None = None) -> Shape:
     shape = slide.shapes.add_shape(shape_type, left, top, width, height)
     if fill is not None:
         shape.fill.solid()
@@ -171,14 +175,16 @@ def add_shape(slide, shape_type, left, top, width, height, fill: RGBColor = None
     return shape
 
 
-def add_bg_rect(slide, left, top, width, height, color: RGBColor):
+def add_bg_rect(slide: Slide, left: int, top: int, width: int,
+                height: int, color: RGBColor) -> Shape:
     return add_shape(slide, RECT, left, top, width, height, fill=color)
 
 
-def add_text(slide, text, left, top, width, height, font_size=18,
-             bold=False, color: RGBColor = RGBColor(0, 0, 0),
-             align=PP_ALIGN.LEFT, italic=False, word_wrap=True,
-             font: str = None):
+def add_text(slide: Slide, text: str, left: int, top: int, width: int,
+             height: int, font_size: float = 18, bold: bool = False,
+             color: RGBColor = RGBColor(0, 0, 0),
+             align: PP_ALIGN = PP_ALIGN.LEFT, italic: bool = False,
+             word_wrap: bool = True, font: str | None = None) -> Shape:
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     tf.word_wrap = word_wrap
@@ -195,7 +201,9 @@ def add_text(slide, text, left, top, width, height, font_size=18,
     return txBox
 
 
-def add_image_from_bytes(slide, img_bytes, left, top, width=None, height=None):
+def add_image_from_bytes(slide: Slide, img_bytes: bytes, left: int, top: int,
+                         width: int | None = None,
+                         height: int | None = None) -> None:
     img_io = io.BytesIO(img_bytes)
     slide.shapes.add_picture(img_io, left, top, width, height)
 

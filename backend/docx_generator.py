@@ -5,6 +5,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx.document import Document as DocumentObject
+from docx.text.paragraph import Paragraph
 from models import ESGRequest, ESGScores, AestheticTheme
 from i18n import L
 
@@ -66,12 +68,12 @@ DOCX_STYLES = {
 }
 
 
-def hex_to_rgb(h):
+def hex_to_rgb(h: str) -> RGBColor:
     h = h.lstrip('#')
     return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
 
-def shade_cell(cell, color_hex):
+def shade_cell(cell, color_hex: str) -> None:  # cell: pas de type public dans python-docx
     tcPr = cell._tc.get_or_add_tcPr()
     shd = OxmlElement('w:shd')
     shd.set(qn('w:val'), 'clear')
@@ -79,7 +81,7 @@ def shade_cell(cell, color_hex):
     tcPr.append(shd)
 
 
-def shade_paragraph(p, color_hex):
+def shade_paragraph(p: Paragraph, color_hex: str) -> None:
     pPr = p._p.get_or_add_pPr()
     shd = OxmlElement('w:shd')
     shd.set(qn('w:val'), 'clear')
@@ -109,7 +111,7 @@ def add_heading(doc, text, level, color_hex, size=None, style=None):
     return p
 
 
-def add_hr(doc, color_hex):
+def add_hr(doc: DocumentObject, color_hex: str) -> None:
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(8)
@@ -165,7 +167,8 @@ def add_score_block(doc, label, score, color_hex):
     score_run.font.color.rgb = hex_to_rgb(color_hex)
 
 
-def add_bullet_list(doc, items, icon, color_hex):
+def add_bullet_list(doc: DocumentObject, items: list[str], icon: str,
+                    color_hex: str) -> None:
     for item in items:
         p = doc.add_paragraph()
         icon_run = p.add_run(f"{icon}  ")

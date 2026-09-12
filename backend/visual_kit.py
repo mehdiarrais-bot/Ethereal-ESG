@@ -7,25 +7,26 @@ Tout est dessiné en supersampling (x4) puis réduit pour un rendu lisse.
 """
 import io
 import math
+from collections.abc import Sequence
 from PIL import Image, ImageDraw, ImageFilter
 
 SS = 4  # supersampling
 
 
-def _hex(h):
+def _hex(h: str) -> tuple[int, ...]:
     h = h.lstrip('#')
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def _lerp(c1, c2, t):
+def _lerp(c1: tuple[int, ...], c2: tuple[int, ...], t: float) -> tuple[int, ...]:
     return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
 
-def _canvas(size):
+def _canvas(size: int) -> Image.Image:
     return Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 0))
 
 
-def _finish(img, size):
+def _finish(img: Image.Image, size: int) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
@@ -33,7 +34,8 @@ def _finish(img, size):
 # ICÔNES — géométriques, monoline épais, arrondies → rendu « designé »
 # ══════════════════════════════════════════════════════════════════════════
 
-def draw_icon(name: str, size: int, color, bg=None) -> Image.Image:
+def draw_icon(name: str, size: int, color: str | tuple[int, ...],
+              bg: tuple[int, ...] | None = None) -> Image.Image:
     """Icône RGBA transparente. `color` = hex ou tuple RGB."""
     if isinstance(color, str):
         color = _hex(color)
@@ -43,7 +45,8 @@ def draw_icon(name: str, size: int, color, bg=None) -> Image.Image:
     S = size * SS
     lw = max(2, int(S * 0.075))
 
-    def line(pts, w=lw, fill=c, joint="curve"):
+    def line(pts: Sequence[tuple[float, float]], w: int = lw,
+             fill: tuple[int, ...] = c, joint: str = "curve") -> None:
         d.line(pts, fill=fill, width=w, joint=joint)
         r = w / 2
         for (x, y) in (pts[0], pts[-1]):
@@ -194,8 +197,9 @@ def draw_icon(name: str, size: int, color, bg=None) -> Image.Image:
 # ANNEAU DE SCORE — donut avec valeur au centre
 # ══════════════════════════════════════════════════════════════════════════
 
-def score_ring(value: float, size: int, color, track=(255, 255, 255, 60),
-               text_color=(255, 255, 255, 255)) -> Image.Image:
+def score_ring(value: float, size: int, color: str | tuple[int, ...],
+               track: tuple[int, ...] = (255, 255, 255, 60),
+               text_color: tuple[int, ...] = (255, 255, 255, 255)) -> Image.Image:
     if isinstance(color, str):
         color = _hex(color)
     if isinstance(text_color, str):
@@ -319,7 +323,7 @@ def pillar_hero(pillar: str, palette: dict, width: int = 900, height: int = 1400
     return buf.read()
 
 
-def icon_png(name: str, size: int, color) -> bytes:
+def icon_png(name: str, size: int, color: str | tuple[int, ...]) -> bytes:
     img = draw_icon(name, size, color)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -327,7 +331,8 @@ def icon_png(name: str, size: int, color) -> bytes:
     return buf.read()
 
 
-def ring_png(value: float, size: int, color, text_color=(255, 255, 255)) -> bytes:
+def ring_png(value: float, size: int, color: str | tuple[int, ...],
+             text_color: tuple[int, ...] = (255, 255, 255)) -> bytes:
     img = score_ring(value, size, color, text_color=text_color)
     buf = io.BytesIO()
     img.save(buf, format="PNG")

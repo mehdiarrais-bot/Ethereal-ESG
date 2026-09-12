@@ -23,16 +23,17 @@ ART_SPECS = {
 }
 
 
-def _hex_rgb(h):
+def _hex_rgb(h: str) -> tuple[int, ...]:
     h = h.lstrip('#')
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def _lerp(c1, c2, t):
+def _lerp(c1: tuple[int, ...], c2: tuple[int, ...], t: float) -> tuple[int, ...]:
     return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
 
-def _gradient(width, height, top, bottom):
+def _gradient(width: int, height: int, top: tuple[int, ...],
+              bottom: tuple[int, ...]) -> Image.Image:
     img = Image.new("RGB", (width, height))
     px = img.load()
     for y in range(height):

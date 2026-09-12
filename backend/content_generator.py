@@ -10,10 +10,10 @@ from models import ESGRequest, ESGScores
 def _seed(name: str) -> int:
     return int(hashlib.md5(name.encode()).hexdigest(), 16) % 10
 
-def _pick(seed: int, offset: int, options: list):
+def _pick(seed: int, offset: int, options: list[str]) -> str:
     return options[(seed + offset) % len(options)]
 
-def _fmt(v, suffix="", decimals=0):
+def _fmt(v: float | None, suffix: str = "", decimals: int = 0) -> str:
     if v is None: return "—"
     return f"{v:,.{decimals}f}{suffix}"
 
@@ -25,17 +25,18 @@ _NUM_FR_M = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept",
 _NUM_EN = ["zero", "one", "two", "three", "four", "five", "six", "seven",
            "eight", "nine", "ten", "eleven", "twelve"]
 
-def _nb(n, en=False, fem=False):
+def _nb(n: float, en: bool = False, fem: bool = False) -> str:
     """Nombre en lettres jusqu'à douze, chiffres au-delà."""
     n = int(n)
     lst = _NUM_EN if en else (_NUM_FR if fem else _NUM_FR_M)
     return lst[n] if 0 <= n < len(lst) else str(n)
 
-def _agree(n, sing, plur, en=False, fem=False):
+def _agree(n: float, sing: str, plur: str,
+           en: bool = False, fem: bool = False) -> str:
     """« un point fort consolidé » / « deux points forts consolidés »."""
     return f"{_nb(n, en, fem)} {sing if int(n) == 1 else plur}"
 
-def _pts(v):
+def _pts(v: float) -> str:
     """« 1 pt » / « 13 pts » (valeur déjà arrondie à l'entier)."""
     n = abs(int(round(v)))
     return f"{n} pt" if n == 1 else f"{n} pts"
@@ -80,7 +81,7 @@ def elider(texte: str, nom: str) -> str:
         return texte
     import re as _re
 
-    def _remplacer(m):
+    def _remplacer(m: "_re.Match[str]") -> str:
         mot = m.group(1)
         if mot.lower() == "de":
             return ("D'" if mot[0] == "D" else "d'") + nom
@@ -101,7 +102,7 @@ SECTOR_CTX = {
     "Chimie": ("l'industrie chimique, aux enjeux réglementaires majeurs", "la réduction de ses émissions polluantes"),
 }
 
-def _ctx(sector):
+def _ctx(sector: str) -> tuple[str, str]:
     for k, v in SECTOR_CTX.items():
         if k.lower() in sector.lower(): return v
     return ("son secteur d'activité", "l'amélioration continue de ses pratiques ESG")
@@ -560,7 +561,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         de = scores.environmental_score - prev["env"]
         ds = scores.social_score - prev["social"]
         dg = scores.governance_score - prev["gov"]
-        def sg(v):
+        def sg(v: float) -> str:
             return f"+{v:.0f}" if v >= 0.5 else (f"{v:.0f}" if v <= -0.5 else "=")
         if en:
             if abs(dt) < 0.5:
@@ -1069,7 +1070,7 @@ SECTOR_CTX_EN = {
 }
 
 
-def _ctx_en(sector):
+def _ctx_en(sector: str) -> tuple[str, str]:
     for k, v in SECTOR_CTX_EN.items():
         if k.lower() in sector.lower():
             return v
@@ -1543,7 +1544,7 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
     qw = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] < 5 and r["impact"] >= 6]
     strat = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] >= 5 and r["impact"] >= 7]
 
-    def _join_nums(nums, conj):
+    def _join_nums(nums: list[str], conj: str) -> str:
         nums = [str(n) for n in nums]
         if len(nums) == 1:
             return nums[0]
@@ -1600,7 +1601,7 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
 # Ces fonctions concentrent les deux patrons les plus dangereux de la couche.
 # Elles rendent None quand la donnee manque ; c'est aux appelants de le voir.
 
-def _perf_desc(rating, en=False):
+def _perf_desc(rating: str | None, en: bool = False) -> str | None:
     """Qualification derivee de la note lettree. ABSTENTION sans note.
 
     Le patron d'origine, `PERF_DESC.get(rating, "performance mesuree")`, NE
@@ -1614,7 +1615,9 @@ def _perf_desc(rating, en=False):
         rating, "measured performance" if en else "performance mesurée")
 
 
-def _classement_piliers(scores, libelles=None):
+def _classement_piliers(scores: ESGScores,
+                        libelles: tuple[str, ...] | None = None
+                        ) -> list[tuple[str, float]]:
     """[(cle, score)] des seuls piliers CALCULABLES, ordre env/social/gov.
 
     Le patron d'origine -- `max(pil, key=...)` / `min(...)` sur les trois
@@ -1629,7 +1632,7 @@ def _classement_piliers(scores, libelles=None):
     return [(c, v) for c, v in paires if v is not None]
 
 
-def _band(score):
+def _band(score: float | None) -> str | None:
     """Bande de lecture d'un score. ABSTENTION sur un score absent.
 
     Lot 0 : un pilier sans indicateur n'a pas de bande. Rendre « low » --
@@ -1745,7 +1748,7 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
     worst = min(pil, key=lambda x: x[1])[0] if pil else None
     same = (len({p[1] for p in pil}) == 1) if pil else False
 
-    def num(v):  # entier sans décimale
+    def num(v: float) -> str:  # entier sans décimale
         return f"{v:.0f}"
 
     def env_hook(sc):
