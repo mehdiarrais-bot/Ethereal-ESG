@@ -1,0 +1,36 @@
+# Versions gelees pour la build de l'executable (CI). Regenerer volontairement :
+#   python -m venv v && v/bin/pip install -r requirements.txt && v/bin/pip freeze
+# requirements.txt reste en >= pour le developpement.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+charset-normalizer==3.5.1
+click==8.5.0
+contourpy==1.4.0
+cycler==0.12.1
+et_xmlfile==2.0.0
+fastapi==0.141.1
+fonttools==4.65.0
+h11==0.16.0
+idna==3.20
+kiwisolver==1.5.1
+lxml==6.1.3
+matplotlib==3.11.2
+numpy==2.5.3
+openpyxl==3.1.5
+packaging==26.3
+pillow==12.3.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+python-docx==1.2.0
+python-multipart==0.0.32
+python-pptx==1.0.2
+reportlab==5.0.1
+six==1.17.0
+starlette==1.6.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.53.0
+xlsxwriter==3.2.9
