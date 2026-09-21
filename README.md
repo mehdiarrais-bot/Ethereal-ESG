@@ -192,6 +192,23 @@ scripts/make_examples.py    Régénère les livrables d'exemple
 
 ## Démarrage
 
+### Version exécutable Windows (sans Python ni Node)
+
+Télécharger `EtherealESG-windows.zip` depuis l'onglet **Actions** du dépôt (workflow
+*Build Windows exe*), le décompresser, puis double-cliquer sur `EtherealESG\EtherealESG.exe`.
+L'application s'ouvre dans le navigateur ; la fenêtre console doit rester ouverte pendant
+l'utilisation. Les dossiers clients sont stockés dans `%APPDATA%\EtherealESG\clients`,
+donc conservés lors d'une mise à jour de l'exécutable.
+
+L'exécutable n'est pas signé : Windows SmartScreen affiche un avertissement au premier
+lancement (« Informations complémentaires » puis « Exécuter quand même »).
+
+Construction locale : `cd frontend && npm run build`, puis depuis la racine
+`pyinstaller packaging/ethereal_esg.spec --noconfirm` et
+`python packaging/smoke_test.py dist/EtherealESG/EtherealESG.exe`.
+
+### Depuis les sources
+
 ```bash
 # Windows : double-cliquer sur start.bat
 # Mac / Linux :

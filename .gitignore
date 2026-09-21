@@ -21,3 +21,7 @@ backend/data/
 
 # Antisèche entretien — document personnel, jamais publié
 NOTES-ENTRETIEN.md
+
+# Sorties PyInstaller
+/build/
+/dist/
