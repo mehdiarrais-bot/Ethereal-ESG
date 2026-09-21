@@ -200,6 +200,11 @@ L'application s'ouvre dans le navigateur ; la fenêtre console doit rester ouver
 l'utilisation. Les dossiers clients sont stockés dans `%APPDATA%\EtherealESG\clients`,
 donc conservés lors d'une mise à jour de l'exécutable.
 
+Reprise des dossiers créés avec `start.bat` : ils se trouvent dans `backend\data\clients`
+du dossier source. Les exporter depuis l'ancienne installation (sauvegarde des dossiers),
+puis les importer dans l'exécutable ; ou copier les fichiers `.json` dans
+`%APPDATA%\EtherealESG\clients`.
+
 L'exécutable n'est pas signé : Windows SmartScreen affiche un avertissement au premier
 lancement (« Informations complémentaires » puis « Exécuter quand même »).
 
