@@ -692,6 +692,126 @@ positif : il faudrait alors distinguer les deux usages.
   externe a disparu. À réévaluer : soit le câbler sur la section
   Positionnement, soit le retirer du modèle et du formulaire.
 
+## 7. PRIORITAIRE — perte de données : « Données exemple » n'oublie pas le dossier ouvert
+
+- **Où** : `frontend/src/App.jsx:172-175` (`loadDemo`), à comparer à
+  `frontend/src/App.jsx:177-183` (`resetForm`).
+- **Constat** : `loadDemo` remplace le formulaire par `DEMO_DATA` mais ne
+  remet à zéro ni `clientId`, ni `clientHistory`, ni `clientActions` —
+  `resetForm`, lui, remet les quatre. Or `saveClient`
+  (`frontend/src/App.jsx:98-110`) poste `{ id: clientId, ... }`. Séquence
+  destructrice : ouvrir un dossier client, cliquer « Données exemple »,
+  cliquer « Enregistrer » — le dossier réel est **écrasé par les données de
+  démonstration** et son historique de scores reçoit un point qui ne
+  correspond à aucun exercice réel. Aucune confirmation n'est demandée.
+- **Même famille — modifications non enregistrées perdues sans
+  confirmation** : `loadClient` (`:125-139`) et `resetForm` (`:177-183`)
+  remplacent le formulaire sans garde, alors que l'état `clientDirty` existe
+  et est mis à jour à chaque frappe (`:96`). Le drapeau est calculé mais
+  jamais utilisé comme verrou.
+- **À faire** : décider du correctif (réinitialiser l'identité du dossier
+  dans `loadDemo`, et poser une confirmation sur les trois chemins qui
+  écrasent une saisie en cours). **Correction non encore validée** — aucune
+  ligne de code n'a été touchée.
+
+## 8. Références réglementaires non vérifiées dans le questionnaire envoyé au client
+
+> **Rattachement** : même matière que le § 0octies (AFEP-MEDEF appliqué hors
+> de son champ) et le § 3bis (seuils de Copé-Zimmermann non vérifiés sur
+> texte primaire). Le fait nouveau n'est pas le barème : c'est que ces deux
+> affirmations **quittent désormais le cabinet** dans un document adressé au
+> client, et dans deux langues.
+
+- **Où** : `backend/questionnaire_generator.py:60-61` (FR) et
+  `backend/labels_en.py:42-43` (EN), champ d'aide des indicateurs
+  `female_board_percent` et `independent_board_percent`.
+- **Constat** : le questionnaire de collecte imprime « Seuil légal de
+  référence : 40 %. » / « French legal reference threshold: 40%. » et
+  « Référence AFEP-MEDEF : 50 %. » / « AFEP-MEDEF reference: 50%. » Aucune
+  des deux n'a été confrontée au texte primaire, et aucune ne porte de
+  condition d'applicabilité : celle-ci est probablement limitée aux sociétés
+  cotées ou de grande taille, ce qui **reste à vérifier**. Le produit cible
+  des PME/ETI souvent non cotées.
+- **Aggravant par rapport au livrable** : un rapport est relu par le
+  consultant avant remise ; ce questionnaire part tel quel chez le client et
+  l'aide s'affiche à côté du champ à remplir, donc au moment précis où elle
+  est prise pour une règle.
+- **À faire** : vérifier les deux affirmations sur les textes réels, puis
+  soit les assortir de leur condition d'applicabilité, soit les retirer du
+  questionnaire. Les deux langues doivent être corrigées **dans le même
+  commit**, `questionnaire_generator.py` et `labels_en.py` étant deux
+  sources distinctes pour la même affirmation.
+
+## 9. Exécutable Windows non signé
+
+- **Où** : `packaging/ethereal_esg.spec` et
+  `.github/workflows/build-windows.yml` — aucune étape de signature ; le
+  fait est documenté dans `README.md` (« L'exécutable n'est pas signé »).
+- **Constat** : au premier lancement, Windows SmartScreen affiche un
+  avertissement de réputation (« Informations complémentaires » puis
+  « Exécuter quand même »). Sur un poste géré par une DSI, la stratégie
+  d'exécution peut **bloquer** le binaire sans possibilité de contournement
+  par l'utilisateur — un cabinet livrant l'outil à son client ne peut pas
+  garantir qu'il démarrera.
+- **À faire** : **décision produit en attente** — acquérir un certificat de
+  signature de code (et décider OV ou EV, l'EV seul effaçant l'avertissement
+  de réputation immédiatement), ou assumer l'avertissement et documenter la
+  procédure de déblocage. Rien à corriger dans le code tant que la décision
+  n'est pas prise.
+
+## 10. `requirements-lock.txt` gelé sous Linux — dépendances Windows absentes
+
+- **Où** : `backend/requirements-lock.txt`. L'en-tête documente la commande
+  de régénération avec un chemin POSIX (`v/bin/pip freeze`), donc le gel a
+  été produit sous Linux, alors que le lock ne sert qu'à la build Windows
+  (`.github/workflows/build-windows.yml`, étape « Dependances Python »).
+- **Constat** : les dépendances conditionnées à la plateforme n'y figurent
+  pas. Cas vérifié : `colorama` (0.4.6 dans l'environnement Windows local),
+  tiré par `click` sur Windows uniquement, est **absent** du lock. La CI
+  l'installera quand même, en résolution libre, puisque `pip` suit les
+  marqueurs d'environnement — donc la build n'échoue pas, mais **sa version
+  n'est pas gelée** et le lock ne décrit pas la build qu'il prétend
+  reproduire.
+- **À faire** : régénérer le lock **sous Windows** (ou ajouter les paquets
+  conditionnels avec leur marqueur `sys_platform`), et corriger l'en-tête
+  pour que la commande documentée soit celle de la plateforme visée.
+  **Ne pas régénérer à l'aveugle** : un gel produit sur une autre version de
+  Python que le 3.12 de la CI déplacerait les versions sans rapport avec le
+  sujet.
+
+## 11. Menus — quatre points relevés hors périmètre
+
+- **Le référentiel visé se choisit après la saisie** : `STEPS`
+  (`frontend/src/App.jsx:17-23`) place « Livrables » en dernière étape, et
+  c'est là que le choix CSRD/ESRS ou VSME est offert
+  (`frontend/src/components/steps/StepOutput.jsx:209-219`). Le consultant
+  saisit donc tous les indicateurs sans savoir quel référentiel les jugera,
+  alors que ce choix devrait orienter la collecte.
+- **Aucun champ source / statut par indicateur** : `backend/models.py`
+  déclare 69 champs et **aucune** occurrence de source, provenance, ou
+  statut mesuré/estimé. Un chiffre estimé au doigt mouillé et un chiffre
+  relevé sur facture entrent dans le même champ et ressortent avec la même
+  autorité dans le livrable.
+- **Indicateurs non structurés par datapoint VSME** : le questionnaire et le
+  modèle sont organisés par pilier, pas par datapoint du référentiel, ce qui
+  interdit toute table de correspondance vers VSME (lien R5).
+- **Score et note mis en avant dans toute l'interface** : la note lettrée
+  s'affiche à **cinq** endroits de l'interface de saisie —
+  `components/Header.jsx:22`, `components/MiniScorebar.jsx:30-31`,
+  `components/steps/StepOutput.jsx:263`, `components/ResultsPanel.jsx:65`,
+  `components/PreviewPanel.jsx:144-147` — plus **deux** dans les écrans
+  dossiers et portefeuille (`components/ClientsPanel.jsx:112`,
+  `components/PortfolioView.jsx:82`), et le score seul dans la barre
+  latérale (`components/Sidebar.jsx:39`). Sept affichages de la note, donc,
+  pour un score dont un pilier sans aucun indicateur renseigné vaut encore
+  50/100 (`backend/esg_calculator.py:99`, `:149`, `:197` — chantier
+  « exactitude du scoring » en cours, non consigné dans ce registre)
+  (lien R4).
+- **Réserve de lecture** : la numérotation « R4 / R5 » vient de l'analyse
+  « Menus » et **n'a pas de cible dans ce registre**. À résoudre — soit en
+  versant cette analyse au dépôt, soit en remplaçant ces renvois par le
+  numéro de section correspondant.
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une
