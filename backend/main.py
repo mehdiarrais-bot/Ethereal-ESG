@@ -1,6 +1,7 @@
 import os
 import io
 import re
+import sys
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
@@ -562,9 +563,20 @@ def generate_proposal(request: ESGRequest):
 
 
 # Serve frontend static files
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
-if os.path.exists(frontend_path):
+def _frontend_dist() -> str:
+    """Chemin du frontend compilé : embarqué dans le .exe, ou frontend/dist en dev."""
+    if getattr(sys, "frozen", False):
+        return os.path.join(sys._MEIPASS, "frontend_dist")
+    return os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+
+frontend_path = _frontend_dist()
+if os.path.isdir(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
+elif getattr(sys, "frozen", False):
+    # En .exe, un frontend absent est un défaut de build : l'utilisateur verrait
+    # une 404 JSON sans explication. On échoue bruyamment au démarrage.
+    raise RuntimeError(f"Frontend introuvable dans l'executable : {frontend_path}")
 
 if __name__ == "__main__":
     import uvicorn
