@@ -74,6 +74,19 @@ for section, key, typ, labels in FIELD_SPECS:
     for lab in labels + [key]:
         _LOOKUP[_norm(lab)] = (section, key, typ)
 
+# Libellés du questionnaire anglais : reconnus à l'import. Un libellé anglais
+# ne doit jamais rediriger un synonyme existant vers un autre champ ; si
+# c'est le cas, on échoue à l'import du module plutôt que d'importer faux.
+from labels_en import FIELD_META_EN as _EN  # noqa: E402
+
+_SPEC_BY_KEY = {key: (section, key, typ) for section, key, typ, _ in FIELD_SPECS}
+for _key, (_label, _unit, _hint) in _EN.items():
+    _n = _norm(_label)
+    _existing = _LOOKUP.get(_n)
+    if _existing is not None and _existing[1] != _key:
+        raise RuntimeError(f"Libellé anglais {_label!r} en conflit avec le champ {_existing[1]}")
+    _LOOKUP[_n] = _SPEC_BY_KEY[_key]
+
 
 def _to_number(v):
     s = str(v).strip().replace(" ", "").replace(" ", "")

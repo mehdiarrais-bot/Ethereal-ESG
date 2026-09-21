@@ -89,6 +89,8 @@ def main(exe):
                     failures.append(f"{label} : HTTP {e.code}")
                     continue
                 ok = status == 200 and len(out) > 1000 and out.lstrip()[:len(magic)] == magic
+                if name == "questionnaire" and f'<html lang="{lang}">'.encode() not in out:
+                    ok = False  # servi dans la mauvaise langue
                 print(f"  {'OK ' if ok else 'KO '} {label:<18} {len(out):>9} octets")
                 if not ok:
                     failures.append(f"{label} : statut {status}, {len(out)} octets")

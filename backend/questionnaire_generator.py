@@ -12,6 +12,7 @@ import html
 import json
 
 from import_data import FIELD_SPECS
+from labels_en import FIELD_META_EN  # noqa: F401  (réexporté pour les tests)
 from branding import validate_colors, _to_hex
 
 SECTION_META = {
@@ -71,28 +72,86 @@ FIELD_META = {
 }
 
 
-def _fields_by_section():
+SECTION_META_EN = {
+    "company": ("Your company", "General information and report identity."),
+    "environmental": ("Environment", "Energy, emissions, water and waste over the reporting year."),
+    "social": ("Social", "Workforce, training, safety and stakeholder relations."),
+    "governance": ("Governance", "Board, ethics, controls and ESG oversight."),
+    "taxonomy": ("EU Taxonomy", "Share of sustainable activities. Leave blank if not assessed."),
+}
+
+UI = {
+    "fr": {
+        "title_named": "Collecte ESG — {name}", "title": "Collecte de données ESG",
+        "year": "Exercice {year}", "year_unknown": "Exercice à préciser",
+        "by": "Questionnaire préparé par {name}",
+        "sub": "Questionnaire de collecte ESG / RSE",
+        "notice": ("<strong>Comment procéder.</strong> Renseignez ce que vous connaissez et laissez vide le reste —\n"
+                   "    une donnée absente sera signalée comme « non renseignée » dans le rapport, ce qui est une\n"
+                   "    information utile en soi. <strong>Ne devinez pas un chiffre.</strong> Votre saisie est\n"
+                   "    enregistrée automatiquement dans ce navigateur : vous pouvez fermer et reprendre plus tard.\n"
+                   "    Quand vous avez terminé, cliquez sur « Télécharger le fichier » en bas et renvoyez le fichier obtenu.\n"
+                   "    <br><br>\n"
+                   "    Ce document fonctionne <strong>entièrement hors ligne</strong> : rien n'est envoyé sur Internet."),
+        "yes": "Oui", "no": "Non", "dunno": "Je ne sais pas",
+        "clear": "Tout effacer", "download": "⬇ Télécharger le fichier",
+        "zero": "0 champ renseigné", "one": " champ renseigné", "many": " champs renseignés",
+        "of": " sur ", "saved": "enregistré",
+        "confirm": "Effacer toutes les réponses saisies ?",
+        "csv_head": ["Champ", "Valeur"], "csv_prefix": "donnees_esg_",
+    },
+    "en": {
+        "title_named": "ESG data collection: {name}", "title": "ESG data collection",
+        "year": "Reporting year {year}", "year_unknown": "Reporting year to be confirmed",
+        "by": "Questionnaire prepared by {name}",
+        "sub": "ESG / CSR data collection questionnaire",
+        "notice": ("<strong>How to proceed.</strong> Fill in what you know and leave the rest blank.\n"
+                   "    A missing figure will be reported as \u201cnot disclosed\u201d, which is useful information\n"
+                   "    in itself. <strong>Do not guess a figure.</strong> Your answers are saved automatically\n"
+                   "    in this browser: you can close the file and resume later.\n"
+                   "    When you are done, click \u201cDownload file\u201d at the bottom and send back the resulting file.\n"
+                   "    <br><br>\n"
+                   "    This document works <strong>entirely offline</strong>: nothing is sent over the Internet."),
+        "yes": "Yes", "no": "No", "dunno": "I don't know",
+        "clear": "Clear all", "download": "⬇ Download file",
+        "zero": "0 field completed", "one": " field completed", "many": " fields completed",
+        "of": " of ", "saved": "saved",
+        "confirm": "Clear all answers entered?",
+        "csv_head": ["Field", "Value"], "csv_prefix": "esg_data_",
+    },
+}
+
+
+def _fields_by_section(lang: str = "fr"):
     """[(section, [(csv_label, key, type, meta), ...]), ...] dans l'ordre."""
     out, order = {}, []
+    field_meta = FIELD_META_EN if lang == "en" else FIELD_META
     for section, key, typ, labels in FIELD_SPECS:
         if section not in out:
             out[section] = []
             order.append(section)
-        meta = FIELD_META.get(key, (key.replace("_", " ").capitalize(), "", ""))
-        # labels[0] est l'en-tête écrit dans le CSV, capitalisé comme le modèle
-        out[section].append((labels[0].capitalize(), key, typ, meta))
+        meta = field_meta.get(key, (key.replace("_", " ").capitalize(), "", ""))
+        # En-tête écrit dans le CSV : labels[0] en français (capitalisé comme
+        # le modèle), le libellé anglais en anglais (déclaré synonyme à l'import).
+        csv_label = meta[0] if lang == "en" else labels[0].capitalize()
+        out[section].append((csv_label, key, typ, meta))
     return [(s, out[s]) for s in order]
 
 
 def generate_questionnaire_html(company_name: str = "", year: int = None,
-                                consultant: str = "", custom_colors: dict = None) -> str:
+                                consultant: str = "", custom_colors: dict = None,
+                                lang: str = "fr") -> str:
     """Fichier HTML autonome, hors ligne, prêt à être envoyé au client."""
+    if lang not in UI:
+        raise ValueError(f"langue non prise en charge : {lang!r}")
+    t = UI[lang]
+    section_meta = SECTION_META_EN if lang == "en" else SECTION_META
     primary, accent = "#1B3A6B", "#F39C12"
     v = validate_colors(custom_colors) if custom_colors else None
     if v:
         primary, accent = _to_hex(v[0]), _to_hex(v[1])
 
-    sections = _fields_by_section()
+    sections = _fields_by_section(lang)
     # Structure exploitée par le JS pour reconstruire le CSV
     schema = [{"section": s,
                "fields": [{"csv": csv_label, "key": k, "type": t} for csv_label, k, t, _ in flds]}
@@ -101,7 +160,7 @@ def generate_questionnaire_html(company_name: str = "", year: int = None,
     esc = html.escape
     body = []
     for section, fields in sections:
-        title, intro = SECTION_META.get(section, (section.capitalize(), ""))
+        title, intro = section_meta.get(section, (section.capitalize(), ""))
         body.append(f'<section class="card" data-section="{esc(section)}">')
         body.append(f'<h2>{esc(title)}</h2>')
         if intro:
@@ -114,9 +173,9 @@ def generate_questionnaire_html(company_name: str = "", year: int = None,
             if typ == "bool":
                 control = (
                     f'<div class="yn" role="group">'
-                    f'<button type="button" class="yn-btn" data-for="{fid}" data-val="Oui">Oui</button>'
-                    f'<button type="button" class="yn-btn" data-for="{fid}" data-val="Non">Non</button>'
-                    f'<button type="button" class="yn-btn ghost" data-for="{fid}" data-val="">Je ne sais pas</button>'
+                    f'<button type="button" class="yn-btn" data-for="{fid}" data-val="{t['yes']}">{esc(t['yes'])}</button>'
+                    f'<button type="button" class="yn-btn" data-for="{fid}" data-val="{t['no']}">{esc(t['no'])}</button>'
+                    f'<button type="button" class="yn-btn ghost" data-for="{fid}" data-val="">{esc(t['dunno'])}</button>'
                     f'<input type="hidden" id="{fid}" data-key="{esc(key)}">'
                     f'</div>')
             else:
@@ -129,13 +188,13 @@ def generate_questionnaire_html(company_name: str = "", year: int = None,
                 f'<div class="field"><label for="{fid}">{esc(label)}{hint_html}</label>{control}</div>')
         body.append('</div></section>')
 
-    title_txt = f"Collecte ESG — {company_name}" if company_name else "Collecte de données ESG"
-    year_txt = f"Exercice {year}" if year else "Exercice à préciser"
-    by_txt = f"Questionnaire préparé par {consultant}" if consultant else ""
+    title_txt = t["title_named"].format(name=company_name) if company_name else t["title"]
+    year_txt = t["year"].format(year=year) if year else t["year_unknown"]
+    by_txt = t["by"].format(name=consultant) if consultant else ""
     fname = "".join(ch if ch.isalnum() else "_" for ch in (company_name or "collecte"))[:40]
 
     return f"""<!doctype html>
-<html lang="fr"><head><meta charset="utf-8">
+<html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title_txt)}</title>
 <style>
@@ -190,20 +249,14 @@ def generate_questionnaire_html(company_name: str = "", year: int = None,
 <body>
 <header><div class="hwrap">
   <h1>{esc(title_txt)}</h1>
-  <div class="sub">{esc(year_txt)} · Questionnaire de collecte ESG / RSE</div>
+  <div class="sub">{esc(year_txt)} · {esc(t['sub'])}</div>
   {f'<div class="by">{esc(by_txt)}</div>' if by_txt else ''}
 </div></header>
 <div class="bar"></div>
 
 <main>
   <div class="notice">
-    <strong>Comment procéder.</strong> Renseignez ce que vous connaissez et laissez vide le reste —
-    une donnée absente sera signalée comme « non renseignée » dans le rapport, ce qui est une
-    information utile en soi. <strong>Ne devinez pas un chiffre.</strong> Votre saisie est
-    enregistrée automatiquement dans ce navigateur : vous pouvez fermer et reprendre plus tard.
-    Quand vous avez terminé, cliquez sur « Télécharger le fichier » en bas et renvoyez le fichier obtenu.
-    <br><br>
-    Ce document fonctionne <strong>entièrement hors ligne</strong> : rien n'est envoyé sur Internet.
+    {t['notice']}
   </div>
   {''.join(body)}
 </main>
@@ -211,14 +264,15 @@ def generate_questionnaire_html(company_name: str = "", year: int = None,
 <footer><div class="fwrap">
   <div class="prog">
     <div class="prog-bg"><div class="prog-fill" id="pf"></div></div>
-    <div class="prog-lab"><span id="pl">0 champ renseigné</span> · <span class="saved" id="sv"></span></div>
+    <div class="prog-lab"><span id="pl">{esc(t['zero'])}</span> · <span class="saved" id="sv"></span></div>
   </div>
-  <button class="btn sec" id="clear" type="button">Tout effacer</button>
-  <button class="btn" id="dl" type="button">⬇ Télécharger le fichier</button>
+  <button class="btn sec" id="clear" type="button">{esc(t['clear'])}</button>
+  <button class="btn" id="dl" type="button">{esc(t['download'])}</button>
 </div></footer>
 
 <script>
 const SCHEMA = {json.dumps(schema, ensure_ascii=False)};
+const T = {json.dumps({k: t[k] for k in ("one", "many", "of", "saved", "confirm", "csv_head", "csv_prefix")}, ensure_ascii=False)};
 const STORE = "esg_collecte_{esc(fname)}";
 const all = () => Array.from(document.querySelectorAll("[data-key]"));
 
@@ -229,9 +283,9 @@ function save() {{
   const n = Object.keys(d).length, tot = all().length;
   document.getElementById("pf").style.width = (100 * n / tot) + "%";
   document.getElementById("pl").textContent =
-    n + (n > 1 ? " champs renseignés" : " champ renseigné") + " sur " + tot;
+    n + (n > 1 ? T.many : T.one) + T.of + tot;
   const sv = document.getElementById("sv");
-  sv.textContent = "enregistré";
+  sv.textContent = T.saved;
   clearTimeout(window._t); window._t = setTimeout(() => sv.textContent = "", 1600);
 }}
 
@@ -259,7 +313,7 @@ document.querySelectorAll(".yn-btn").forEach(btn => {{
 }});
 
 document.getElementById("clear").addEventListener("click", () => {{
-  if (!confirm("Effacer toutes les réponses saisies ?")) return;
+  if (!confirm(T.confirm)) return;
   all().forEach(el => el.value = "");
   document.querySelectorAll(".yn-btn").forEach(b => b.classList.remove("on"));
   try {{ localStorage.removeItem(STORE); }} catch (e) {{}}
@@ -270,7 +324,7 @@ document.getElementById("dl").addEventListener("click", () => {{
   const vals = {{}};
   all().forEach(el => vals[el.dataset.key] = el.value);
   // Format « Champ;Valeur » — celui que la plateforme sait réimporter
-  const rows = [["Champ", "Valeur"]];
+  const rows = [T.csv_head];
   SCHEMA.forEach(sec => sec.fields.forEach(f => rows.push([f.csv, vals[f.key] || ""])));
   const csv = rows.map(r => r.map(c => {{
     const s = String(c);
@@ -279,7 +333,7 @@ document.getElementById("dl").addEventListener("click", () => {{
   const blob = new Blob(["\\ufeff" + csv], {{ type: "text/csv;charset=utf-8" }});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "donnees_esg_{esc(fname)}.csv";
+  a.download = T.csv_prefix + "{esc(fname)}.csv";
   document.body.appendChild(a); a.click();
   setTimeout(() => {{ document.body.removeChild(a); URL.revokeObjectURL(a.href); }}, 200);
 }});

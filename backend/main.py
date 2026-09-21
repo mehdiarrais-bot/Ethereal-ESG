@@ -529,8 +529,10 @@ def generate_questionnaire(request: ESGRequest):
         year=request.company.reporting_year,
         consultant=request.company.presenter_name or "",
         custom_colors=getattr(request, "custom_colors", None),
+        lang=request.language,
     )
-    filename = f"Collecte_ESG_{safe_name(request.company.name)}_{request.company.reporting_year}.html"
+    prefix = "ESG_data_collection" if request.language == "en" else "Collecte_ESG"
+    filename = f"{prefix}_{safe_name(request.company.name)}_{request.company.reporting_year}.html"
     return StreamingResponse(
         io.BytesIO(doc.encode("utf-8")), media_type="text/html; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
