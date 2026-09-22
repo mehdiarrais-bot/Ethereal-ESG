@@ -48,7 +48,7 @@ function Swatch({ colors }) {
   return (
     <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
       {colors.map(c => (
-        <div key={c} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.15)' }} />
+        <div key={c} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: '1px solid var(--border-strong)' }} />
       ))}
     </div>
   )
@@ -342,10 +342,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         .output-section-title {
           display: inline-flex; align-items: center;
           font-size: 12px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 1px; color: var(--neon);
+          letter-spacing: 1px; color: var(--brand);
           margin-bottom: 16px; padding: 7px 16px;
-          background: rgba(34, 211, 238, 0.08);
-          border: 1px solid rgba(34, 211, 238, 0.25);
+          background: var(--brand-soft);
+          border: 1px solid var(--brand-soft-border);
           border-radius: var(--radius-pill);
         }
         .options-grid {
@@ -354,64 +354,64 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           gap: 14px;
         }
         .options-grid-4 { grid-template-columns: repeat(4, 1fr); }
-        .lang-toggle { display: inline-flex; gap: 0; border: 1px solid var(--glass-border); border-radius: var(--radius-pill); overflow: hidden; }
+        .lang-toggle { display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; }
         .lang-btn {
-          padding: 10px 22px; border: none; background: rgba(8,5,22,0.5);
+          padding: 10px 22px; border: none; background: var(--bg-surface);
           color: var(--text-dim); font-size: 14px; font-weight: 600; cursor: pointer;
           transition: background var(--fast), color var(--fast);
         }
-        .lang-btn:first-child { border-right: 1px solid var(--glass-border); }
-        .lang-btn:hover { background: rgba(124,92,246,0.14); color: var(--text); }
-        .lang-btn.active { background: linear-gradient(135deg, var(--violet), var(--neon-blue)); color: #fff; }
+        .lang-btn:first-child { border-right: 1px solid var(--border); }
+        .lang-btn:hover { background: var(--bg-subtle); color: var(--text); }
+        .lang-btn.active { background: linear-gradient(135deg, var(--brand), var(--brand-hover)); color: #fff; }
         .option-card {
           position: relative; padding: 16px 18px 15px;
-          border: 1px solid var(--glass-border); border-radius: var(--radius);
-          background: rgba(8, 5, 22, 0.5); text-align: left; cursor: pointer;
+          border: 1px solid var(--border); border-radius: var(--radius);
+          background: var(--bg-surface); text-align: left; cursor: pointer;
           transition: border-color var(--fast), background var(--fast), transform var(--fast) var(--ease), box-shadow var(--fast);
           color: var(--text); min-height: 74px;
         }
-        .option-card:hover { border-color: var(--glass-border-lit); background: rgba(124,92,246,0.12); transform: translateY(-3px); }
+        .option-card:hover { border-color: var(--brand); background: var(--bg-subtle);  }
         .option-card.selected {
-          border-color: var(--neon); background: rgba(34,211,238,0.1);
-          box-shadow: var(--glow-neon);
+          border-color: var(--brand); background: var(--brand-soft);
+          box-shadow: none;
         }
         .option-name { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.3; padding-right: 24px; }
         .option-desc { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
         .option-check {
           position: absolute; top: 12px; right: 12px;
           width: 22px; height: 22px;
-          background: linear-gradient(135deg, var(--neon), var(--neon-blue)); color: #04121a;
+          background: var(--brand); color: #fff;
           border-radius: 50%; display: flex; align-items: center; justify-content: center;
           font-size: 12px; font-weight: 800;
-          box-shadow: 0 0 12px rgba(34,211,238,0.6);
+          box-shadow: none;
         }
         .generate-actions {
           display: flex; gap: 16px; align-items: flex-start;
-          padding-top: 22px; border-top: 1px solid var(--glass-border);
+          padding-top: 22px; border-top: 1px solid var(--border);
           flex-wrap: wrap; flex-direction: column;
         }
         .generate-actions > div { width: 100%; }
         .score-preview-chip {
           display: inline-flex; align-items: center;
-          background: rgba(52,211,153,0.12);
-          border: 1px solid rgba(52,211,153,0.35);
+          background: var(--ok-soft);
+          border: 1px solid var(--ok-border);
           border-radius: var(--radius-pill); padding: 9px 20px;
-          font-size: 13px; color: #6ee7b7;
+          font-size: 13px; color: var(--ok);
         }
         .score-preview-pending {
-          background: rgba(34,211,238,0.1);
-          border-color: rgba(34,211,238,0.35);
-          color: var(--neon);
+          background: var(--brand-soft);
+          border-color: var(--brand-soft-border);
+          color: var(--brand);
         }
         .actions-track { display: flex; flex-direction: column; gap: 6px; }
         .action-check {
           display: flex; align-items: center; gap: 9px;
           font-size: 12.5px; color: var(--text); cursor: pointer;
           padding: 7px 10px; border-radius: 8px;
-          background: var(--glass); border: 1px solid var(--glass-border);
+          background: var(--bg-subtle); border: 1px solid var(--border);
         }
         .action-check.done { opacity: 0.75; }
-        .action-check.done { text-decoration: line-through; border-color: rgba(52,211,153,0.5); }
+        .action-check.done { text-decoration: line-through; border-color: var(--ok-border); }
         .notes-grid {
           display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px;
         }
@@ -420,19 +420,19 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           font-size: 11.5px; font-weight: 700; color: var(--text);
         }
         .note-field textarea {
-          background: var(--glass); border: 1px solid var(--glass-border);
+          background: var(--bg-subtle); border: 1px solid var(--border);
           border-radius: 8px; color: var(--text); font-size: 12px;
           padding: 8px 10px; resize: vertical; min-height: 46px;
           font-family: inherit; font-weight: 400;
         }
-        .note-field textarea:focus { outline: none; border-color: var(--violet); }
+        .note-field textarea:focus { outline: none; border-color: var(--brand); }
         @media (max-width: 700px) { .notes-grid { grid-template-columns: 1fr; } }
         .color-pick {
           display: inline-flex; align-items: center; gap: 8px;
           font-size: 12px; color: var(--text); font-weight: 600;
         }
         .color-pick input[type=color] {
-          width: 42px; height: 28px; border: 1px solid var(--glass-border);
+          width: 42px; height: 28px; border: 1px solid var(--border);
           border-radius: 6px; background: none; cursor: pointer; padding: 1px;
         }
         .checkbox-label {
@@ -441,29 +441,29 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         }
         .checkbox-label input[type=checkbox] {
           width: 16px; height: 16px;
-          cursor: pointer; accent-color: var(--neon);
+          cursor: pointer; accent-color: var(--brand);
         }
         .btn-preview {
-          background: var(--glass); color: var(--neon);
-          border: 1px solid var(--glass-border-lit);
+          background: var(--bg-subtle); color: var(--brand);
+          border: 1px solid var(--brand);
           padding: 10px 20px; border-radius: 10px;
           font-weight: 600; cursor: pointer; font-size: 14px;
           transition: background var(--fast), color var(--fast), box-shadow var(--fast), transform var(--fast) var(--ease);
         }
         .btn-preview:hover:not(:disabled) {
-          background: rgba(34,211,238,0.15); box-shadow: var(--glow-neon); transform: translateY(-1px);
+          background: var(--brand-soft); box-shadow: none;
         }
         .btn-preview:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* Lien manuel */
         .manual-dl-banner {
           display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-          background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.4); border-radius: 12px;
+          background: var(--ok-soft); border: 1px solid var(--ok-border); border-radius: 12px;
           padding: 12px 16px; margin-top: 8px;
         }
-        .manual-dl-banner span { color: #6ee7b7; font-weight: 700; font-size: 13px; }
+        .manual-dl-banner span { color: var(--ok); font-weight: 700; font-size: 13px; }
         .manual-dl-link {
-          color: var(--neon); font-size: 13px; font-weight: 600;
+          color: var(--brand); font-size: 13px; font-weight: 600;
           text-decoration: underline; flex: 1;
         }
         .manual-dl-close {
@@ -477,35 +477,35 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           padding: 12px 0 4px;
         }
         .progress-bar-bg {
-          width: 100%; height: 8px; background: rgba(140,120,255,0.18); border-radius: 99px; overflow: hidden;
+          width: 100%; height: 8px; background: var(--bg-inset); border-radius: 99px; overflow: hidden;
         }
         .progress-bar-fill {
-          height: 100%; background: linear-gradient(90deg, var(--violet), var(--neon));
-          border-radius: 99px; transition: width 0.3s var(--ease); box-shadow: var(--glow-neon);
+          height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand));
+          border-radius: 99px; transition: width 0.3s var(--ease); box-shadow: none;
         }
-        .progress-bar-fill.done { background: linear-gradient(90deg, #059669, var(--env)); }
+        .progress-bar-fill.done { background: var(--ok); }
         .progress-label {
-          font-size: 12px; color: var(--neon); font-weight: 600;
+          font-size: 12px; color: var(--brand); font-weight: 600;
         }
 
         /* Zone preview */
         .preview-card {
-          background: var(--glass-strong); border-radius: 16px;
-          border: 1px solid var(--glass-border-lit);
-          overflow: hidden; box-shadow: var(--shadow), var(--glow-neon);
+          background: var(--bg-surface); border-radius: 16px;
+          border: 1px solid var(--brand);
+          overflow: hidden; box-shadow: var(--shadow), none;
           backdrop-filter: blur(16px);
           animation: fadeUp var(--med) var(--ease) both;
         }
         .preview-header {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 14px 20px; background: rgba(34,211,238,0.08);
-          border-bottom: 1px solid var(--glass-border);
+          padding: 14px 20px; background: var(--brand-soft);
+          border-bottom: 1px solid var(--border);
         }
-        .preview-title { font-weight: 700; color: var(--neon); font-size: 14px; }
+        .preview-title { font-weight: 700; color: var(--brand); font-size: 14px; }
         .preview-hint { font-size: 12px; color: var(--muted); }
         .preview-footer {
           display: flex; gap: 10px; padding: 14px 20px;
-          border-top: 1px solid var(--glass-border); background: rgba(8,5,22,0.4);
+          border-top: 1px solid var(--border); background: var(--bg-surface);
           flex-wrap: wrap;
         }
 

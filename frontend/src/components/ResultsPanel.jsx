@@ -7,20 +7,20 @@ function ScoreGauge({ label, score, color }) {
   return (
     <div className="gauge-wrap">
       <svg width="110" height="110" viewBox="0 0 110 110">
-        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(140,120,255,0.18)" strokeWidth="10" />
+        <circle cx="55" cy="55" r={r} fill="none" strokeWidth="10" style={{ stroke: 'var(--bg-inset)' }} />
         <circle
           cx="55" cy="55" r={r} fill="none"
-          stroke={color} strokeWidth="10"
+          strokeWidth="10"
           strokeDasharray={circ}
           strokeDashoffset={offset}
           strokeLinecap="round"
           transform="rotate(-90 55 55)"
-          style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+          style={{ stroke: color, transition: 'stroke-dashoffset 0.8s ease' }}
         />
-        <text x="55" y="52" textAnchor="middle" fontSize="20" fontWeight="800" fill={color}>
+        <text x="55" y="52" textAnchor="middle" fontSize="20" fontWeight="700" style={{ fill: color }}>
           {score.toFixed(0)}
         </text>
-        <text x="55" y="67" textAnchor="middle" fontSize="10" fill="var(--muted)">
+        <text x="55" y="67" textAnchor="middle" fontSize="10" style={{ fill: 'var(--muted)' }}>
           /100
         </text>
       </svg>
@@ -30,12 +30,8 @@ function ScoreGauge({ label, score, color }) {
 }
 
 function RatingBadge({ rating }) {
-  const colors = {
-    AAA: '#27AE60', AA: '#2ECC71', A: '#82E0AA',
-    BBB: '#F39C12', BB: '#E67E22', B: '#E74C3C', CCC: '#C0392B',
-  }
   return (
-    <div className="rating-badge" style={{ background: colors[rating] || '#95A5A6' }}>
+    <div className="rating-badge">
       <div className="rating-label">Note ESG</div>
       <div className="rating-value">{rating}</div>
     </div>
@@ -61,53 +57,53 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
   return (
     <div className={`results-panel ${inline ? 'results-inline' : 'results-sidebar'}`}>
       <div className="results-header">
-        <span>📊 Résultats ESG</span>
+        <span>Résultats ESG</span>
         <RatingBadge rating={scores.rating} />
       </div>
 
       <div className="gauges-row">
-        <ScoreGauge label="Environnement" score={scores.environmental_score} color="#34d399" />
-        <ScoreGauge label="Social" score={scores.social_score} color="#38bdf8" />
-        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="#c084fc" />
-        <ScoreGauge label="Global" score={scores.total_esg_score} color="#22d3ee" />
+        <ScoreGauge label="Environnement" score={scores.environmental_score} color="var(--env)" />
+        <ScoreGauge label="Social" score={scores.social_score} color="var(--social)" />
+        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="var(--gov)" />
+        <ScoreGauge label="Global" score={scores.total_esg_score} color="var(--brand)" />
       </div>
 
       {scores.strengths?.length > 0 && (
         <div className="result-section">
-          <div className="result-section-title">✅ Points Forts</div>
-          <ListItems items={scores.strengths} icon="✓" color="#27AE60" />
+          <div className="result-section-title">Points forts</div>
+          <ListItems items={scores.strengths} icon="✓" color="var(--ok)" />
         </div>
       )}
 
       {scores.weaknesses?.length > 0 && (
         <div className="result-section">
-          <div className="result-section-title">⚠️ Axes d'Amélioration</div>
-          <ListItems items={scores.weaknesses} icon="→" color="#E67E22" />
+          <div className="result-section-title">Axes d'amélioration</div>
+          <ListItems items={scores.weaknesses} icon="→" color="var(--warn)" />
         </div>
       )}
 
       {scores.recommendations?.length > 0 && (
         <div className="result-section">
-          <div className="result-section-title">💡 Recommandations</div>
-          <ListItems items={scores.recommendations.slice(0, 4)} icon="•" color="#2E86C1" />
+          <div className="result-section-title">Recommandations</div>
+          <ListItems items={scores.recommendations.slice(0, 4)} icon="•" color="var(--social)" />
         </div>
       )}
 
       <div className="download-actions">
         <button className="btn btn-pptx" onClick={onDownloadPptx} disabled={loading} style={{ flex: 1 }}>
-          📑 PowerPoint
+          PowerPoint
         </button>
         <button className="btn btn-pdf" onClick={onDownloadPdf} disabled={loading} style={{ flex: 1 }}>
-          📄 PDF
+          PDF
         </button>
         <button className="btn btn-docx" onClick={onDownloadDocx} disabled={loading} style={{ flex: 1 }}>
-          📝 Word
+          Word
         </button>
       </div>
       {loading && progress > 0 && (
         <div className="rp-progress-wrap">
           <div className="rp-progress-bg">
-            <div className="rp-progress-fill" style={{ width: `${Math.min(100, progress)}%`, background: progress === 100 ? '#27AE60' : undefined }} />
+            <div className="rp-progress-fill" style={{ width: `${Math.min(100, progress)}%`, background: progress === 100 ? 'var(--ok)' : undefined }} />
           </div>
           <span className="rp-progress-label">
             {progress === 100 ? '✓ Pret' : `Generation... ${Math.round(progress)}%`}
@@ -124,38 +120,36 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         .results-sidebar {
           width: 320px;
           flex-shrink: 0;
-          padding: 20px 16px;
+          padding: 20px 18px;
           overflow-y: auto;
           max-height: 100%;
-          border-left: 1px solid var(--glass-border);
-          background: rgba(8, 5, 22, 0.4);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
+          border-left: 1px solid var(--border);
+          background: var(--bg-surface);
         }
         .results-inline {
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius);
-          padding: 24px;
-          border-left: 3px solid var(--neon);
-          background: var(--glass-strong);
-          backdrop-filter: blur(16px);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
+          padding: 22px 24px;
+          background: var(--bg-surface);
+          box-shadow: var(--shadow);
         }
         .results-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 18px;
-          font-weight: 800;
+          font-size: 16px;
+          font-weight: 650;
           color: var(--text);
         }
+        /* Rang secondaire assume : la note informe, elle ne domine plus. */
         .rating-badge {
-          padding: 8px 20px;
-          border-radius: var(--radius);
-          color: white;
+          padding: 5px 12px;
+          border-radius: var(--radius-sm);
+          background: var(--bg-inset);
           text-align: center;
         }
-        .rating-label { font-size: 10px; font-weight: 600; opacity: 0.9; text-transform: uppercase; color: #04121a; }
-        .rating-value { font-size: 22px; font-weight: 900; line-height: 1.2; color: #04121a; }
+        .rating-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+        .rating-value { font-size: 15px; font-weight: 700; line-height: 1.2; color: var(--text); }
         .gauges-row {
           display: flex;
           gap: 8px;
@@ -166,9 +160,11 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         .gauge-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-align: center; }
         .result-section { display: flex; flex-direction: column; gap: 8px; }
         .result-section-title {
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 700;
-          color: var(--text);
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+          color: var(--text-dim);
         }
         .result-list {
           list-style: none;
@@ -177,9 +173,10 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
           gap: 6px;
         }
         .result-list li {
-          padding: 10px 14px;
-          background: rgba(124,92,246,0.08);
-          border-radius: 14px;
+          padding: 9px 12px;
+          background: var(--bg-subtle);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-sm);
           font-size: 12px;
           color: var(--text-dim);
           display: flex;
@@ -190,23 +187,24 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         .result-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
         .download-actions {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           padding-top: 12px;
-          border-top: 1px solid var(--glass-border);
+          border-top: 1px solid var(--border);
           margin-top: 4px;
         }
         .rp-progress-wrap {
           display: flex; flex-direction: column; gap: 5px;
         }
         .rp-progress-bg {
-          width: 100%; height: 6px; background: rgba(140,120,255,0.18); border-radius: 99px; overflow: hidden;
+          width: 100%; height: 6px; background: var(--bg-inset);
+          border-radius: var(--radius-pill); overflow: hidden;
         }
         .rp-progress-fill {
-          height: 100%; background: linear-gradient(90deg, var(--violet), var(--neon));
-          border-radius: 99px; transition: width 0.3s var(--ease); box-shadow: var(--glow-neon);
+          height: 100%; background: var(--brand);
+          border-radius: var(--radius-pill); transition: width 0.3s var(--ease);
         }
         .rp-progress-label {
-          font-size: 11px; color: var(--neon); font-weight: 600;
+          font-size: 11px; color: var(--text-dim); font-weight: 600;
         }
         @media (max-width: 960px) {
           .results-sidebar { display: none; }

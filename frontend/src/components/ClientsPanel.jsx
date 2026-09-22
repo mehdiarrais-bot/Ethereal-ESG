@@ -39,10 +39,10 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
 
   // Mini-CRM : cycle de vie d'une mission
   const STATUSES = [
-    { id: 'prospect', label: 'Prospect', color: '#38bdf8' },
-    { id: 'signed', label: 'Signé', color: '#c084fc' },
-    { id: 'delivered', label: 'Livré', color: '#34d399' },
-    { id: 'archived', label: 'Archivé', color: '#94a3b8' },
+    { id: 'prospect', label: 'Prospect', color: 'var(--social)' },
+    { id: 'signed', label: 'Signé', color: 'var(--gov)' },
+    { id: 'delivered', label: 'Livré', color: 'var(--ok)' },
+    { id: 'archived', label: 'Archivé', color: 'var(--neutral)' },
   ]
 
   const setStatus = async (id, status) => {
@@ -70,10 +70,10 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
     <div className="clients-wrap" ref={boxRef}>
       <button className="hdr-btn clients-save" onClick={onSave} disabled={saving}
               title="Enregistrer le dossier client (données + historique de scores)">
-        {saving ? '⏳' : '💾'} Enregistrer{dirty ? ' •' : ''}
+        {saving ? 'Enregistrement…' : 'Enregistrer'}{dirty ? ' •' : ''}
       </button>
       <button className={`hdr-btn clients-toggle ${open ? 'on' : ''}`} onClick={() => setOpen(o => !o)}>
-        📁 Dossiers
+        Dossiers
       </button>
 
       {open && (
@@ -85,7 +85,7 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
           {loading && <div className="clients-empty">Chargement…</div>}
           {!loading && clients.length === 0 && (
             <div className="clients-empty">
-              Aucun dossier. Remplissez le formulaire puis cliquez « 💾 Enregistrer ».
+              Aucun dossier. Remplissez le formulaire puis cliquez « Enregistrer ».
             </div>
           )}
           <div className="clients-list">
@@ -126,10 +126,10 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
           </div>
           <div className="clients-backup">
             <a className="backup-btn" href="/api/clients-export" download title="Télécharger tous les dossiers (.zip)">
-              ⬇ Sauvegarde
+              Sauvegarde
             </a>
             <label className="backup-btn" title="Restaurer une sauvegarde (.zip)">
-              ⬆ Restaurer
+              Restaurer
               <input type="file" accept=".zip" style={{ display: 'none' }}
                      onChange={e => { restoreBackup(e.target.files?.[0]); e.target.value = '' }} />
             </label>
@@ -138,67 +138,69 @@ export default function ClientsPanel({ currentId, onSave, onLoad, onDelete, savi
       )}
 
       <style>{`
-        .clients-wrap { position: relative; display: flex; gap: 8px; }
-        .clients-save { background: linear-gradient(135deg, var(--violet), var(--neon-blue)); color: #fff; border: none; }
+        .clients-wrap { position: relative; display: flex; gap: 7px; }
+        .clients-save { background: var(--brand); color: #fff; border-color: transparent; }
+        .clients-save:hover { background: var(--brand-hover); color: #fff; }
         .clients-save:disabled { opacity: 0.6; cursor: wait; }
-        .clients-toggle.on { background: rgba(124,92,246,0.25); border-color: var(--violet); }
+        .clients-toggle.on { background: var(--brand-soft); border-color: var(--brand-soft-border); color: var(--brand-hover); }
         .clients-pop {
-          position: absolute; top: 44px; right: 0; width: 380px; max-height: 420px;
+          position: absolute; top: 42px; right: 0; width: 380px; max-height: 420px;
           overflow: auto; z-index: 300;
-          background: rgba(18,10,40,0.97); border: 1px solid var(--glass-border-lit);
-          border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,0.55);
-          backdrop-filter: blur(18px);
+          background: var(--bg-surface); border: 1px solid var(--border);
+          border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
         }
         .clients-pop-head {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px; border-bottom: 1px solid var(--glass-border);
+          padding: 12px 16px; border-bottom: 1px solid var(--border);
           font-size: 13px; color: var(--text);
         }
         .clients-count {
-          background: rgba(124,92,246,0.3); border-radius: 10px; padding: 1px 9px;
+          background: var(--bg-inset); color: var(--text-dim);
+          border-radius: var(--radius-pill); padding: 1px 9px;
           font-size: 11px; font-weight: 700;
         }
         .clients-empty { padding: 18px 16px; font-size: 12px; color: var(--muted); }
         .clients-list { padding: 6px; }
         .client-row {
           display: flex; align-items: center; gap: 8px;
-          border-radius: 10px; padding: 4px 6px;
+          border-radius: var(--radius-sm); padding: 4px 6px;
         }
-        .client-row:hover { background: rgba(124,92,246,0.12); }
-        .client-row.active { background: rgba(56,189,248,0.12); outline: 1px solid rgba(56,189,248,0.35); }
+        .client-row:hover { background: var(--bg-subtle); }
+        .client-row.active { background: var(--brand-soft); outline: 1px solid var(--brand-soft-border); }
         .client-main {
           flex: 1; text-align: left; background: none; border: none; cursor: pointer;
           padding: 6px 4px; color: var(--text);
         }
-        .client-name { font-size: 13px; font-weight: 700; }
+        .client-name { font-size: 13px; font-weight: 650; }
         .client-meta { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+        /* Rang secondaire : le score d'un dossier informe, il ne crie pas. */
         .client-score {
-          font-size: 14px; font-weight: 800; color: #34d399; white-space: nowrap;
+          font-size: 13px; font-weight: 650; color: var(--text-dim); white-space: nowrap;
         }
         .client-score small { font-size: 10px; color: var(--muted); font-weight: 600; }
         .client-del {
           background: none; border: 1px solid transparent; color: var(--muted);
-          border-radius: 8px; cursor: pointer; padding: 4px 8px; font-size: 12px;
+          border-radius: var(--radius-sm); cursor: pointer; padding: 4px 8px; font-size: 12px;
         }
-        .client-del:hover { color: #f87171; border-color: rgba(248,113,113,0.4); }
-        .client-del.confirm { color: #fff; background: #dc2626; font-size: 10.5px; font-weight: 700; }
+        .client-del:hover { color: var(--danger); border-color: var(--danger-border); background: var(--danger-soft); }
+        .client-del.confirm { color: #fff; background: var(--danger); font-size: 10.5px; font-weight: 700; }
         .client-status {
-          background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
-          border-radius: 8px; font-size: 10.5px; font-weight: 700; padding: 3px 4px;
+          background: var(--bg-surface); border: 1px solid var(--border-strong);
+          border-radius: var(--radius-sm); font-size: 10.5px; font-weight: 650; padding: 3px 4px;
           cursor: pointer;
         }
-        .client-status option { color: #1e293b; }
+        .client-status option { color: var(--text); }
         .clients-backup {
           display: flex; gap: 8px; padding: 10px 14px;
-          border-top: 1px solid var(--glass-border);
+          border-top: 1px solid var(--border);
         }
         .backup-btn {
-          flex: 1; text-align: center; font-size: 11.5px; font-weight: 700;
-          color: var(--text); background: rgba(124,92,246,0.15);
-          border: 1px solid var(--glass-border); border-radius: 8px;
+          flex: 1; text-align: center; font-size: 11.5px; font-weight: 650;
+          color: var(--text-dim); background: var(--bg-surface);
+          border: 1px solid var(--border); border-radius: var(--radius-sm);
           padding: 7px 0; cursor: pointer; text-decoration: none;
         }
-        .backup-btn:hover { background: rgba(124,92,246,0.3); }
+        .backup-btn:hover { background: var(--bg-subtle); border-color: var(--border-strong); color: var(--text); }
         @media (max-width: 560px) { .clients-pop { width: 300px; } }
       `}</style>
     </div>

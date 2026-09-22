@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { computeSparklinePoints, groupByStatus, averageScore } from '../lib/portfolioMath.mjs'
 
+// Couleurs de statut prises aux jetons (index.css), jamais recopiées en dur.
 const STATUSES = {
-  prospect: { label: 'Prospect', color: '#38bdf8' },
-  signed: { label: 'Signé', color: '#c084fc' },
-  delivered: { label: 'Livré', color: '#34d399' },
-  archived: { label: 'Archivé', color: '#94a3b8' },
+  prospect: { label: 'Prospect', color: 'var(--social)' },
+  signed: { label: 'Signé', color: 'var(--gov)' },
+  delivered: { label: 'Livré', color: 'var(--ok)' },
+  archived: { label: 'Archivé', color: 'var(--neutral)' },
 }
 
 /** Sparkline SVG de la trajectoire du score. Le calcul des points est dans
@@ -13,11 +14,11 @@ const STATUSES = {
 function Sparkline({ history }) {
   const pts = computeSparklinePoints(history)
   if (!pts) return <div className="spark-empty">—</div>
-  const col = pts.up ? '#34d399' : '#f87171'
+  const col = pts.up ? 'var(--ok)' : 'var(--danger)'
   return (
     <svg width={pts.W} height={pts.H} className="spark">
-      <path d={pts.path} fill="none" stroke={col} strokeWidth="2" strokeLinecap="round" />
-      <circle cx={pts.lastX} cy={pts.lastY} r="3" fill={col} />
+      <path d={pts.path} fill="none" strokeWidth="2" strokeLinecap="round" style={{ stroke: col }} />
+      <circle cx={pts.lastX} cy={pts.lastY} r="3" style={{ fill: col }} />
     </svg>
   )
 }
@@ -41,7 +42,7 @@ export default function PortfolioView({ onClose, onLoad }) {
       <div className="pf-panel">
         <div className="pf-head">
           <div>
-            <div className="pf-title">📊 Portefeuille clients</div>
+            <div className="pf-title">Portefeuille clients</div>
             <div className="pf-sub">
               {(clients || []).length} dossier{(clients || []).length > 1 ? 's' : ''}
               {Object.entries(byStatus).map(([k, n]) => (
@@ -58,7 +59,7 @@ export default function PortfolioView({ onClose, onLoad }) {
         {clients === null && <div className="pf-empty">Chargement…</div>}
         {clients?.length === 0 && (
           <div className="pf-empty">
-            Aucun dossier client. Remplissez le formulaire puis « 💾 Enregistrer ».
+            Aucun dossier client. Remplissez le formulaire puis « Enregistrer ».
           </div>
         )}
 
@@ -97,45 +98,47 @@ export default function PortfolioView({ onClose, onLoad }) {
       <style>{`
         .pf-overlay {
           position: fixed; inset: 0; z-index: 500;
-          background: rgba(5,2,20,0.75); backdrop-filter: blur(6px);
+          background: var(--scrim);
           display: flex; align-items: flex-start; justify-content: center;
           padding: 40px 20px; overflow: auto;
         }
         .pf-panel {
           width: min(1100px, 100%);
-          background: rgba(18,10,40,0.98); border: 1px solid var(--glass-border-lit);
-          border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+          background: var(--bg-surface); border: 1px solid var(--border);
+          border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
           padding: 22px 26px 26px;
         }
         .pf-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
-        .pf-title { font-size: 19px; font-weight: 800; color: var(--text); }
+        .pf-title { font-size: 18px; font-weight: 650; color: var(--text); }
         .pf-sub { font-size: 12px; color: var(--muted); margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .pf-chip { font-weight: 700; }
+        .pf-chip { font-weight: 650; color: var(--text-dim); }
         .pf-close {
-          background: var(--glass); border: 1px solid var(--glass-border);
-          color: var(--text); border-radius: 10px; padding: 6px 12px; cursor: pointer;
+          background: var(--bg-surface); border: 1px solid var(--border);
+          color: var(--text-dim); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer;
         }
+        .pf-close:hover { background: var(--bg-subtle); border-color: var(--border-strong); color: var(--text); }
         .pf-empty { padding: 30px 6px; color: var(--muted); font-size: 13px; }
         .pf-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
           gap: 14px;
         }
         .pf-card {
-          text-align: left; background: var(--glass);
-          border: 1px solid var(--glass-border); border-radius: 14px;
+          text-align: left; background: var(--bg-surface);
+          border: 1px solid var(--border); border-radius: var(--radius);
           padding: 14px 16px; cursor: pointer; color: var(--text);
-          transition: transform var(--fast) var(--ease), border-color var(--fast);
+          transition: border-color var(--fast), box-shadow var(--fast);
         }
-        .pf-card:hover { transform: translateY(-2px); border-color: var(--violet); }
+        .pf-card:hover { border-color: var(--brand-soft-border); box-shadow: var(--shadow); }
         .pf-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-        .pf-name { font-size: 14.5px; font-weight: 800; }
+        .pf-name { font-size: 14px; font-weight: 650; }
         .pf-status {
-          font-size: 10px; font-weight: 800; border: 1px solid;
-          border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+          font-size: 10px; font-weight: 700; border: 1px solid;
+          border-radius: var(--radius-pill); padding: 2px 9px; white-space: nowrap;
         }
         .pf-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
         .pf-body { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
-        .pf-score-num { font-size: 30px; font-weight: 900; color: #34d399; }
+        /* Rang secondaire : la trajectoire prime sur le chiffre. */
+        .pf-score-num { font-size: 22px; font-weight: 650; color: var(--text); }
         .pf-score-sub { font-size: 11px; color: var(--muted); margin-left: 4px; }
         .spark-empty { color: var(--muted); font-size: 12px; }
         .pf-years { font-size: 10.5px; color: var(--muted); margin-top: 10px; }

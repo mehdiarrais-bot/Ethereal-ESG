@@ -59,6 +59,7 @@
   --shadow-sm: 0 1px 2px rgba(16, 35, 28, 0.05);
   --shadow: 0 1px 3px rgba(16, 35, 28, 0.06), 0 4px 12px rgba(16, 35, 28, 0.05);
   --shadow-lg: 0 12px 32px rgba(16, 35, 28, 0.10);
+  --scrim: rgba(16, 35, 28, 0.45);   /* voile des surcouches modales */
 
   /* ── Rayons ───────────────────────────────────────────────── */
   --radius-lg: 14px;
@@ -70,28 +71,6 @@
   --fast: 140ms;
   --med: 220ms;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* ══ Alias dépréciés ═══════════════════════════════════════════
-     Noms hérités du thème Galaxy, encore référencés par les blocs
-     <style> des composants non réécrits. Chacun disparaît avec le
-     composant qui le consomme. Ne PAS en introduire de nouveaux. */
-  --bg-0: var(--bg-app);
-  --bg-1: var(--bg-surface);
-  --violet: var(--brand);
-  --violet-deep: var(--brand-hover);
-  --violet-soft: var(--brand-mark);
-  --neon: var(--brand);
-  --neon-blue: var(--brand-hover);
-  --accent: var(--brand);
-  --glass: var(--bg-subtle);
-  --glass-strong: var(--bg-surface);
-  --glass-border: var(--border);
-  --glass-border-lit: var(--brand);
-  --card: var(--bg-surface);
-  --glow-violet: none;
-  --glow-neon: none;
-  --blue-primary: var(--brand);
-  --blue-secondary: var(--brand-hover);
 }
 
 html, body { height: 100%; }

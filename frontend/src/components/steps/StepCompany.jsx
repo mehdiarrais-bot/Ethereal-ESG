@@ -37,33 +37,33 @@ function ImportPanel({ onImport }) {
       {status && <div className={`import-status ${status.ok ? 'ok' : 'err'}`}>{status.msg}</div>}
       <style>{`
         .import-panel {
-          border: 1px solid var(--glass-border-lit); border-radius: var(--radius);
-          background: rgba(34,211,238,0.06); padding: 18px 20px; margin-bottom: 22px;
+          border: 1px solid var(--brand); border-radius: var(--radius);
+          background: var(--brand-soft); padding: 18px 20px; margin-bottom: 22px;
           backdrop-filter: blur(8px);
         }
         .import-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 14px; }
-        .import-title { font-weight: 700; color: var(--neon); font-size: 15px; }
+        .import-title { font-weight: 700; color: var(--brand); font-size: 15px; }
         .import-sub { font-size: 12px; color: var(--muted); }
         .import-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
         .import-tpl {
           font-size: 13px; color: var(--text-dim); text-decoration: none;
-          padding: 10px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-pill);
+          padding: 10px 18px; border: 1px solid var(--border); border-radius: var(--radius-pill);
           transition: background var(--fast), border-color var(--fast);
         }
-        .import-tpl:hover { background: rgba(124,92,246,0.14); border-color: var(--glass-border-lit); }
+        .import-tpl:hover { background: var(--bg-subtle); border-color: var(--brand); }
         .import-btn {
           display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-          font-size: 13px; font-weight: 600; color: #04121a;
-          background: linear-gradient(135deg, var(--neon), var(--neon-blue));
+          font-size: 13px; font-weight: 600; color: #fff;
+          background: var(--brand);
           padding: 10px 20px; border-radius: var(--radius-pill);
-          box-shadow: 0 0 16px rgba(34,211,238,0.35); transition: transform var(--fast) var(--ease);
+          box-shadow: var(--shadow-sm); transition: transform var(--fast) var(--ease);
         }
         .import-btn:hover { transform: translateY(-1px); }
         .import-btn.busy { opacity: 0.7; cursor: wait; }
         .import-btn input { display: none; }
         .import-status { margin-top: 12px; font-size: 13px; padding: 8px 14px; border-radius: 10px; }
-        .import-status.ok { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
-        .import-status.err { background: rgba(244,63,94,0.12); color: #fda4af; border: 1px solid rgba(244,63,94,0.3); }
+        .import-status.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-border); }
+        .import-status.err { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger-border); }
       `}</style>
     </div>
   )
@@ -240,22 +240,22 @@ export default function StepCompany({ form, updateSection, onImport }) {
       </div>
       <style>{`
         .tip-box {
-          background: rgba(46,134,193,0.08);
-          border-left: 4px solid var(--blue-secondary);
+          background: var(--social-soft);
+          border-left: 4px solid var(--brand-hover);
           border-radius: 0 8px 8px 0;
           padding: 14px 18px;
           font-size: 13px;
-          color: var(--blue-primary);
+          color: var(--brand);
           margin-top: 12px;
         }
         .logo-upload {
           display: inline-flex; align-items: center; gap: 8px;
           padding: 9px 16px; border: 2px dashed var(--border);
           border-radius: 8px; cursor: pointer; font-size: 13px;
-          color: var(--blue-secondary); background: rgba(46,134,193,0.04);
+          color: var(--brand-hover); background: var(--social-soft);
           transition: all 0.15s;
         }
-        .logo-upload:hover { border-color: var(--blue-secondary); }
+        .logo-upload:hover { border-color: var(--brand-hover); }
         .logo-upload input[type=file] { display: none; }
         .logo-preview {
           display: flex; align-items: center; gap: 12px;
@@ -266,11 +266,11 @@ export default function StepCompany({ form, updateSection, onImport }) {
           background: white; padding: 4px;
         }
         .logo-remove {
-          background: none; border: 1px solid #E74C3C; color: #E74C3C;
+          background: none; border: 1px solid var(--danger); color: var(--danger);
           border-radius: 6px; padding: 5px 10px; font-size: 12px;
           cursor: pointer;
         }
-        .logo-remove:hover { background: rgba(231,76,60,0.08); }
+        .logo-remove:hover { background: var(--danger-soft); }
       `}</style>
     </div>
   )
