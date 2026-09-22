@@ -3,101 +3,94 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
     <header className="header">
       <div className="header-inner">
         <div className="header-brand">
-          <div className="header-logo">Eth</div>
+          <div className="header-logo">E</div>
           <div>
             <div className="header-title">Ethereal ESG</div>
-            <div className="header-sub">Diagnostic & reporting extra-financier — 100 % local</div>
+            <div className="header-sub">Diagnostic &amp; reporting extra-financier — 100 % local</div>
           </div>
         </div>
         <div className="header-right">
           <div className="header-badges">
-            <span className="badge badge-env">🌍 Environnement</span>
-            <span className="badge badge-soc">👥 Social</span>
-            <span className="badge badge-gov">⚖️ Gouvernance</span>
+            <span className="badge badge-env">Environnement</span>
+            <span className="badge badge-soc">Social</span>
+            <span className="badge badge-gov">Gouvernance</span>
           </div>
           <div className="header-actions">
             {clientsPanel}
             {scores && (
               <button className="hdr-btn hdr-btn-score" onClick={onToggleResults}>
-                📊 {scores.total_esg_score?.toFixed(1)} · {scores.rating} {showResults ? '◀' : '▶'}
+                {scores.total_esg_score?.toFixed(1)} · {scores.rating} {showResults ? '◀' : '▶'}
               </button>
             )}
             <button className="hdr-btn hdr-btn-demo" onClick={onLoadDemo}>
-              🎯 Données exemple
+              Données exemple
             </button>
             <button className="hdr-btn hdr-btn-reset" onClick={onReset}>
-              ↺ Réinitialiser
+              Réinitialiser
             </button>
           </div>
         </div>
       </div>
       <style>{`
         .header {
-          background: linear-gradient(135deg, rgba(20,10,45,0.85) 0%, rgba(10,6,30,0.9) 100%);
+          background: var(--bg-surface);
           color: var(--text);
-          border-bottom: 1px solid var(--glass-border);
+          border-bottom: 1px solid var(--border);
           position: sticky;
           top: 0;
           z-index: 100;
-          box-shadow: 0 4px 30px rgba(5,2,25,0.6);
-          backdrop-filter: blur(18px) saturate(150%);
-          -webkit-backdrop-filter: blur(18px) saturate(150%);
-        }
-        /* Neon underline */
-        .header::after {
-          content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-          background: linear-gradient(90deg, transparent, var(--violet), var(--neon), transparent);
-          opacity: 0.8;
         }
         .header-inner {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 32px;
+          padding: 10px 24px;
+          gap: 16px;
         }
-        .header-brand { display: flex; align-items: center; gap: 14px; }
+        .header-brand { display: flex; align-items: center; gap: 11px; }
         .header-logo {
-          width: 48px; height: 48px;
-          background: linear-gradient(135deg, var(--violet), var(--neon-blue));
-          border-radius: 50%;
+          width: 34px; height: 34px;
+          background: var(--brand);
+          border-radius: var(--radius-sm);
           display: flex; align-items: center; justify-content: center;
-          font-size: 15px; font-weight: 900; color: #fff; letter-spacing: -0.5px;
-          box-shadow: var(--glow-violet);
-          animation: glowPulse 3.5s ease-in-out infinite;
+          font-size: 16px; font-weight: 700; color: #fff;
+          flex-shrink: 0;
         }
-        .header-title {
-          font-size: 18px; font-weight: 800; line-height: 1.2;
-          background: linear-gradient(90deg, #fff, var(--violet-soft));
-          -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .header-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-        .header-right { display: flex; align-items: center; gap: 20px; }
-        .header-badges { display: flex; gap: 8px; }
+        .header-title { font-size: 15px; font-weight: 650; line-height: 1.2; color: var(--text); }
+        .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .header-badges { display: flex; gap: 6px; }
         .badge {
-          padding: 4px 11px; border-radius: 20px;
-          font-size: 11px; font-weight: 600; color: var(--text);
-          backdrop-filter: blur(6px);
+          padding: 4px 10px; border-radius: var(--radius-pill);
+          font-size: 11px; font-weight: 600;
+          display: inline-flex; align-items: center; gap: 6px;
         }
-        .badge-env { background: rgba(52,211,153,0.14); border: 1px solid rgba(52,211,153,0.4); }
-        .badge-soc { background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.4); }
-        .badge-gov { background: rgba(192,132,252,0.14); border: 1px solid rgba(192,132,252,0.4); }
-        .header-actions { display: flex; gap: 8px; }
+        .badge::before {
+          content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+        }
+        .badge-env { background: var(--env-soft); color: var(--env); }
+        .badge-soc { background: var(--social-soft); color: var(--social); }
+        .badge-gov { background: var(--gov-soft); color: var(--gov); }
+        .header-actions { display: flex; gap: 7px; align-items: center; }
         .hdr-btn {
-          padding: 8px 16px; border-radius: 999px;
-          border: 1px solid var(--glass-border); font-size: 12px; font-weight: 600;
-          cursor: pointer; transition: transform var(--fast) var(--ease), box-shadow var(--fast), background var(--fast);
-          color: var(--text); background: var(--glass);
+          padding: 7px 13px; border-radius: var(--radius-sm);
+          border: 1px solid var(--border); font-size: 12.5px; font-weight: 600;
+          cursor: pointer; transition: background var(--fast), border-color var(--fast), color var(--fast);
+          color: var(--text-dim); background: var(--bg-surface);
           white-space: nowrap;
         }
-        .hdr-btn:hover { transform: translateY(-1px); }
-        .hdr-btn-score { background: rgba(52,211,153,0.16); color: #fff; border: 1px solid rgba(52,211,153,0.5); font-size: 13px; font-weight: 700; }
-        .hdr-btn-score:hover { box-shadow: 0 0 16px rgba(52,211,153,0.45); }
-        .hdr-btn-demo { background: linear-gradient(135deg, var(--neon), var(--neon-blue)); color: #04121a; border: none; }
-        .hdr-btn-demo:hover { box-shadow: var(--glow-neon); }
-        .hdr-btn-reset:hover { background: rgba(124,92,246,0.2); border-color: var(--glass-border-lit); }
+        .hdr-btn:hover { background: var(--bg-subtle); border-color: var(--border-strong); color: var(--text); }
+        .hdr-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-ring); }
+        .hdr-btn-score {
+          background: var(--brand-soft); color: var(--brand-hover);
+          border-color: var(--brand-soft-border); font-weight: 700;
+        }
+        .hdr-btn-score:hover { background: var(--brand-soft-border); color: var(--brand-hover); }
+        .hdr-btn-demo { background: var(--brand); color: #fff; border-color: transparent; }
+        .hdr-btn-demo:hover { background: var(--brand-hover); color: #fff; }
         @media (max-width: 900px) {
           .header-badges { display: none; }
-          .header-inner { padding: 10px 16px; }
+          .header-inner { padding: 10px 14px; }
         }
         @media (max-width: 560px) {
           .header-sub { display: none; }
