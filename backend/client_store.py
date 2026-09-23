@@ -117,14 +117,47 @@ def export_all() -> bytes:
     return buf.read()
 
 
+# Bornes de l'import : un dossier (photos et logo compris) tient sous
+# MAX_DOSSIER_BYTES ; au-delà, ou au-delà du total, l'archive est suspecte
+# (bombe de décompression : quelques Ko compressés, des Go décompressés).
+MAX_DOSSIER_BYTES = 20_000_000
+MAX_ARCHIVE_TOTAL = 500_000_000
+MAX_ARCHIVE_MEMBERS = 5_000
+
+
+def _read_bounded(z, info, limit: int) -> bytes | None:
+    """Lit un membre sans jamais décompresser plus de `limit` octets
+    (la taille annoncée dans l'en-tête zip peut mentir)."""
+    with z.open(info) as f:
+        raw = f.read(limit + 1)
+    return None if len(raw) > limit else raw
+
+
+def _valid_dossier(d: dict, stem: str) -> bool:
+    """Un dossier importé doit porter son identifiant et un formulaire que
+    le modèle accepte (mêmes règles que la saisie : logo, photos, champs)."""
+    if not isinstance(d, dict) or d.get("id") != stem or not isinstance(d.get("form"), dict):
+        return False
+    from models import ESGRequest
+    try:
+        ESGRequest(**d["form"])
+    except Exception:
+        return False
+    return True
+
+
 def import_archive(data: bytes) -> dict:
     """Restaure une archive zip de dossiers. Fusion par id (l'archive gagne).
-    Retourne {imported, skipped}."""
+    Retourne {imported, skipped}. Membres bornés en taille, dossiers validés
+    par le modèle avant écriture ; une archive hors bornes lève ValueError."""
     import zipfile
     _ensure_dir()
-    imported, skipped = 0, 0
+    imported, skipped, total = 0, 0, 0
     with zipfile.ZipFile(__import__("io").BytesIO(data)) as z:
-        for info in z.infolist():
+        members = z.infolist()
+        if len(members) > MAX_ARCHIVE_MEMBERS:
+            raise ValueError("Archive refusée : trop de fichiers")
+        for info in members:
             fn = os.path.basename(info.filename)
             if not fn.endswith(".json"):
                 continue
@@ -132,15 +165,23 @@ def import_archive(data: bytes) -> dict:
             if not _ID_RE.match(stem):
                 skipped += 1
                 continue
-            try:
-                d = json.loads(z.read(info).decode("utf-8"))
-                if d.get("id") != stem or "form" not in d:
-                    skipped += 1
-                    continue
-                _atomic_write(_path(stem), d)
-                imported += 1
-            except Exception:
+            raw = _read_bounded(z, info, MAX_DOSSIER_BYTES)
+            if raw is None:
                 skipped += 1
+                continue
+            total += len(raw)
+            if total > MAX_ARCHIVE_TOTAL:
+                raise ValueError("Archive refusée : volume décompressé excessif")
+            try:
+                d = json.loads(raw.decode("utf-8"))
+            except (ValueError, UnicodeDecodeError):
+                skipped += 1
+                continue
+            if not _valid_dossier(d, stem):
+                skipped += 1
+                continue
+            _atomic_write(_path(stem), d)
+            imported += 1
     return {"imported": imported, "skipped": skipped}
 
 
