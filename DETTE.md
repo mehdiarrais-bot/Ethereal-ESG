@@ -666,20 +666,21 @@ volontairement **limitée aux cinq livrables analytiques**, lettre de mission
 exclue. Étendre le test au document contractuel déclencherait ce faux
 positif : il faudrait alors distinguer les deux usages.
 
-## 5. Séparateur de milliers anglais dans un texte français
+## 5. Séparateur de milliers anglais dans un texte français — **traité le 2026-09-24**
 
-- **Où** : `backend/content_generator.py` (ancien générateur, format `,`
-  — ex. ligne 708 : `f"{env.energy_consumption_mwh:,.0f} MWh consommés"`)
-  et, par alignement volontaire, `backend/composer.py._formater_valeur()`.
-- **Constat** : les nombres sortent en `12,000` (séparateur anglais) dans
-  un texte français, où l'usage est `12 000`.
-- **Décision pour ce chantier** : le composer **reproduit sciemment** le
-  format de l'ancien générateur. Corriger seulement le composer ferait
-  cohabiter `12 000` (sections déjà migrées) et `12,000` (sections encore
-  sur l'ancien générateur) dans un même rapport, ce qui se verrait.
-- **À faire** : passer tout le système en `12 000` **d'un seul coup**,
-  ancien générateur + composer, avec un test de non-régression sur le
-  rendu. Ne pas le faire section par section.
+- **Constat d'origine** : `12,000` dans les textes français (ancien
+  générateur, reproduit sciemment par le composer). Aggravé le 2026-09-24 :
+  le texte analytique du PDF (`narrative.py`) écrivait `12 000`, les deux
+  formats cohabitaient dans le même rapport.
+- **Traitement** : `backend/typo.py` applique la typographie française au
+  **rendu**, en un point par format (PDF via `pdf_kit.clean`, Word /
+  PowerPoint / lettre de mission via un passage final sur le document) :
+  milliers, virgule décimale, espace insécable avant « % ». Le texte anglais
+  n'est pas modifié. Les générateurs de texte n'ont pas été touchés.
+- **Filet** : `tests/test_typo.py` lit le texte rendu des cinq livrables FR.
+- **Reste** : les libellés **dans les graphiques** matplotlib (axes, étiquettes)
+  ne passent pas par ce point — ils sont rares et à contrôler lors d'un
+  chantier graphiques.
 
 ## 6. `include_benchmarks` : drapeau défini mais jamais lu
 
@@ -692,27 +693,20 @@ positif : il faudrait alors distinguer les deux usages.
   externe a disparu. À réévaluer : soit le câbler sur la section
   Positionnement, soit le retirer du modèle et du formulaire.
 
-## 7. PRIORITAIRE — perte de données : « Données exemple » n'oublie pas le dossier ouvert
+## 7. Perte de données : « Données exemple » n'oubliait pas le dossier ouvert — **traité le 2026-09-24**
 
-- **Où** : `frontend/src/App.jsx:172-175` (`loadDemo`), à comparer à
-  `frontend/src/App.jsx:177-183` (`resetForm`).
-- **Constat** : `loadDemo` remplace le formulaire par `DEMO_DATA` mais ne
-  remet à zéro ni `clientId`, ni `clientHistory`, ni `clientActions` —
-  `resetForm`, lui, remet les quatre. Or `saveClient`
-  (`frontend/src/App.jsx:98-110`) poste `{ id: clientId, ... }`. Séquence
-  destructrice : ouvrir un dossier client, cliquer « Données exemple »,
-  cliquer « Enregistrer » — le dossier réel est **écrasé par les données de
-  démonstration** et son historique de scores reçoit un point qui ne
-  correspond à aucun exercice réel. Aucune confirmation n'est demandée.
-- **Même famille — modifications non enregistrées perdues sans
-  confirmation** : `loadClient` (`:125-139`) et `resetForm` (`:177-183`)
-  remplacent le formulaire sans garde, alors que l'état `clientDirty` existe
-  et est mis à jour à chaque frappe (`:96`). Le drapeau est calculé mais
-  jamais utilisé comme verrou.
-- **À faire** : décider du correctif (réinitialiser l'identité du dossier
-  dans `loadDemo`, et poser une confirmation sur les trois chemins qui
-  écrasent une saisie en cours). **Correction non encore validée** — aucune
-  ligne de code n'a été touchée.
+- **Constat d'origine** : `loadDemo` remplaçait le formulaire sans détacher
+  le dossier ouvert ; « Enregistrer » écrasait alors le dossier réel. Aucun
+  des trois chemins qui remplacent la saisie (démo, nouveau, ouverture d'un
+  autre dossier) ne demandait confirmation.
+- **Traitement** : `frontend/src/lib/formSession.mjs` (logique pure) — la
+  démo et « Nouveau » détachent la session de tout dossier ; les trois
+  chemins demandent confirmation si la saisie n'est pas enregistrée.
+  L'indicateur « non enregistré » ne s'allume plus sur un remplacement
+  programmatique (fin du `setTimeout` de 100 ms).
+- **Filets** : `formSession.test.mjs` (`npm test`) ; scénario rejoué dans
+  l'application réelle (dossier modifié → démo → confirmation ; démo
+  enregistrée → nouveau dossier, dossier réel intact).
 
 ## 8. Références réglementaires non vérifiées dans le questionnaire envoyé au client
 
