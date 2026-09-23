@@ -345,6 +345,15 @@ COVERS = {"classic": cover_classic, "organic": cover_organic,
           "luxe": cover_luxe, "minimal": cover_minimal}
 
 
+def add_notes(slide, paragraphs) -> None:
+    """Texte analytique du rapport (narrative.py) en notes de l'orateur : la
+    présentation porte le même contenu que le PDF et le Word, sans
+    surcharger la diapositive."""
+    text = "\n\n".join(p for p in paragraphs if p)
+    if text:
+        slide.notes_slide.notes_text_frame.text = text
+
+
 def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
                        title, subtitle, score, kpis, t, insight=""):
     """Slide de pilier en infographie : héros illustré à gauche + chips KPI.
@@ -562,9 +571,26 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                      color=theme["text_dark"] if not _dk0 else theme["subtitle"], font=fb)
 
     # ── SLIDE 2: Tableau de Bord ESG ────────────────────────────────────
+    import narrative as NR
+    from content_generator import (risks_opportunities as _ro_fn, compliance_assessment as _ca_fn,
+                                   enriched_recommendations as _er_fn, roadmap_12m as _rm_fn)
+    _ref = t["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" \
+        else t["cover_refs"]
+    _n_recs = _er_fn(request, scores) if request.include_recommendations else []
+    _n_ro = _ro_fn(request, scores)
+    _n_gaps = _ca_fn(request, scores)
+    _n_rm = _rm_fn(request, scores)
+
+    def _pillar_notes(pillar, extra=None):
+        paras = NR.pillar_paragraphs(request, scores, pillar)
+        if request.include_recommendations:
+            paras.append(NR.levers_sentence(request, _n_recs, pillar))
+        add_notes(prs.slides[-1], paras + ([extra] if extra else []))
+
     dark = style["dark_slides"]
     white = RGBColor(0xFF, 0xFF, 0xFF)
     slide = prs.slides.add_slide(blank_layout)
+    add_notes(slide, NR.company_paragraphs(request, _ref))
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"] if dark else theme["bg_secondary"])
 
     # ── HERO gauche : score global mis en scène (élément dominant) ──
@@ -757,6 +783,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     pillar_infographic(prs, blank_layout, theme, style, "env",
                        t["pillar_env"], _headlines["env"],
                        scores.environmental_score, env_kpis, t, _insights["env"])
+    _pillar_notes("env", NR.ghg_paragraph(request))
 
     # ── SLIDE 4: Social (infographie) ────────────────────────────────────
     soc = request.social
@@ -780,6 +807,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     pillar_infographic(prs, blank_layout, theme, style, "social",
                        t["pillar_soc"], _headlines["social"],
                        scores.social_score, soc_kpis, t, _insights["social"])
+    _pillar_notes("social")
 
     # ── SLIDE 5: Gouvernance (infographie) ───────────────────────────────
     gov = request.governance
@@ -805,6 +833,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     pillar_infographic(prs, blank_layout, theme, style, "gov",
                        t["pillar_gov"], _headlines["gov"],
                        scores.governance_score, gov_kpis, t, _insights["gov"])
+    _pillar_notes("gov")
 
     # ── SLIDE 5b: Double matérialité (CSRD/ESRS) ────────────────────────
     if "materiality" in chart_images:
@@ -852,6 +881,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
 
     # ── SLIDE 6: Analyse Stratégique — Solide vs. À progresser ──────────
     slide = content_slide(prs, blank_layout, theme, style, _sh["strategic"], header_color, kicker=t["strategic"])
+    add_notes(slide, [NR.act1_intro(request, scores, _n_gaps, _n_ro["risks"]), NR.bench_intro(request),
+                      NR.gaps_intro(request, _n_gaps, _ref)])
     dark = style["dark_slides"]
     red = RGBColor(0xE7, 0x4C, 0x3C)
     panel_shape = ROUNDED_RECT if style["card"] != "flat" else RECT
@@ -882,6 +913,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if _ro["risks"] or _ro["opportunities"]:
         slide = content_slide(prs, blank_layout, theme, style,
                               t["ro_title"], header_color, kicker=t["ro_kicker"])
+        add_notes(slide, [NR.risks_intro(request, _n_ro["risks"])])
         _dk = style["dark_slides"]
         red = RGBColor(0xE7, 0x4C, 0x3C)
         panel_shape = ROUNDED_RECT if style["card"] != "flat" else RECT
@@ -946,6 +978,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         from content_generator import enriched_recommendations
         recs = enriched_recommendations(request, scores)[:5]
         slide = content_slide(prs, blank_layout, theme, style, t["recommendations"], header_color)
+        add_notes(slide, [NR.act2_intro(request, _n_recs, _n_rm), NR.recs_intro(request, _n_recs)])
         add_text(slide, t["rec_intro"], Inches(0.6), Inches(1.2), Inches(12.1), Inches(0.5),
                  font_size=13, color=theme["muted"], font=fb)
 
@@ -984,6 +1017,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         _dk = style["dark_slides"]
         slide = content_slide(prs, blank_layout, theme, style,
                               t["roadmap_title"], header_color, kicker=t["roadmap_kicker"])
+        add_notes(slide, [NR.roadmap_intro(request, _rm)])
         col_w, gap = Inches(4.05), Inches(0.28)
         x0 = Inches(0.35)
         for pi, ph in enumerate(_rm):

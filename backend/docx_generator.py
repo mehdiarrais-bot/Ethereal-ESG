@@ -172,9 +172,38 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     style = docx_style(request.aesthetic_theme)
     TR = L(request.language)
 
-    from content_generator import pillar_headline, section_headlines
+    from content_generator import (pillar_headline, section_headlines, risks_opportunities,
+                                   compliance_assessment, enriched_recommendations, roadmap_12m)
+    import narrative as NR
     _hl = pillar_headline(request, scores)
     _shl = section_headlines(request, scores)
+    # Texte analytique partagé avec le rapport PDF (narrative.py) : le Word
+    # porte le même contenu, éditable.
+    lang = request.language
+    ref = TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" \
+        else TR["cover_refs"]
+    _ro_all = risks_opportunities(request, scores)
+    _gaps_all = compliance_assessment(request, scores)
+    _recs_all = enriched_recommendations(request, scores) if request.include_recommendations else []
+    _rm_all = roadmap_12m(request, scores)
+
+    def add_text(text, size=10.5, italic=False, shade=None, after=8):
+        par = doc.add_paragraph()
+        run = par.add_run(text)
+        run.font.size = Pt(size)
+        run.italic = italic
+        if shade:
+            shade_paragraph(par, shade)
+        par.paragraph_format.space_after = Pt(after)
+        return par
+
+    def add_reading(pillar, color_hex):
+        """« Lecture des indicateurs » + leviers du plan d'action (comme le PDF)."""
+        add_heading(doc, NR.T[lang]["reading_title"], 2, color_hex, style=style)
+        for para in NR.pillar_paragraphs(request, scores, pillar):
+            add_text(para)
+        if request.include_recommendations:
+            add_text(NR.levers_sentence(request, _recs_all, pillar))
 
     def add_conclusion(text, color_hex):
         """Sous-titre en gras = la conclusion de la section (information scent)."""
@@ -326,6 +355,16 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
             ar.font.color.rgb = hex_to_rgb("7F8C8D")
             ap.paragraph_format.space_after = Pt(18)
 
+    # ── L'entreprise en bref ──────────────────────────────────────────────
+    add_heading(doc, TR["ed_company"], 1, colors["primary"], style=style)
+    add_hr(doc, colors["secondary"])
+    for para in NR.company_paragraphs(request, ref):
+        add_text(para)
+    _inits = NR.initiatives(request)
+    if _inits:
+        add_heading(doc, TR["ed_initiatives"], 2, colors["secondary"], style=style)
+        add_bullet_list(doc, _inits, "•", colors["accent"])
+
     # ── 1. Synthèse Exécutive ─────────────────────────────────────────────
     add_heading(doc, TR["pdf_s1"], 1, colors["primary"], style=style)
     add_hr(doc, colors["secondary"])
@@ -359,6 +398,11 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     if env.scope2_emissions is not None: env_kpis.append((TR["kpit"]["s2"], f"{env.scope2_emissions:,.0f}"))
     if env.scope3_emissions is not None: env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}"))
     add_kpi_table(doc, env_kpis, colors)
+    add_reading("env", colors["env"])
+    _ghg = NR.ghg_paragraph(request)
+    if _ghg:
+        add_heading(doc, TR["ed_ghg_table"], 2, colors["env"], style=style)
+        add_text(_ghg)
 
     # ── 3. Social ──────────────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s3"], 1, colors["social"], style=style)
@@ -380,6 +424,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     if soc.accident_frequency_rate is not None: soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}"))
     if soc.customer_satisfaction_score is not None: soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
     add_kpi_table(doc, soc_kpis, colors)
+    add_reading("social", colors["social"])
 
     # ── 4. Gouvernance ────────────────────────────────────────────────────
     add_heading(doc, TR["pdf_s4"], 1, colors["gov"], style=style)
@@ -403,6 +448,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     if gov.sustainability_committee is not None:
         gov_kpis.append((TR["kpit"]["committee"], TR["kpit"]["yes"] if gov.sustainability_committee else TR["kpit"]["no"]))
     add_kpi_table(doc, gov_kpis, colors)
+    add_reading("gov", colors["gov"])
 
     doc.add_page_break()
 
@@ -443,6 +489,12 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     doc.add_page_break()
 
+    # ── Chapitre 01 — Diagnostic ──────────────────────────────────────────
+    add_heading(doc, f'01 — {TR["div1_title"]}', 1, colors["accent"], style=style)
+    add_text(TR["div1_sub"], size=12, italic=True, after=4)
+    add_text(NR.act1_intro(request, scores, _gaps_all, _ro_all["risks"]),
+             shade=colors.get("light", "F0F2F5"), after=14)
+
     # ── 6. Analyse Stratégique ────────────────────────────────────────────
     add_heading(doc, TR["pdf_s6"], 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
@@ -455,10 +507,14 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
 
     if request.include_recommendations and scores.recommendations:
-        from content_generator import enriched_recommendations
+        add_heading(doc, f'02 — {TR["div2_title"]}', 1, colors["accent"], style=style)
+        add_text(TR["div2_sub"], size=12, italic=True, after=4)
+        add_text(NR.act2_intro(request, _recs_all, _rm_all),
+                 shade=colors.get("light", "F0F2F5"), after=14)
         add_heading(doc, TR["pdf_s7"], 1, colors["primary"], style=style)
         add_hr(doc, colors["accent"])
-        for i, rec in enumerate(enriched_recommendations(request, scores), 1):
+        add_text(NR.recs_intro(request, _recs_all))
+        for i, rec in enumerate(_recs_all, 1):
             p = doc.add_paragraph()
             num = p.add_run(f"{i}.  ")
             num.bold = True
@@ -485,6 +541,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     p = doc.add_paragraph()
     r_ = p.add_run(_bv["title"]); r_.bold = True; r_.font.size = Pt(12)
     r_.font.color.rgb = hex_to_rgb(colors["secondary"])
+    add_text(NR.bench_intro(request), after=4)
     cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
     cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
 
@@ -528,6 +585,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     from content_generator import compliance_assessment
     _ga = compliance_assessment(request, scores)
     add_heading(doc, TR["gap_title"], 2, colors["secondary"], style=style)
+    add_text(NR.gaps_intro(request, _ga, ref))
     # Conversion depuis gap_status (source unique) vers l'hexa sans « # ».
     import gap_status as GS
     gtbl = doc.add_table(rows=len(_ga) + 1, cols=4)
@@ -550,6 +608,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     doc.add_paragraph()
 
     add_heading(doc, TR["risks_head"], 2, "E74C3C", style=style)
+    add_text(NR.risks_intro(request, _ro["risks"]))
     add_bullet_list(doc, [
         f'[{i.get("priority", "P2")}] {i["tag"]} — {i["text"]} '
         f'({TR["risk_impact"].lower()} : {i.get("impact", "—").lower()} · '
@@ -561,6 +620,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     _rm = roadmap_12m(request, scores)
     if any(ph["actions"] for ph in _rm):
         add_heading(doc, TR["roadmap_title"], 2, colors["accent"], style=style)
+        add_text(NR.roadmap_intro(request, _rm))
         for ph in _rm:
             pp = doc.add_paragraph()
             hr = pp.add_run(f'{ph["label"]} — {ph["sub"]}')
@@ -595,6 +655,11 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         mr.font.size = Pt(8.5)
         mr.font.color.rgb = hex_to_rgb("5A6572")
         shade_paragraph(mp, colors.get("light", "F0F2F5"))
+    # Photo de couverture issue de la banque d'illustration : mention
+    if cover_art:
+        from pdf_kit import Kit
+        if Kit(request).uses_bank(("cover",)):
+            add_text(TR["ed_photo_note"], size=8, italic=True)
 
     # ── Glossaire ─────────────────────────────────────────────────────────
     from glossary import glossary_entries

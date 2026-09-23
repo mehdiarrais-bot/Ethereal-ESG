@@ -332,11 +332,6 @@ def _facts(request, TR, lang):
     return out[:4]
 
 
-def _initiatives(request):
-    raw = request.company.key_initiatives or ""
-    return [s.strip() for s in re.split(r"[;\n]|,(?!\d)", raw) if s.strip()][:8]
-
-
 def page_context(request, scores, TR, type_label):
     from content_generator import score_verdict, hero_stat, pillar_headline, _band
     lang = request.language
@@ -362,7 +357,7 @@ def page_context(request, scores, TR, type_label):
         else TR["cover_refs"],
         "env_m": _env_metrics(request, TR, lang), "soc_m": _soc_metrics(request, TR, lang),
         "gov_line": _gov_line(request, TR, lang), "facts": _facts(request, TR, lang),
-        "initiatives": _initiatives(request), "hero": hero_stat(request, scores),
+        "initiatives": NR.initiatives(request), "hero": hero_stat(request, scores),
         "env_headline": pillar_headline(request, scores).get("env"),
         "ghg_text": NR.ghg_paragraph(request),
         "footer_label": TR["rep_default"],
@@ -1086,10 +1081,9 @@ def _closing(story, request, scores, content, k, S, TR, anchors):
                                     k.ps("mn", 8.6, color="ink", leading=13, allowWidows=0,
                                          allowOrphans=0)),
                           k, k.c["panel"], left=k.c["accent"]))
-    # Les emplacements éditoriaux (focus, chapitres, 4e de couverture) viennent
-    # toujours de la banque : la mention figure donc dans tout rapport.
-    story.append(Paragraph(esc(TR["ed_photo_note"]), k.ps("pn", 7.6, font="body_i", color="muted",
-                                                          leading=10.5, spaceBefore=6)))
+    if k.uses_bank():
+        story.append(Paragraph(esc(TR["ed_photo_note"]), k.ps("pn", 7.6, font="body_i", color="muted",
+                                                              leading=10.5, spaceBefore=6)))
     gloss = glossary_entries(request, scores)
     if gloss:
         story.append(_sp(k, 10))

@@ -134,7 +134,6 @@ class Kit:
             raw = decode_logo(url)
             if raw and slot in CLIENT_PHOTO_SLOTS:
                 self._client_photos[slot] = raw
-        self.uses_bank_photos = False
 
     def _apply_brand(self, custom):
         if not custom:
@@ -159,13 +158,16 @@ class Kit:
         if slot in self._client_photos:
             return self._client_photos[slot]
         name = self.d["photos"].get(slot)
-        raw = bank_photo(name) if name else None
-        if raw:
-            self.uses_bank_photos = True
-        return raw
+        return bank_photo(name) if name else None
 
     def has_client_photo(self, slot: str) -> bool:
         return slot in self._client_photos
+
+    def uses_bank(self, slots=("cover", "environment")) -> bool:
+        """Une photo d'illustration de la banque apparaît-elle ? (mention
+        obligatoire dans la note méthodologique). Par défaut : couverture et
+        environnement, les deux seuls emplacements comblés par la banque."""
+        return any(s in self.d["photos"] and not self.has_client_photo(s) for s in slots)
 
     # -- styles de paragraphe -----------------------------------------------
     # Densité de composition de la séquence en cours (1 = normale). Réglée

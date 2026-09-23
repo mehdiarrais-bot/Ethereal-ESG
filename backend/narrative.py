@@ -79,6 +79,14 @@ def _data(request) -> dict:
 
 # ── Présentation et périmètre ─────────────────────────────────────────────
 
+def initiatives(request) -> list[str]:
+    """Initiatives saisies (séparées par « ; », retour à la ligne ou virgule
+    non suivie d'un chiffre — « 1,5 M€ » reste entier)."""
+    import re
+    raw = request.company.key_initiatives or ""
+    return [s.strip() for s in re.split(r"[;\n]|,(?!\d)", raw) if s.strip()][:8]
+
+
 def completeness(request) -> tuple[int, int]:
     d = _data(request)
     fields = [f for fs in FIELDS.values() for f in fs]
