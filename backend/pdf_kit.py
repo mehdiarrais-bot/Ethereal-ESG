@@ -166,10 +166,22 @@ class Kit:
         return slot in self._client_photos
 
     # -- styles de paragraphe -----------------------------------------------
+    # Densité de composition de la séquence en cours (1 = normale). Réglée
+    # par report_generator pour qu'une séquence ne finisse pas sur une page
+    # presque vide : < 1 resserre les espacements, > 1 les desserre.
+    density = 1.0
+
+    def space(self, pt: float) -> float:
+        return pt * self.density
+
     def ps(self, name, size, font="body", color="ink", leading=None, **kw) -> ParagraphStyle:
         col = self.c[color] if isinstance(color, str) else color
+        for key in ("spaceBefore", "spaceAfter"):
+            if key in kw:
+                kw[key] = self.space(kw[key])
+        lead = (leading or size * 1.4) * (1 + (self.density - 1) * 0.2)
         return ParagraphStyle(name, fontName=self.f.get(font, font), fontSize=size,
-                              leading=leading or size * 1.4, textColor=col, **kw)
+                              leading=lead, textColor=col, **kw)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -291,7 +303,8 @@ class Px:
 _CROP_CACHE: dict = {}
 
 
-def cover_crop(raw: bytes, ratio: float) -> ImageReader:
+def crop_jpeg(raw: bytes, ratio: float) -> bytes:
+    """Photo recadrée au centre au rapport largeur/hauteur `ratio` (JPEG)."""
     key = (hash(raw), ratio)
     if key in _CROP_CACHE:
         return _CROP_CACHE[key]
@@ -308,12 +321,15 @@ def cover_crop(raw: bytes, ratio: float) -> ImageReader:
     im.thumbnail((1400, 1400))  # ~200 dpi sur une pleine page A4
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=80)
-    buf.seek(0)
-    ir = ImageReader(buf)
     if len(_CROP_CACHE) > 64:
         _CROP_CACHE.clear()
-    _CROP_CACHE[key] = ir
-    return ir
+    _CROP_CACHE[key] = buf.getvalue()
+    return _CROP_CACHE[key]
+
+
+def cover_crop(raw: bytes, ratio: float) -> ImageReader:
+    """Comme crop_jpeg, pour un dessin au canevas (drawImage)."""
+    return ImageReader(io.BytesIO(crop_jpeg(raw, ratio)))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -427,8 +443,13 @@ class FullPage(Flowable):
     def draw(self):
         cv = self.canv
         cv.saveState()
-        # le cadre place l'origine en bas à gauche de la page
-        self.drawer(Px(cv, self.kit), self.kit, *self.args)
+        # les pages composées ont une mise en page fixe : densité neutre
+        dens, self.kit.density = self.kit.density, 1.0
+        try:
+            # le cadre place l'origine en bas à gauche de la page
+            self.drawer(Px(cv, self.kit), self.kit, *self.args)
+        finally:
+            self.kit.density = dens
         cv.restoreState()
 
 

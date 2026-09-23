@@ -53,7 +53,7 @@ def test_chaque_theme_a_un_gabarit_complet():
     assert set(RD.DESIGNS) == set(AestheticTheme)
     for theme, d in RD.DESIGNS.items():
         assert set(d["colors"]) == set(ref["colors"]), theme
-        assert set(d["photos"]) == set(RD.CLIENT_PHOTO_SLOTS + RD.BANK_ONLY_SLOTS), theme
+        assert set(d["photos"]) == set(RD.BANK_SLOTS), theme
         for key in ("cover", "glance", "header", "kpi", "radius"):
             assert key in d["layout"], (theme, key)
         for v in d["colors"].values():
@@ -120,7 +120,19 @@ def test_photo_client_prioritaire_sur_la_banque():
     url = _jpeg_data_url()
     k = Kit(make_request(report_photos={"cover": url}))
     assert k.photo("cover") == base64.b64decode(url.split(",", 1)[1])
-    assert k.photo("social") == bank_photo(k.d["photos"]["social"])
+    assert k.photo("environment") == bank_photo(k.d["photos"]["environment"])
+
+
+@pytest.mark.parametrize("slot", ["company", "social", "governance"])
+def test_aucune_photo_d_illustration_hors_sujet(slot):
+    """Retour utilisateur du 2026-09-24 : « des images aléatoires à des
+    emplacements aléatoires ». Hors couverture et environnement, seule une
+    photo fournie par l'entreprise peut apparaître ; sinon, rien."""
+    from pdf_kit import Kit
+    for theme in AestheticTheme:
+        assert Kit(make_request(theme=theme.value)).photo(slot) is None
+    url = _jpeg_data_url()
+    assert Kit(make_request(report_photos={slot: url})).photo(slot)
 
 
 def test_emplacement_photo_inconnu_refuse():
@@ -216,3 +228,130 @@ def test_vignettes_du_selecteur_presentes():
     racine = os.path.dirname(BACKEND)
     for t in AestheticTheme:
         assert os.path.isfile(os.path.join(racine, "frontend", "public", "designs", f"{t.value}.jpg")), t
+
+
+# ── Pagination (retour utilisateur du 2026-09-24) ─────────────────────────
+
+def _layout(request):
+    from report_generator import compose_report
+    s = calculate_esg_scores(request)
+    return compose_report(request, s, generate_esg_content(request, s), {})
+
+
+def _requetes_variees():
+    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
+    from make_examples import DEMO
+    for base in (DEMO, make_request()):
+        for lang in ("fr", "en"):
+            for theme in AestheticTheme:
+                yield base.model_copy(update={"aesthetic_theme": theme, "language": lang})
+
+
+def test_aucune_sequence_ne_finit_sur_une_page_presque_vide():
+    """« Un bloc trop gros qui déborde sur une page pour 2-4 lignes » : la
+    dernière page de chaque séquence de pages courantes (avant une page
+    composée) doit être remplie au moins à SPARSE_FILL. 24 cas : deux jeux
+    de données, deux langues, six gabarits."""
+    from report_generator import _sparse_runs, SPARSE_FILL
+    echecs = []
+    for req in _requetes_variees():
+        _, layout = _layout(req)
+        if _sparse_runs(layout):
+            echecs.append((req.aesthetic_theme.value, req.language,
+                           [(p, f) for p, _r, f in layout["pages"] if f < SPARSE_FILL]))
+    assert not echecs, echecs
+
+
+def test_la_detection_de_debord_casse_sur_l_ancien_etat():
+    """Règle d'admission : le garde-fou doit reconnaître le cas signalé
+    (rapport EcoGroup : séquence finie sur une page remplie à 28 %)."""
+    from report_generator import _sparse_runs
+    assert _sparse_runs({"pages": [(5, 1, 0.75), (6, 1, 0.84), (7, 1, 0.28)]}) == {1}
+    assert _sparse_runs({"pages": [(5, 1, 0.75), (6, 1, 0.5)]}) == set()
+    assert _sparse_runs({"pages": [(9, 2, 0.1)]}) == set()   # page unique : pas un débord
+
+
+def test_tableau_jamais_coupe_en_laissant_moins_de_trois_lignes():
+    from report_generator import GuardedTable
+    rows = [["en-tête"]] + [[f"ligne {i}"] for i in range(10)]
+    t = GuardedTable(rows, colWidths=[200], rowHeights=[20] * 11, repeatRows=1)
+    t.wrap(200, 1000)
+    assert t.split(200, 65) == []          # 2 lignes seulement avant le saut : refusé
+    parts = t.split(200, 105)              # 4 lignes avant, 6 après : accepté
+    assert len(parts) == 2
+    assert t.split(200, 205) == []         # 9 lignes avant, 1 seule après : refusé
+
+
+def test_paragraphes_sans_veuves_ni_orphelines():
+    from pdf_kit import Kit
+    from report_generator import build_styles
+    S = build_styles(Kit(make_request()))
+    for nom in ("body", "lead", "bullet"):
+        assert S[nom].allowWidows == 0 and S[nom].allowOrphans == 0, nom
+
+
+# ── Texte analytique (narrative.py) ───────────────────────────────────────
+
+def _textes_narratifs(req):
+    import narrative as NR
+    from content_generator import (risks_opportunities, compliance_assessment,
+                                   enriched_recommendations, roadmap_12m)
+    s = calculate_esg_scores(req)
+    ro, gaps = risks_opportunities(req, s), compliance_assessment(req, s)
+    recs, rm = enriched_recommendations(req, s), roadmap_12m(req, s)
+    out = NR.company_paragraphs(req, "CSRD / ESRS")
+    for p in ("env", "social", "gov"):
+        out += NR.pillar_paragraphs(req, s, p) + [NR.levers_sentence(req, recs, p)]
+    out += [NR.ghg_paragraph(req) or "", NR.act1_intro(req, s, gaps, ro["risks"]),
+            NR.act2_intro(req, recs, rm), NR.gaps_intro(req, gaps, "CSRD / ESRS"),
+            NR.risks_intro(req, ro["risks"]), NR.recs_intro(req, recs), NR.roadmap_intro(req, rm)]
+    return out
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_texte_narratif_respecte_les_garde_fous(lang):
+    from test_suite import FORMULATIONS_DE_VERIFICATION, _affirme_une_conformite
+    for req in (make_request(lang), make_request(lang, environmental=make_request().environmental
+                                                 .model_copy(update={"scope3_emissions": None}))):
+        for texte in _textes_narratifs(req):
+            assert "(s)" not in texte and "{" not in texte and "}" not in texte, texte
+            assert " 1 actions" not in texte and " 1 recommandations" not in texte, texte
+            assert not _affirme_une_conformite(texte), texte
+            bas = texte.lower()
+            for f in FORMULATIONS_DE_VERIFICATION:
+                assert f not in bas, (f, texte)
+
+
+def test_texte_cite_la_grille_du_score():
+    """La tranche citée est celle de bands.py, et la pastille du PDF aussi."""
+    import narrative as NR
+    from bands import classer
+    from report_generator import _status
+    req = make_request()                                  # 42 % renouvelable
+    tranche = classer("renewable_energy_percent", 42)
+    assert any(f"42 %, un niveau {tranche}" in t for t in NR.indicator_readings(req, "env"))
+    assert _status(req, "renewable_energy_percent", 42) == {"solide": "good", "exemplaire": "good",
+                                                             "satisfaisant": "warn"}.get(tranche, "bad")
+
+
+def test_indicateurs_manquants_listes_et_jamais_commentes():
+    import narrative as NR
+    req = make_request()                                  # pas de volume de déchets
+    texte = " ".join(NR.pillar_paragraphs(req, calculate_esg_scores(req), "env"))
+    assert "Restent à documenter" in texte and "le volume de déchets" in texte
+    assert "biodiversité sont déclarées" not in texte
+
+
+def test_le_rapport_porte_du_texte_sur_chaque_page_courante():
+    """« Un manque cruel de texte réel » : chaque page courante porte au
+    moins 120 mots de texte (tableaux compris), et le rapport de
+    démonstration dépasse 3 500 mots."""
+    import fitz
+    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
+    from make_examples import DEMO
+    pdf, layout = _layout(DEMO)
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    mots = lambda i: len(re.findall(r"\w+", doc[i].get_text()))
+    assert sum(mots(i) for i in range(doc.page_count)) > 3500
+    for page in layout["content_pages"]:
+        assert mots(page - 1) >= 120, f"page {page} : {mots(page - 1)} mots"

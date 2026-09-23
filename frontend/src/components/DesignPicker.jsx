@@ -98,8 +98,9 @@ export function PhotoSlots({ photos, onChange }) {
       </div>
       {error && <p className="design-error">{error}</p>}
       <p className="photo-hint">
-        Sans photo fournie, le rapport utilise des images d'illustration libres de droits
-        (paysages, végétal, architecture), signalées comme telles dans la note méthodologique.
+        Sans photo fournie, la couverture et le pilier environnemental sont illustrés par des
+        paysages libres de droits (signalés dans la note méthodologique) ; les autres emplacements
+        restent sans photo plutôt que d'afficher une image sans rapport avec le sujet.
       </p>
     </div>
   )

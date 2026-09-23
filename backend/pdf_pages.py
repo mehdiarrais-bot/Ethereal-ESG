@@ -6,13 +6,36 @@ Aucune donnée n'est inventée ici : une métrique absente n'est pas affichée,
 et le radar ne trace que les trois piliers du client (N-1 en pointillés
 quand l'historique existe), jamais une référence sectorielle.
 """
-from pdf_kit import (Px, Kit, draw_radar, draw_header, draw_footer, paint_paper, esc,
+from pdf_kit import (Px, Kit, draw_radar, draw_header, draw_footer, paint_paper, esc, hexc,
                      SERIF_FAMILIES)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Petits blocs réutilisés
 # ═══════════════════════════════════════════════════════════════════════════
+
+_PILLAR_ICON = {"env": "leaf", "social": "people", "gov": "scale"}
+
+
+def photo_or_tile(p: Px, k: Kit, slot, pillar, label, x, y, w, h, radius=0):
+    """Photo fournie par l'entreprise pour l'emplacement ; sinon (ou banque
+    pour l'environnement) une tuile sobre : fond du pilier et pictogramme.
+    Jamais une photo d'illustration sans rapport avec le pilier."""
+    raw = k.photo(slot)
+    if raw:
+        p.image(raw, x, y, w, h, radius=radius)
+        return
+    from visual_kit import icon_png
+    from reportlab.lib.utils import ImageReader
+    import io
+    p.rect(x, y, w, h, pillar, radius=radius)
+    size = min(w, h) * 0.34
+    ir = ImageReader(io.BytesIO(icon_png(_PILLAR_ICON[pillar], 256, hexc(k.c[pillar + "_soft"]))))
+    p.cv.drawImage(ir, p.x(x + (w - size) / 2), p.y(y + h / 2 + size / 2 - 8), size * 0.75,
+                   size * 0.75, mask="auto")
+    p.text(x + w / 2, y + h / 2 + size / 2 + 18, label, "body", 11, color=pillar + "_soft",
+           align="center", track=0.14, upper=True)
+
 
 def _delta(g, key):
     d = (g.get("delta") or {}).get(key)
@@ -83,7 +106,7 @@ def glance_aurora(p: Px, k: Kit, g):
     p.text(56, 122, "01", "display", 34, color="accent")
     p.text(56, 170, TR["ed_glance"], "display", 42, color="ink", max_w=680)
     p.para(56, 190, 560, esc(g["verdict"]), k.ps("v", 14.5 * 0.75, color="muted", leading=22 * 0.75))
-    p.image(k.photo("environment"), 56, 272, 682, 200)
+    p.image(k.photo("cover"), 56, 272, 682, 200)
     # Quatre colonnes à filets
     y0, h = 500, 128
     p.line(56, y0, 738, y0, color="ink", lw=0.8)
@@ -126,7 +149,7 @@ def glance_annuel(p: Px, k: Kit, g):
     p.rect(373, 192, 48, 2, "accent")
     p.para(157, 212, 480, esc(g["verdict"]),
            k.ps("v", 16 * 0.75, font="display", color="muted", leading=24 * 0.75, alignment=1))
-    p.image(k.photo("environment"), 76, 296, 642, 180)
+    p.image(k.photo("cover"), 76, 296, 642, 180)
     p.rect(76, 296, 642, 180, None, stroke="rule", lw=0.8)
     # Tableau à doubles filets
     y0, h = 506, 132
@@ -159,7 +182,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
     p.text(56, 126, "01 · " + TR["toc_part1"], "body_b", 12.5, color="accent", track=0.06, upper=True)
     p.text(56, 180, TR["ed_glance"], "display", 56, color="ink", max_w=680)
     p.para(56, 198, 540, esc(g["verdict"]), k.ps("v", 15 * 0.75, color="muted", leading=23 * 0.75))
-    p.image(k.photo("environment"), 56, 276, 682, 170, radius=16)
+    p.image(k.photo("cover"), 56, 276, 682, 170, radius=16)
     cw, gap, y0, h = (682 - 36) / 4, 12, 460, 132
     for i, (key, lab, val) in enumerate(_pillars(g)):
         x = 56 + i * (cw + gap)
@@ -195,7 +218,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
 def glance_portrait(p: Px, k: Kit, g):
     TR = g["TR"]
     paint_paper(p, k)
-    p.image(k.photo("company"), 0, 0, 794, 440)
+    p.image(k.photo("company") or k.photo("cover"), 0, 0, 794, 440)
     p.gradient_v(0, 0, 794, 110, "primary", 0.45, 0.0)
     p.text(56, 44, g["name"], "body", 10, color="on_primary", track=0.12, upper=True, max_w=400)
     p.text(738, 44, TR["ed_report_year"].format(y=g["year"]), "body", 10, color="on_primary",
@@ -242,7 +265,7 @@ def glance_terre(p: Px, k: Kit, g):
     for i, (key, slot, lab, val, items) in enumerate(tiles):
         x = 56 + i * (cw + 14)
         p.rect(x, y0, cw, 430, f"{key}_soft", radius=3)
-        p.image(k.photo(slot), x, y0, cw, 190)
+        photo_or_tile(p, k, slot, key, lab, x, y0, cw, 190)
         p.text(x + 20, y0 + 232, lab, "body", 12, color=key, track=0.1, upper=True)
         p.text(x + cw - 20, y0 + 240, f"{val:.0f}", "display", 44, color=key, align="right")
         d = _delta(g, key)
@@ -269,8 +292,8 @@ def glance_galerie(p: Px, k: Kit, g):
     big_w = (666 - 8) * 1.6 / 2.6
     p.image(k.photo("environment"), 64, 210, big_w, 308)
     sx, sw = 64 + big_w + 8, 666 - big_w - 8
-    p.image(k.photo("social"), sx, 210, sw, 150)
-    p.image(k.photo("governance"), sx, 368, sw, 150)
+    photo_or_tile(p, k, "social", "social", TR["ed_soc"], sx, 210, sw, 150)
+    photo_or_tile(p, k, "governance", "gov", TR["ed_gov"], sx, 368, sw, 150)
     y0 = 560
     p.text(64, y0 + 10, TR["ed_global"], "body", 11, color="muted", track=0.14, upper=True)
     p.text(64, y0 + 82, f"{g['t']:.0f}", "display", 70, color="ink")
@@ -474,7 +497,7 @@ def cover_mosaic(p, k, g):
     p.image(k.photo("cover"), 64, y0, big_w, 470)
     sx, sw = 64 + big_w + 8, 666 - big_w - 8
     p.image(k.photo("environment"), sx, y0, sw, 231)
-    p.image(k.photo("social"), sx, y0 + 239, sw, 231)
+    photo_or_tile(p, k, "social", "social", TR["ed_soc"], sx, y0 + 239, sw, 231)
     y1 = y0 + 470 + 40
     p.para(64, y1, 360, esc(g["tagline"]), k.ps("tg", 15 * 0.75, color="muted", leading=22 * 0.75))
     p.text(730, y1 + 20, TR["ed_global"], "body", 10.5, color="muted", align="right", track=0.14, upper=True)
@@ -524,106 +547,60 @@ def toc_page(p: Px, k: Kit, g, parts, pages: dict):
     draw_footer(p, k, g["footer_label"], p.cv.getPageNumber())
 
 
-def company_page(p: Px, k: Kit, g):
-    """« L'entreprise en bref » : identité et chiffres saisis, photo, initiatives."""
-    TR = g["TR"]
-    c = g["company"]
-    paint_paper(p, k)
-    draw_header(p, k, TR["ed_report_year"].format(y=g["year"]))
-    p.text(56, 150, TR["ed_company"], k.title_font, 44, color="ink", max_w=680)
-    intro = f"{c.name} — {c.sector}, {c.country}."
-    p.para(56, 172, 520, esc(intro), k.ps("in", 15 * 0.75, color="muted", leading=23 * 0.75))
-    facts = g["facts"]
-    y0 = 250
-    if facts:
-        cw = 682 / len(facts)
-        p.line(56, y0, 738, y0, color="rule", lw=0.6)
-        for i, (val, lab) in enumerate(facts):
-            x = 56 + i * cw
-            if i:
-                p.line(x, y0 + 14, x, y0 + 96, color="rule", lw=0.6)
-            p.text(x + (0 if i == 0 else 18), y0 + 58, val, "display", 34, color="ink", max_w=cw - 24)
-            p.text(x + (0 if i == 0 else 18), y0 + 84, lab, "body", 11, color="muted", max_w=cw - 24)
-        p.line(56, y0 + 110, 738, y0 + 110, color="rule", lw=0.6)
-    p.image(k.photo("company"), 56, 390, 682, 360, radius=k.layout["radius"])
-    inits = g["initiatives"]
-    if inits:
-        p.text(56, 800, TR["ed_initiatives"], "display", 22, color="ink")
-        cols = 2 if len(inits) > 3 else 1
-        cw = 682 / cols
-        per = (len(inits) + cols - 1) // cols
-        for i, it in enumerate(inits[:8]):
-            x = 56 + (i // per) * cw
-            yy = 830 + (i % per) * 44
-            p.cv.setFillColor(k.c["accent"]); p.cv.circle(p.x(x + 6), p.y(yy + 14), 3, fill=1, stroke=0)
-            p.para(x + 22, yy + 4, cw - 40, esc(it), k.ps("it", 13 * 0.75, color="ink", leading=18 * 0.75),
-                   max_h=40)
-    draw_footer(p, k, g["footer_label"], p.cv.getPageNumber())
-
-
-def word_page(p: Px, k: Kit, g):
-    """Mot de la direction (maquette Aurora « raison d'être »)."""
-    TR = g["TR"]
-    c = g["company"]
-    paint_paper(p, k)
-    draw_header(p, k, TR["ed_report_year"].format(y=g["year"]))
-    p.image(k.photo("purpose"), 470, 90, 324, 960)
-    p.text(56, 150, TR["ed_word"], k.title_font, 30, color="ink", max_w=380)
-    if k.d["fonts"]["display"] in SERIF_FAMILIES:
-        p.text(56, 240, "“", "display", 90, color="accent")
-    else:
-        p.rect(56, 200, 40, 3, "accent")
-    q = c.ceo_quote.strip().strip('"“”«» ')
-    q = f"« {q} »" if g["lang"] != "en" else f"“{q}”"
-    h = p.para(56, 250, 370, esc(q), k.ps("q", 22 * 0.75, font="display_i", color="ink",
-                                          leading=33 * 0.75))
-    if c.presenter_name:
-        attrib = c.presenter_name + (f" — {c.presenter_title}" if c.presenter_title else "")
-        p.rect(56, 280 + h, 30, 0.9, "muted")
-        p.para(96, 272 + h, 330, esc(attrib), k.ps("a", 12 * 0.75, color="muted"))
-    draw_footer(p, k, g["footer_label"], p.cv.getPageNumber())
-
-
 def focus_page(p: Px, k: Kit, g):
-    """Focus environnement (maquette Aurora « Sobriété énergétique »)."""
+    """Focus environnement : photo de nature (thème du pilier), chiffre-clé
+    et lecture de l'empreinte carbone."""
     TR = g["TR"]
     hs = g["hero"]
     paint_paper(p, k)
     draw_header(p, k, TR["ed_report_year"].format(y=g["year"]))
-    p.image(k.photo("focus"), 56, 90, 330, 960, radius=k.layout["radius"])
-    x, w = 430, 308
-    p.text(x, 330, TR["ed_focus"], "body", 11, color="muted", track=0.14, upper=True)
-    h = p.para(x, 346, w, esc(hs["statement"]),
-               k.ps("fs", 26 * 0.75, font="display", color="ink", leading=34 * 0.75))
-    y = 346 + h + 30
-    if g.get("env_headline"):
-        y += p.para(x, y, w, esc(g["env_headline"]),
-                    k.ps("fh", 13.5 * 0.75, color="muted", leading=21 * 0.75)) + 30
-    p.line(x, y, x + w, y, color="rule", lw=0.7)
-    p.text(x, y + 76, f"{hs['value']}{hs['unit']}".replace(" ", ""), "display", 64, color="accent",
+    p.image(k.photo("environment"), 56, 90, 330, 960, radius=k.layout["radius"])
+    x, w = 424, 314
+    p.text(x, 150, TR["ed_focus"], "body", 11, color="muted", track=0.14, upper=True)
+    y = 166 + p.para(x, 166, w, esc(hs["statement"]),
+                     k.ps("fs", 25 * 0.75, font="display", color="ink", leading=33 * 0.75))
+    p.line(x, y + 24, x + w, y + 24, color="rule", lw=0.7)
+    p.text(x, y + 100, f"{hs['value']}{hs['unit']}".replace(" ", ""), "display", 64, color="accent",
            max_w=w)
-    p.para(x, y + 92, w, esc(hs["label"]), k.ps("fl", 14 * 0.75, color="muted", leading=20 * 0.75))
+    y += 116 + p.para(x, y + 116, w, esc(hs["label"]),
+                      k.ps("fl", 14 * 0.75, color="muted", leading=20 * 0.75))
+    for text in (g.get("env_headline"), g.get("ghg_text")):
+        if text:
+            y += 26 + p.para(x, y + 26, w, esc(text),
+                             k.ps("ft", 13 * 0.75, color="ink", leading=20 * 0.75), max_h=1040 - y)
     draw_footer(p, k, g["footer_label"], p.cv.getPageNumber())
 
 
-def divider_page(p: Px, k: Kit, g, num, title, subtitle, slot):
-    """Carton de chapitre : photo pleine hauteur, grand numéro, titre."""
-    paint_paper(p, k)
-    p.image(k.photo(slot), 0, 0, 397, 1123)
-    x, w = 450, 290
-    p.text(x, 470, num, "display", 120, color="accent")
-    h = p.para(x, 500, w, esc(title), k.ps("dt", 40 * 0.75, font=k.title_font, color="ink",
-                                            leading=46 * 0.75))
-    p.rect(x, 524 + h, 56, 2, "accent")
-    p.para(x, 546 + h, w, esc(subtitle), k.ps("ds", 16 * 0.75, font="display_i", color="muted",
-                                               leading=23 * 0.75))
-    draw_footer(p, k, g["footer_label"], p.cv.getPageNumber())
+def divider_page(p: Px, k: Kit, g, num, title, subtitle, intro, figures):
+    """Carton de chapitre typographique : pas de photo d'illustration, mais
+    ce que contient le chapitre et ses chiffres clés."""
+    p.rect(0, 0, 794, 1123, "primary")
+    p.text(56, 56, g["name"], "body", 10, color="accent_on_primary", track=0.14, upper=True,
+           max_w=400)
+    p.text(56, 330, num, "display", 150, color="accent_on_primary")
+    h = p.para(56, 360, 600, esc(title), k.ps("dt", 50 * 0.75, font=k.title_font,
+                                               color="on_primary", leading=56 * 0.75))
+    y = 360 + h + 20
+    p.rect(56, y, 64, 2, "accent_on_primary")
+    y += 22 + p.para(56, y + 22, 560, esc(subtitle),
+                     k.ps("ds", 20 * 0.75, font="display_i", color="accent_on_primary",
+                          leading=28 * 0.75))
+    p.para(56, y + 40, 600, esc(intro), k.ps("di", 14.5 * 0.75, color="on_primary",
+                                              leading=23 * 0.75))
+    cw = 682 / len(figures)
+    p.line(56, 880, 738, 880, color="accent_on_primary", lw=0.6)
+    for i, (val, lab) in enumerate(figures):
+        x = 56 + i * cw
+        p.text(x, 950, val, "display", 46, color="on_primary")
+        p.text(x, 976, lab, "body", 11, color="accent_on_primary", track=0.08, upper=True,
+               max_w=cw - 14)
+    draw_footer(p, k, g["footer_label"], p.cv.getPageNumber(), on_dark=True)
 
 
 def back_cover(p: Px, k: Kit, g):
-    """Quatrième de couverture (maquette Aurora)."""
-    p.image(k.photo("closing"), 0, 0, 794, 1123)
-    p.gradient_v(0, 0, 794, 520, "paper", 0.85, 0.0)
+    """Quatrième de couverture : la photo de couverture, en écho."""
+    p.image(k.photo("cover"), 0, 0, 794, 1123)
+    p.gradient_v(0, 0, 794, 520, "paper", 0.88, 0.0)
     p.gradient_v(0, 960, 794, 163, "primary", 0.0, 0.55)
     p.para(56, 40, 300, esc(g["name"].upper()),
            k.ps("bn", 10.5 * 0.75, font="body_b", color="ink", charSpace=1.4))

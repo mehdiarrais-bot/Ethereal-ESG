@@ -17,7 +17,7 @@ import re
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer,
+from reportlab.platypus import (Flowable, BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer,
                                 Table, TableStyle, Image, PageBreak, KeepTogether,
                                 NextPageTemplate, CondPageBreak)
 
@@ -26,6 +26,8 @@ from i18n import L
 from pdf_kit import (Kit, Px, FullPage, Anchor, PX, PAGE_W, PAGE_H, clean, esc, hexc,
                      draw_header, draw_footer, paint_paper)
 import pdf_pages as PG
+import narrative as NR
+from bands import classer
 
 pdf_txt = clean  # nom historique, conservé pour les appelants
 
@@ -61,8 +63,14 @@ def build_styles(k: Kit) -> dict:
                    spaceAfter=4, keepWithNext=1),
         "h2": k.ps("h2", 13.5, font="display", color="ink", leading=17, spaceBefore=12,
                    spaceAfter=5, keepWithNext=1),
-        "body": k.ps("body", 9.6, color="ink", leading=15, spaceAfter=6),
-        "bullet": k.ps("bullet", 9.6, color="ink", leading=14, leftIndent=12, spaceAfter=3),
+        # allowWidows/allowOrphans=0 : jamais une ligne seule en haut ou en
+        # bas de page (règle typographique d'un rapport publié)
+        "body": k.ps("body", 9.6, color="ink", leading=15, spaceAfter=7,
+                     allowWidows=0, allowOrphans=0),
+        "lead": k.ps("lead", 11.2, color="ink", leading=17.5, spaceAfter=9,
+                     allowWidows=0, allowOrphans=0),
+        "bullet": k.ps("bullet", 9.6, color="ink", leading=14, leftIndent=12, spaceAfter=3,
+                       allowWidows=0, allowOrphans=0),
         "caption": k.ps("caption", 8, font="body_i", color="muted", alignment=TA_CENTER),
         "small": k.ps("small", 8.3, color="ink", leading=11.5),
         "small_b": k.ps("small_b", 8.3, font="body_b", color="ink", leading=11.5),
@@ -75,9 +83,11 @@ def section_head(story, title, color_key, k: Kit, S, anchors, key=None, keep_cm=
     """Titre de section. « 2. Pilier… » est posé sur deux lignes (numéro en
     accent, titre dessous) ; l'extraction texte rend « 2. Pilier… », ce que
     vérifie le test de numérotation du sommaire."""
+    story.append(CondPageBreak(keep_cm * 28.35))
+    # Repère APRÈS le saut conditionnel : posé avant, il notait la page
+    # précédente quand le titre partait en haut de la page suivante.
     if key:
         story.append(Anchor(key, anchors))
-    story.append(CondPageBreak(keep_cm * 28.35))
     m = re.match(r"^(\d+)\.\s+(.*)$", title)
     if m:
         markup = (f'<font name="{k.f["display"]}" size="15" color="{hexc(k.c["accent"])}">'
@@ -89,7 +99,7 @@ def section_head(story, title, color_key, k: Kit, S, anchors, key=None, keep_cm=
     rule.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), k.c[color_key])]))
     rule.hAlign = "LEFT"
     story.append(rule)
-    story.append(Spacer(1, 10))
+    story.append(_sp(k, 10))
 
 
 def _box(content, k: Kit, bg, left=None, left_w=2.2, pad=12):
@@ -109,7 +119,7 @@ def insight_callout(story, text, color_key, k: Kit):
     """Encadré « lecture métier » — le message clé de la section."""
     story.append(_box(Paragraph(esc(text), k.ps("ic", 10, color="ink", leading=15)), k,
                       k.c["panel"], left=k.c[color_key]))
-    story.append(Spacer(1, 8))
+    story.append(_sp(k, 8))
 
 
 def consultant_callout(story, text, k: Kit, TR):
@@ -119,7 +129,7 @@ def consultant_callout(story, text, k: Kit, TR):
                                                         spaceAfter=4)),
             Paragraph(esc(text), k.ps("cnb", 10, font="display_i", color="on_primary", leading=15))]
     story.append(_box(flow, k, k.c["primary"]))
-    story.append(Spacer(1, 8))
+    story.append(_sp(k, 8))
 
 
 def kpi_block(kpis, k: Kit, lang):
@@ -154,7 +164,7 @@ def kpi_block(kpis, k: Kit, lang):
         t.setStyle(TableStyle(st))
         return t
 
-    cells = [[Paragraph(esc(i[0]).upper(), lab_st), Spacer(1, 4), Paragraph(val(i), val_st)]
+    cells = [[Paragraph(esc(i[0]).upper(), lab_st), _sp(k, 4), Paragraph(val(i), val_st)]
              for i in kpis]
     ncol = 3
     data = [cells[i:i + ncol] + [""] * (ncol - len(cells[i:i + ncol]))
@@ -198,10 +208,29 @@ def _card(content, k: Kit, w):
     return t
 
 
+class GuardedTable(Table):
+    """Table qui refuse une coupure laissant moins de MIN_ROWS lignes de
+    données d'un côté ou de l'autre du saut de page : le tableau passe alors
+    entier à la page suivante (ou se coupe plus loin). ReportLab recrée les
+    fragments via self.__class__, qui restent donc protégés."""
+    MIN_ROWS = 3
+
+    def split(self, aw, ah):
+        parts = super().split(aw, ah)
+        if len(parts) < 2:
+            return parts
+        head = self.repeatRows if isinstance(self.repeatRows, int) else len(self.repeatRows)
+        first = len(parts[0]._cellvalues) - head
+        rest = len(parts[1]._cellvalues) - head
+        if first < self.MIN_ROWS or rest < self.MIN_ROWS:
+            return []
+        return parts
+
+
 def data_table(rows, widths, k: Kit, header=True, total=False, zebra=False):
     """Tableau éditorial : en-tête en petites capitales, filets fins, pas
     d'aplat (maquette Aurora). `total` : dernière ligne mise en valeur."""
-    t = Table(rows, colWidths=widths, repeatRows=1 if header else 0)
+    t = GuardedTable(rows, colWidths=widths, repeatRows=1 if header else 0)
     st = [("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
           ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
@@ -219,6 +248,11 @@ def data_table(rows, widths, k: Kit, header=True, total=False, zebra=False):
                ("ROUNDEDCORNERS", [k.layout["radius"]] * 4)]
     t.setStyle(TableStyle(st))
     return t
+
+
+def _sp(k: Kit, pt: float) -> Spacer:
+    """Espace vertical proportionnel à la densité de la séquence."""
+    return Spacer(1, k.space(pt))
 
 
 def _chart(story, chart_images, key, w_cm, h_cm, caption, S):
@@ -330,6 +364,7 @@ def page_context(request, scores, TR, type_label):
         "gov_line": _gov_line(request, TR, lang), "facts": _facts(request, TR, lang),
         "initiatives": _initiatives(request), "hero": hero_stat(request, scores),
         "env_headline": pillar_headline(request, scores).get("env"),
+        "ghg_text": NR.ghg_paragraph(request),
         "footer_label": TR["rep_default"],
     }
 
@@ -338,12 +373,31 @@ def page_context(request, scores, TR, type_label):
 # Assemblage
 # ═══════════════════════════════════════════════════════════════════════════
 
-class _Story(list):
-    """Histoire ReportLab qui gère la bascule pages composées / pages courantes."""
+class _RunMarker(Flowable):
+    """Repère invisible : les pages suivantes appartiennent à la séquence n."""
 
-    def __init__(self, kit):
+    def __init__(self, run: int, state: dict):
         super().__init__()
-        self.kit, self.mode = kit, "full"
+        self.run, self.state = run, state
+
+    def wrap(self, aw, ah):
+        return 0, 0
+
+    def draw(self):
+        self.state["run"] = self.run
+
+
+class _Story(list):
+    """Histoire ReportLab qui gère la bascule pages composées / pages courantes.
+
+    Une « séquence » (run) est une suite de pages courantes entre deux pages
+    composées. Chaque séquence a sa densité (Kit.density), réglée par
+    compose_report pour que sa dernière page ne soit pas presque vide."""
+
+    def __init__(self, kit, densities: dict, state: dict):
+        super().__init__()
+        self.kit, self.mode, self.run = kit, "full", -1
+        self.densities, self.state = densities, state
 
     def full(self, drawer, *args):
         if self.mode == "content":
@@ -353,7 +407,9 @@ class _Story(list):
 
     def content(self):
         if self.mode != "content":
-            self += [NextPageTemplate("content"), PageBreak()]
+            self.run += 1
+            self.kit.density = self.densities.get(self.run, 1.0)
+            self += [NextPageTemplate("content"), PageBreak(), _RunMarker(self.run, self.state)]
             self.mode = "content"
 
 
@@ -370,12 +426,87 @@ def _toc_parts(TR):
 
 def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                         chart_images: dict, logo_bytes: bytes = None) -> bytes:
-    pages = {}
-    _compose(request, scores, content, chart_images, logo_bytes, pages_in={}, anchors=pages)
-    return _compose(request, scores, content, chart_images, logo_bytes, pages_in=pages, anchors={})
+    return compose_report(request, scores, content, chart_images, logo_bytes)[0]
 
 
-def _compose(request, scores, content, chart_images, logo_bytes, pages_in, anchors) -> bytes:
+# Une séquence qui finit sur moins de SPARSE_FILL de page est jugée « en
+# débord » ; on essaie ces densités, dans l'ordre, jusqu'à la résorber
+# (resserrer d'abord, puis desserrer pour remplir la dernière page).
+SPARSE_FILL = 0.35
+_DENSITY_STEPS = (0.85, 0.72, 0.6, 1.1, 1.2, 1.32, 1.45)
+
+
+def _sparse_runs(layout) -> set:
+    """Séquences dont la dernière page courante est presque vide."""
+    last = {}
+    for page, run, fill in layout["pages"]:
+        last.setdefault(run, []).append((page, fill))
+    return {run for run, pages in last.items() if len(pages) > 1 and pages[-1][1] < SPARSE_FILL}
+
+
+def compose_report(request, scores, content, chart_images, logo_bytes=None):
+    """(pdf, mise en page).
+
+    1. Composition d'essai : relève la page de chaque section (sommaire) et
+       le remplissage de chaque page courante.
+    2. Pour toute séquence finissant sur une page presque vide (le « débord
+       de trois lignes »), nouvelles compositions à densité ajustée.
+    3. Composition finale avec les numéros de page définitifs.
+    `mise en page` = {"pages": [(page, séquence, remplissage)], "content_pages": [...],
+    "densities": {...}} — lue par les tests de pagination."""
+    args = (request, scores, content, chart_images, logo_bytes)
+    opts = {"densities": {}, "inline_focus": False}
+    anchors, layout = _trial(*args, opts, {})
+    anchors, layout = _fit_densities(args, opts, anchors, layout)
+    if _FOCUS_RUN in _sparse_runs(layout):
+        # Dernier recours pour la séquence Environnement : le focus quitte sa
+        # page propre et vient remplir la page du débord (même contenu).
+        opts = {"densities": {}, "inline_focus": True}
+        anchors, layout = _trial(*args, opts, anchors)
+        anchors, layout = _fit_densities(args, opts, anchors, layout)
+    final_anchors = {}
+    layout = _new_layout(opts)
+    pdf = _compose(*args, pages_in=anchors, anchors=final_anchors, layout=layout, opts=opts)
+    if final_anchors != anchors:  # la pagination a bougé : dernière passe
+        layout = _new_layout(opts)
+        pdf = _compose(*args, pages_in=final_anchors, anchors={}, layout=layout, opts=opts)
+    return pdf, layout
+
+
+# Séquence suivie de la page Focus (synthèse + pilier environnemental)
+_FOCUS_RUN = 1
+
+
+def _new_layout(opts):
+    return {"pages": [], "content_pages": [], "densities": opts["densities"],
+            "inline_focus": opts["inline_focus"]}
+
+
+def _fit_densities(args, opts, anchors, layout):
+    """Essaie les densités de _DENSITY_STEPS sur les séquences en débord ;
+    garde, pour chaque séquence, la première qui résorbe son débord."""
+    for step in _DENSITY_STEPS:
+        sparse = _sparse_runs(layout)
+        if not sparse:
+            break
+        trial = dict(opts, densities={**opts["densities"], **{r: step for r in sparse}})
+        _, t_layout = _trial(*args, trial, anchors)
+        fixed = sparse - _sparse_runs(t_layout)
+        if fixed:
+            opts["densities"].update({r: step for r in fixed})
+            anchors, layout = _trial(*args, opts, anchors)
+    return anchors, layout
+
+
+def _trial(request, scores, content, chart_images, logo_bytes, opts, pages_in):
+    anchors, layout = {}, _new_layout(opts)
+    _compose(request, scores, content, chart_images, logo_bytes, pages_in=pages_in,
+             anchors=anchors, layout=layout, opts=opts)
+    return anchors, layout
+
+
+def _compose(request, scores, content, chart_images, logo_bytes, pages_in, anchors, layout,
+             opts) -> bytes:
     k = Kit(request)
     if logo_bytes:
         k.logo = logo_bytes
@@ -389,10 +520,18 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     buf = io.BytesIO()
 
     def on_content(canvas, doc):
+        layout["content_pages"].append(canvas.getPageNumber())
         p = Px(canvas, k)
         paint_paper(p, k)
         draw_header(p, k, TR["ed_report_year"].format(y=g["year"]))
         draw_footer(p, k, g["footer_label"], canvas.getPageNumber())
+
+    state = {"run": 0}
+
+    def on_content_end(canvas, doc):
+        f = doc.frame
+        fill = (f._y2 - f._y) / (f._y2 - f._y1)
+        layout["pages"].append((canvas.getPageNumber(), state["run"], round(fill, 3)))
 
     doc = BaseDocTemplate(buf, pagesize=A4, title=clean(f"{type_label} — {request.company.name}"),
                           author=clean(request.company.name))
@@ -400,44 +539,59 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     body = Frame(_M_LEFT * PX, (1123 - _M_BOTTOM) * PX, CW, (_M_BOTTOM - _M_TOP) * PX,
                  0, 0, 0, 0, id="body")
     doc.addPageTemplates([PageTemplate("full", [full]),
-                          PageTemplate("content", [body], onPage=on_content)])
+                          PageTemplate("content", [body], onPage=on_content,
+                                       onPageEnd=on_content_end)])
 
-    story = _Story(k)
+    story = _Story(k, opts["densities"], state)
     story.full(PG.cover_page, g)
     story.full(PG.toc_page, g, _toc_parts(TR), pages_in)
-    story.full(PG.company_page, g)
-    if request.company.ceo_quote:
-        story.full(PG.word_page, g)
+    story.content()
+    S = build_styles(k)
+    _company(story, request, k, S, TR, g)
     story.full(PG.glance_page, g)
     story.content()
+    S = build_styles(k)
 
     from content_generator import (pillar_insights, risks_opportunities, enriched_recommendations,
                                    benchmark_verdict, maturity_text, compliance_assessment,
                                    roadmap_12m, priority_reading)
     pi = pillar_insights(request, scores)
     notes = getattr(request, "consultant_notes", None) or {}
+    ro = risks_opportunities(request, scores)
+    gaps = compliance_assessment(request, scores)
+    recs = enriched_recommendations(request, scores) if request.include_recommendations else []
+    rm = roadmap_12m(request, scores)
 
-    _executive(story, request, scores, content, k, S, TR, anchors, notes,
-               risks_opportunities(request, scores), enriched_recommendations(request, scores)[:3])
-    _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi)
-    story.full(PG.focus_page, g)
-    story.content()
-    _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi)
-    _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi)
+    _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs[:3])
+    _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+                 recs)
+    if opts["inline_focus"]:
+        _focus_inline(story, k, S, g)
+    else:
+        story.full(PG.focus_page, g)
+        story.content()
+        S = build_styles(k)
+    _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs)
+    _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs)
     _analyses(story, content, chart_images, k, S, TR, anchors)
 
-    story.full(PG.divider_page, g, "01", TR["div1_title"], TR["div1_sub"], "focus")
+    story.full(PG.divider_page, g, "01", TR["div1_title"], TR["div1_sub"],
+               NR.act1_intro(request, scores, gaps, ro["risks"]),
+               NR.act1_figures(request, scores, gaps, ro["risks"]))
     story.content()
+    S = build_styles(k)
     _strategic(story, request, scores, chart_images, k, S, TR, anchors,
                benchmark_verdict(request, scores), maturity_text(request, scores),
-               risks_opportunities(request, scores), compliance_assessment(request, scores))
+               ro, gaps, g["refs"])
 
-    story.full(PG.divider_page, g, "02", TR["div2_title"], TR["div2_sub"], "action")
+    story.full(PG.divider_page, g, "02", TR["div2_title"], TR["div2_sub"],
+               NR.act2_intro(request, recs, rm), NR.act2_figures(request, recs, rm))
     story.content()
+    S = build_styles(k)
     if request.include_recommendations:
         _recommendations(story, request, scores, chart_images, k, S, TR, anchors,
-                         enriched_recommendations(request, scores), priority_reading)
-    _roadmap(story, request, scores, k, S, TR, anchors, roadmap_12m(request, scores))
+                         recs, priority_reading)
+    _roadmap(story, request, scores, k, S, TR, anchors, rm)
     if request.report_type.value == "white_paper":
         _white_paper(story, request, scores, k, S, TR, anchors)
     _closing(story, request, scores, content, k, S, TR, anchors)
@@ -452,13 +606,88 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
 # Sections du flux courant
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _focus_inline(story, k, S, g):
+    """Le focus environnement dans le flux : photo nature et chiffre-clé côte
+    à côte (même contenu que la page Focus, sans la page dédiée)."""
+    from pdf_kit import crop_jpeg
+    hs, TR = g["hero"], g["TR"]
+    w_img, h = CW * 0.42, CW * 0.52
+    photo = k.photo("environment")
+    img = Image(io.BytesIO(crop_jpeg(photo, round(w_img / h, 3))), width=w_img, height=h) if photo else ""
+    text = [Paragraph(esc(TR["ed_focus"]).upper(), k.ps("fk", 7.8, color="muted", charSpace=0.9,
+                                                         spaceAfter=8)),
+            Paragraph(esc(hs["statement"]), k.ps("fs", 17, font="display", color="ink", leading=22,
+                                                 spaceAfter=14)),
+            Paragraph(esc(f"{hs['value']}{hs['unit']}".replace(" ", "")),
+                      k.ps("fv", 44, font="display", color="accent", leading=48)),
+            Paragraph(esc(hs["label"]), k.ps("fl", 10, color="muted", leading=14, spaceAfter=12))]
+    if g.get("env_headline"):
+        text.append(Paragraph(esc(g["env_headline"]), S["body"]))
+    t = Table([[img, text]], colWidths=[w_img, CW - w_img])
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                           ("LEFTPADDING", (0, 0), (0, 0), 0), ("LEFTPADDING", (1, 0), (1, 0), 24),
+                           ("LINEABOVE", (0, 0), (-1, 0), 0.8, k.c["ink"]),
+                           ("TOPPADDING", (0, 0), (-1, -1), 14)]))
+    story.append(_sp(k, 10))
+    story.append(KeepTogether(t))
+
+
+def _company(story, request, k, S, TR, g):
+    """L'entreprise en bref : présentation, périmètre et complétude, chiffres
+    saisis, photo fournie par l'entreprise, initiatives, mot de la direction."""
+    c = request.company
+    story.append(Paragraph(esc(TR["ed_company"]), k.ps("ct", 30, font=k.title_font, color="ink",
+                                                        leading=35, spaceAfter=14)))
+    paras = NR.company_paragraphs(request, g["refs"])
+    story.append(Paragraph(esc(paras[0]), S["lead"]))
+    facts = g["facts"]
+    if facts:
+        val = k.ps("fv", 24, font="display", color="ink", leading=28)
+        lab = k.ps("fl", 7.8, color="muted", leading=10, charSpace=0.3)
+        cells = [[Paragraph(esc(v), val), _sp(k, 3), Paragraph(esc(l).upper(), lab)] for v, l in facts]
+        t = Table([cells], colWidths=[CW / len(cells)] * len(cells))
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                               ("LINEABOVE", (0, 0), (-1, 0), 0.8, k.c["ink"]),
+                               ("LINEBELOW", (0, 0), (-1, 0), 0.5, k.c["rule"]),
+                               ("LINEAFTER", (0, 0), (-2, -1), 0.5, k.c["rule"]),
+                               ("TOPPADDING", (0, 0), (-1, -1), 12), ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 12)]))
+        story.append(_sp(k, 6))
+        story.append(t)
+        story.append(_sp(k, 14))
+    for para in paras[1:]:
+        story.append(Paragraph(esc(para), S["body"]))
+    photo = k.photo("company") if k.has_client_photo("company") else None
+    if photo:
+        from pdf_kit import crop_jpeg
+        story.append(_sp(k, 8))
+        story.append(Image(io.BytesIO(crop_jpeg(photo, round(16 / 7, 3))), width=CW, height=CW * 7 / 16))
+    if g["initiatives"]:
+        block = [Paragraph(esc(TR["ed_initiatives"]), S["h2"])]
+        block += [Paragraph(f'<font color="{hexc(k.c["accent"])}">•</font>&nbsp; {esc(it)}', S["bullet"])
+                  for it in g["initiatives"]]
+        story.append(KeepTogether(block))
+    if c.ceo_quote:
+        q = c.ceo_quote.strip().strip('"\u201c\u201d\u00ab\u00bb ')
+        q = f"\u00ab {q} \u00bb" if request.language != "en" else f"\u201c{q}\u201d"
+        flow = [Paragraph(esc(TR["ed_word"]).upper(), k.ps("wk", 7.8, font="body_b",
+                                                          color="accent_on_primary", charSpace=0.8,
+                                                          spaceAfter=8)),
+                Paragraph(esc(q), k.ps("wq", 15, font="display_i", color="on_primary", leading=22))]
+        if c.presenter_name:
+            attrib = c.presenter_name + (f" — {c.presenter_title}" if c.presenter_title else "")
+            flow.append(Paragraph(esc(attrib), k.ps("wa", 9, color="accent_on_primary", spaceBefore=10)))
+        story.append(_sp(k, 12))
+        story.append(KeepTogether(_box(flow, k, k.c["primary"], pad=20)))
+
+
 def _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs3):
     section_head(story, TR["pdf_s1"], "accent", k, S, anchors, "s1")
     exec_text = content.get("executive_summary",
                             f"{request.company.name} présente son rapport ESG pour l'exercice "
                             f"{request.company.reporting_year}.")
     story.append(Paragraph(esc(exec_text), S["body"]))
-    story.append(Spacer(1, 8))
+    story.append(_sp(k, 8))
 
     def cell(head, items, col):
         flow = [Paragraph(esc(head).upper(), k.ps("dgh", 7.8, font="body_b", color=col,
@@ -484,21 +713,26 @@ def _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, re
     story.append(grid)
     if recs3:
         acts = "   ".join(f"{i}. {r['title']}" for i, r in enumerate(recs3, 1))
-        story.append(Spacer(1, 6))
+        story.append(_sp(k, 6))
         story.append(_box(Paragraph(f'<b>{esc(TR["digest_actions"]).upper()}</b> — {esc(acts)}',
                                     k.ps("dga", 8.4, color="ink", leading=12)), k, k.c["panel"], pad=9))
     if notes.get("global"):
-        story.append(Spacer(1, 8))
+        story.append(_sp(k, 8))
         consultant_callout(story, notes["global"], k, TR)
-    story.append(Spacer(1, 12))
+    story.append(_sp(k, 12))
 
 
-def _status(v, good, warn, higher_better=True):
-    if v is None:
+_BAND_STATUS = {"exemplaire": "good", "solide": "good", "satisfaisant": "warn",
+                "fragile": "bad", "critique": "bad"}
+
+
+def _status(request, indicator, value):
+    """Pastille d'un indicateur, lue dans la grille du score (bands.py) —
+    la même que le texte : une pastille ne peut plus contredire la phrase.
+    (Avant le 2026-09-24, le PDF portait ses propres seuils, divergents.)"""
+    if value is None:
         return None
-    ok = (v >= good) if higher_better else (v <= good)
-    mid = (v >= warn) if higher_better else (v <= warn)
-    return "good" if ok else ("warn" if mid else "bad")
+    return _BAND_STATUS.get(classer(indicator, value, request.company.sector))
 
 
 def _pillar_intro(story, title, key, score_label, score, insight, note, text, k, S, TR, anchors,
@@ -514,7 +748,20 @@ def _pillar_intro(story, title, key, score_label, score, insight, note, text, k,
     story.append(Paragraph(esc(text), S["body"]))
 
 
-def _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi):
+def _pillar_reading(story, request, scores, pillar, kpis, k, S, TR, lang, recs=()):
+    """« Lecture des indicateurs » : texte chiffré puis tableau, insécables."""
+    first, second = NR.pillar_paragraphs(request, scores, pillar)
+    story.append(KeepTogether([Paragraph(esc(NR.T[lang]["reading_title"]), S["h2"]),
+                               Paragraph(esc(first), S["body"])]))
+    if kpis:
+        story.append(KeepTogether([_sp(k, 4), kpi_block(kpis, k, lang), _sp(k, 10)]))
+    story.append(Paragraph(esc(second), S["body"]))
+    if request.include_recommendations:
+        story.append(Paragraph(esc(NR.levers_sentence(request, recs, pillar)), S["body"]))
+
+
+def _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+                 recs):
     _pillar_intro(story, TR["pdf_s2"], "env", TR["score_env_label"], scores.environmental_score,
                   pi["env"], notes.get("env"),
                   content.get("environmental", "L'analyse environnementale couvre les émissions, "
@@ -526,26 +773,25 @@ def _environment(story, request, scores, content, chart_images, k, S, TR, lang, 
         ci = (env.co2_emissions_tonnes / request.company.revenue_eur * 1e6
               if request.company.revenue_eur else None)
         kpis.append((TR["kpit"]["co2"], _num(env.co2_emissions_tonnes, lang),
-                     _status(ci, 30, 100, higher_better=False)))
+                     _status(request, "co2_emissions_tonnes", round(ci) if ci else None)))
     if env.renewable_energy_percent is not None:
         kpis.append((TR["kpit"]["renewable"], _pct(env.renewable_energy_percent, lang),
-                     _status(env.renewable_energy_percent, 50, 30)))
+                     _status(request, "renewable_energy_percent", env.renewable_energy_percent)))
     if env.energy_consumption_mwh is not None:
         kpis.append((TR["kpit"]["energy"], _num(env.energy_consumption_mwh, lang)))
     if env.water_consumption_m3 is not None:
         kpis.append((TR["kpit"]["water"], _num(env.water_consumption_m3, lang)))
     if env.waste_recycled_percent is not None:
         kpis.append((TR["kpit"]["recycling"], _pct(env.waste_recycled_percent, lang),
-                     _status(env.waste_recycled_percent, 60, 40)))
-    if kpis:
-        story.append(Spacer(1, 6))
-        story.append(kpi_block(kpis, k, lang))
+                     _status(request, "waste_recycled_percent", env.waste_recycled_percent)))
+    _pillar_reading(story, request, scores, "env", kpis, k, S, TR, lang, recs)
     scopes = [("Scope 1", env.scope1_emissions), ("Scope 2", env.scope2_emissions),
               ("Scope 3", env.scope3_emissions)]
     known = [(n, v) for n, v in scopes if v is not None]
     if known:
-        story.append(Spacer(1, 10))
-        story.append(Paragraph(esc(TR["ed_ghg_table"]), S["h2"]))
+        story.append(_sp(k, 6))
+        ghg_head = [Paragraph(esc(TR["ed_ghg_table"]), S["h2"]),
+                    Paragraph(esc(NR.ghg_paragraph(request)), S["body"])]
         tot = sum(v for _, v in known)
         right = k.ps("r", 8.6, color="ink", alignment=2)
         rows = [[Paragraph("", S["th"]), Paragraph("t CO2e", k.ps("thr", 7.4, font="body_b",
@@ -567,16 +813,16 @@ def _environment(story, request, scores, content, chart_images, k, S, TR, lang, 
                 wrap = Table([[tbl, pie]], colWidths=[CW * 0.56, CW * 0.44])
                 wrap.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                                           ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
-                story.append(KeepTogether([wrap, Paragraph(TR["cap_pie"], S["caption"])]))
+                story.append(KeepTogether(ghg_head + [wrap, Paragraph(TR["cap_pie"], S["caption"])]))
             except Exception as e:
                 print(f"Pie error: {e}")
-                story.append(tbl)
+                story.append(KeepTogether(ghg_head + [tbl]))
         else:
-            story.append(tbl)
-    story.append(Spacer(1, 12))
+            story.append(KeepTogether(ghg_head + [tbl]))
+    story.append(_sp(k, 12))
 
 
-def _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi):
+def _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs):
     _pillar_intro(story, TR["pdf_s3"], "social", TR["score_soc_label"], scores.social_score,
                   pi["social"], notes.get("social"),
                   content.get("social", "La performance sociale englobe les ressources humaines, "
@@ -588,26 +834,24 @@ def _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi)
         kpis.append((TR["kpit"]["employees"], _num(soc.total_employees, lang)))
     if soc.female_employees_percent is not None:
         kpis.append((TR["kpit"]["women"], _pct(soc.female_employees_percent, lang),
-                     _status(soc.female_employees_percent, 40, 35)))
+                     _status(request, "female_employees_percent", soc.female_employees_percent)))
     if soc.employee_turnover_percent is not None:
         kpis.append((TR["kpit"]["turnover"], _pct(soc.employee_turnover_percent, lang),
-                     _status(soc.employee_turnover_percent, 10, 20, higher_better=False)))
+                     _status(request, "employee_turnover_percent", soc.employee_turnover_percent)))
     if soc.training_hours_per_employee is not None:
         kpis.append((TR["kpit"]["training"], _num(soc.training_hours_per_employee, lang),
-                     _status(soc.training_hours_per_employee, 20, 10)))
+                     _status(request, "training_hours_per_employee", soc.training_hours_per_employee)))
     if soc.accident_frequency_rate is not None:
         kpis.append((TR["kpit"]["accident"], _num(soc.accident_frequency_rate, lang, 2),
-                     _status(soc.accident_frequency_rate, 2, 5, higher_better=False)))
+                     _status(request, "accident_frequency_rate", soc.accident_frequency_rate)))
     if soc.customer_satisfaction_score is not None:
         kpis.append((TR["kpit"]["satisfaction"], _num(soc.customer_satisfaction_score, lang, 1),
-                     _status(soc.customer_satisfaction_score, 8, 6)))
-    if kpis:
-        story.append(Spacer(1, 6))
-        story.append(kpi_block(kpis, k, lang))
-    story.append(Spacer(1, 12))
+                     _status(request, "customer_satisfaction_score", soc.customer_satisfaction_score)))
+    _pillar_reading(story, request, scores, "social", kpis, k, S, TR, lang, recs)
+    story.append(_sp(k, 12))
 
 
-def _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi):
+def _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs):
     _pillar_intro(story, TR["pdf_s4"], "gov", TR["score_gov_label"], scores.governance_score,
                   pi["gov"], notes.get("gov"),
                   content.get("governance", "La gouvernance évalue la direction, l'indépendance du "
@@ -620,23 +864,21 @@ def _governance(story, request, scores, content, k, S, TR, lang, anchors, notes,
         kpis.append((yn["board"], str(gov.board_members)))
     if gov.female_board_percent is not None:
         kpis.append((yn["women_board"], _pct(gov.female_board_percent, lang),
-                     _status(gov.female_board_percent, 40, 30)))
+                     _status(request, "female_board_percent", gov.female_board_percent)))
     if gov.independent_board_percent is not None:
         kpis.append((yn["independent"], _pct(gov.independent_board_percent, lang),
-                     _status(gov.independent_board_percent, 50, 33)))
+                     _status(request, "independent_board_percent", gov.independent_board_percent)))
     if gov.csr_budget_eur is not None:
         kpis.append((yn["csr"], _num(gov.csr_budget_eur, lang)))
     for flag, key in ((gov.esg_audit_conducted, "audit"), (gov.sustainability_committee, "committee")):
         kpis.append((yn[key], yn["yes"] if flag else (yn["no"] if flag is not None else yn["na"]),
                      "good" if flag else ("bad" if flag is not None else None)))
-    story.append(Spacer(1, 6))
-    story.append(kpi_block(kpis, k, lang))
-    story.append(Spacer(1, 12))
+    _pillar_reading(story, request, scores, "gov", kpis, k, S, TR, lang, recs)
+    story.append(_sp(k, 12))
 
 
 def _analyses(story, content, chart_images, k, S, TR, anchors):
-    story.append(PageBreak())
-    section_head(story, TR["pdf_s5"], "accent", k, S, anchors, "s5")
+    section_head(story, TR["pdf_s5"], "accent", k, S, anchors, "s5", keep_cm=10)
     story.append(Paragraph(TR["sub_materiality"], S["h2"]))
     story.append(Paragraph(esc(content.get("materiality", "")), S["body"]))
     _chart(story, chart_images, "materiality", 16.5, 9.5, TR["cap_materiality"], S)
@@ -650,7 +892,7 @@ def _analyses(story, content, chart_images, k, S, TR, anchors):
     story.append(Paragraph(esc(content.get("climate_risk", "")), S["body"]))
 
 
-def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, ro, gaps):
+def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, ro, gaps, ref):
     import gap_status as GS
     section_head(story, TR["pdf_s6"], "accent", k, S, anchors, "s6")
     story.append(Paragraph(TR["strengths_ident"], S["h2"]))
@@ -662,11 +904,12 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
         story.append(Paragraph(f'<font color="{_STATUS_HEX["bad"]}">—</font>&nbsp; {esc(w)}',
                                S["bullet"]))
 
-    story.append(PageBreak())
-    section_head(story, TR["pdf_diag"], "accent", k, S, anchors, "diag")
-    story.append(Paragraph(esc(bv["title"]), S["h2"]))
-    story.append(Paragraph(TR["pdf_bench_sub"], k.ps("bs", 8.4, font="body_i", color="muted",
-                                                      spaceAfter=6)))
+    story.append(_sp(k, 12))
+    section_head(story, TR["pdf_diag"], "accent", k, S, anchors, "diag", keep_cm=10)
+    bench_head = [Paragraph(esc(bv["title"]), S["h2"]),
+                  Paragraph(esc(NR.bench_intro(request)), S["body"]),
+                  Paragraph(TR["pdf_bench_sub"], k.ps("bs", 8.4, font="body_i", color="muted",
+                                                      spaceAfter=6))]
     # Positionnement INTERNE : les trois piliers comparés entre eux. Aucune
     # donnée externe (la référence sectorielle d'origine était inventée).
     center = k.ps("c", 8.8, color="ink", alignment=TA_CENTER)
@@ -684,8 +927,9 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
     rows.append([Paragraph(esc(TR.get("score_global_short", "Global")), S["small_b"]),
                  Paragraph(f"<b>{scores.total_esg_score:.0f}</b>", center), Paragraph("", center),
                  Paragraph(f"<b>{esc(scores.rating)}</b>", center)])
-    story.append(data_table(rows, [CW * 0.36, CW * 0.17, CW * 0.19, CW * 0.28], k, total=True))
-    story.append(Spacer(1, 8))
+    story.append(KeepTogether(bench_head + [data_table(rows, [CW * 0.36, CW * 0.17, CW * 0.19, CW * 0.28],
+                                                       k, total=True)]))
+    story.append(_sp(k, 8))
     insight_callout(story, bv["insight"], "accent", k)
 
     if "trend" in chart_images:
@@ -698,7 +942,8 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
     story.append(Paragraph(esc(mt["next_hint"]), S["body"]))
 
     # Couverture des exigences (libellés et couleurs : source unique gap_status)
-    story.append(Paragraph(TR["gap_title"], S["h2"]))
+    gap_head = [Paragraph(TR["gap_title"], S["h2"]),
+                Paragraph(esc(NR.gaps_intro(request, gaps, ref)), S["body"])]
     rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in ("gap_req", "gap_ref", "gap_status", "gap_note")]]
     for gp in gaps:
         rows.append([Paragraph(esc(gp["req"]), S["small_b"]), Paragraph(esc(gp["ref"]), S["small"]),
@@ -706,10 +951,11 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
                                f'<b>• {esc(GS.libelle(TR, gp["status"], gp["nature"]))}</b></font>',
                                S["small"]),
                      Paragraph(esc(gp["note"]), S["small"])])
-    story.append(data_table(rows, [CW * 0.32, CW * 0.19, CW * 0.17, CW * 0.32], k))
-    story.append(Spacer(1, 10))
+    story.append(KeepTogether(gap_head + [data_table(rows, [CW * 0.32, CW * 0.19, CW * 0.17, CW * 0.32], k)]))
+    story.append(_sp(k, 10))
 
-    story.append(Paragraph(TR["risks_head"], S["h2"]))
+    risk_head = [Paragraph(TR["risks_head"], S["h2"]),
+                 Paragraph(esc(NR.risks_intro(request, ro["risks"])), S["body"])]
     c2 = k.ps("rc", 8.4, color="ink", alignment=TA_CENTER)
     rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in ("risk_desc", "risk_impact", "risk_lik", "risk_prio")]]
     for it in ro["risks"]:
@@ -717,19 +963,20 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
         rows.append([Paragraph(f'<b>{esc(it["tag"])}</b> — {esc(it["text"])}', S["small"]),
                      Paragraph(esc(it.get("impact", "—")), c2), Paragraph(esc(it.get("likelihood", "—")), c2),
                      Paragraph(f'<font color="{_PRIO_HEX[pr]}"><b>{pr}</b></font>', c2)])
-    story.append(data_table(rows, [CW * 0.6, CW * 0.14, CW * 0.14, CW * 0.12], k))
-    story.append(Spacer(1, 10))
+    story.append(KeepTogether(risk_head + [data_table(rows, [CW * 0.6, CW * 0.14, CW * 0.14, CW * 0.12], k)]))
+    story.append(_sp(k, 10))
 
     opp = [Paragraph(esc(TR["opps_head"]).upper(), k.ps("oh", 8, font="body_b", color="env",
                                                         charSpace=0.6, spaceAfter=6))]
     for it in ro["opportunities"]:
         opp.append(Paragraph(f'<font color="{hexc(k.c["env"])}"><b>{esc(it["tag"])}</b></font> — '
                              f'{esc(it["text"])}', k.ps("oi", 9, color="ink", leading=13, spaceAfter=5)))
-    story.append(_box(opp, k, k.c["env_soft"], left=k.c["env"]))
+    story.append(KeepTogether(_box(opp, k, k.c["env_soft"], left=k.c["env"])))
 
 
 def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, recs, priority_reading):
-    section_head(story, TR["pdf_s7"], "accent", k, S, anchors, "s7")
+    section_head(story, TR["pdf_s7"], "accent", k, S, anchors, "s7", keep_cm=10)
+    story.append(Paragraph(esc(NR.recs_intro(request, recs)), S["lead"]))
     done = getattr(request, "completed_actions", None) or []
     if done:
         flow = [Paragraph(esc(TR["done_head"]).upper(), k.ps("dh", 8, font="body_b",
@@ -740,7 +987,7 @@ def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, re
             flow.append(Paragraph(f'<font color="{_STATUS_HEX["good"]}">—</font>&nbsp; '
                                   f'{esc(item["title"])}{esc(yr)}', k.ps("di", 9, color="ink", leading=12)))
         story.append(_box(flow, k, k.c["env_soft"], left=colors.HexColor(_STATUS_HEX["good"])))
-        story.append(Spacer(1, 8))
+        story.append(_sp(k, 8))
     if "priority" in chart_images:
         _chart(story, chart_images, "priority", 16.5, 9.5, TR["cap_prio"], S)
         insight_callout(story, priority_reading(request, scores), "accent", k)
@@ -760,13 +1007,15 @@ def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, re
              Paragraph(f'{esc(rec.get("owner", ""))} · {esc(rec["horizon"])}',
                        k.ps("rw", 8, color="muted", leading=10.5))]])
     story.append(data_table(rows, [CW * 0.08, CW * 0.58, CW * 0.34], k))
+    story.append(_sp(k, 6))
 
 
 def _roadmap(story, request, scores, k, S, TR, anchors, rm):
     if not any(ph["actions"] for ph in rm):
         return
-    story.append(Spacer(1, 14))
-    section_head(story, TR["roadmap_title"], "accent", k, S, anchors, "roadmap")
+    story.append(_sp(k, 14))
+    section_head(story, TR["roadmap_title"], "accent", k, S, anchors, "roadmap", keep_cm=10)
+    story.append(Paragraph(esc(NR.roadmap_intro(request, rm)), S["body"]))
     pcol = {"env": k.c["env"], "social": k.c["social"], "gov": k.c["gov"]}
     heads, bodies = [], []
     for ph in rm:
@@ -788,18 +1037,16 @@ def _roadmap(story, request, scores, k, S, TR, anchors, rm):
         ("LINEAFTER", (0, 0), (1, -1), 0.5, k.c["rule"]),
         ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 9), ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
-    story.append(t)
-    story.append(Spacer(1, 12))
     band = Table([[Paragraph(esc(TR["div2_sub"]), k.ps("bd", 13, font="display_i", color="on_primary",
                                                         leading=18))]], colWidths=[CW])
     band.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), k.c["primary"]),
                               ("LEFTPADDING", (0, 0), (-1, -1), 20), ("TOPPADDING", (0, 0), (-1, -1), 18),
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 20)]))
-    story.append(band)
+    story.append(KeepTogether([t, _sp(k, 12), band]))
 
 
 def _white_paper(story, request, scores, k, S, TR, anchors):
-    story.append(Spacer(1, 14))
+    story.append(_sp(k, 14))
     section_head(story, TR["pdf_s9_wp"], "accent", k, S, anchors)
     story.append(Paragraph(TR["wp_intro"], S["body"]))
     story.append(Paragraph(TR["wp_horizon"].format(
@@ -819,30 +1066,31 @@ def _white_paper(story, request, scores, k, S, TR, anchors):
 
 def _closing(story, request, scores, content, k, S, TR, anchors):
     from glossary import glossary_entries
-    story.append(PageBreak())
+    story.append(_sp(k, 14))
     title = TR["pdf_concl_wp"] if request.report_type.value == "white_paper" else TR["pdf_concl"]
-    section_head(story, title, "accent", k, S, anchors, "concl")
+    section_head(story, title, "accent", k, S, anchors, "concl", keep_cm=10)
     story.append(Paragraph(esc(content.get("conclusion",
                                            f"{request.company.name} — score ESG "
                                            f"{scores.total_esg_score}/100 (note {scores.rating}).")),
                            S["body"]))
     if content.get("methodology"):
-        story.append(Spacer(1, 10))
+        story.append(_sp(k, 10))
         story.append(Paragraph(TR["pdf_methodo"], S["h2"]))
-        story.append(_box(Paragraph(esc(content["methodology"]), k.ps("mn", 8.6, color="ink", leading=13)),
+        story.append(_box(Paragraph(esc(content["methodology"]),
+                                    k.ps("mn", 8.6, color="ink", leading=13, allowWidows=0,
+                                         allowOrphans=0)),
                           k, k.c["panel"], left=k.c["accent"]))
     # Les emplacements éditoriaux (focus, chapitres, 4e de couverture) viennent
     # toujours de la banque : la mention figure donc dans tout rapport.
-    story.append(Spacer(1, 6))
     story.append(Paragraph(esc(TR["ed_photo_note"]), k.ps("pn", 7.6, font="body_i", color="muted",
-                                                          leading=10.5)))
+                                                          leading=10.5, spaceBefore=6)))
     gloss = glossary_entries(request, scores)
     if gloss:
-        story.append(Spacer(1, 10))
+        story.append(_sp(k, 10))
         story.append(Paragraph(TR["pdf_glossary"], S["h2"]))
         rows = [[Paragraph(esc(e["term"]), S["small_b"]), Paragraph(esc(e["definition"]), S["small"])]
                 for e in gloss]
         story.append(data_table(rows, [CW * 0.22, CW * 0.78], k, header=False))
-    story.append(Spacer(1, 18))
+    story.append(_sp(k, 18))
     story.append(Paragraph(esc(f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]),
                            S["footer"]))

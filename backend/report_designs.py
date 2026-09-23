@@ -23,15 +23,21 @@ Polices : familles embarquées dans assets/fonts (OFL), déclinées en
 Light / Regular / SemiBold / Italic. `office_*` : polices système sûres pour
 PPTX et Word, qui ne peuvent pas embarquer de TTF.
 
-Photos : emplacement -> fichier de la banque locale (assets/photos). Une photo
-fournie par l'entreprise pour le même emplacement a toujours la priorité.
+Photos : la banque locale (assets/photos) ne fournit que deux emplacements,
+la couverture (reprise en quatrième de couverture et en bandeau) et
+l'environnement (paysage, forêt : sujet cohérent avec le pilier). Les autres
+emplacements (entreprise, social, gouvernance) ne montrent QUE des photos
+fournies par l'entreprise ; à défaut, la page se compose sans photo
+(typographie, pictogramme du pilier). Décision du 2026-09-24 : une photo
+d'illustration sans rapport avec le sujet de la page (façade vitrée pour
+« l'entreprise », champ de blé pour « social ») lisait comme aléatoire.
 """
 from models import AestheticTheme
 
 # Emplacements photo que l'entreprise peut renseigner elle-même
 CLIENT_PHOTO_SLOTS = ("cover", "company", "environment", "social", "governance")
-# Emplacements purement éditoriaux (toujours pris dans la banque)
-BANK_ONLY_SLOTS = ("purpose", "focus", "action", "closing")
+# Emplacements que la banque locale peut combler (cf. note ci-dessus)
+BANK_SLOTS = ("cover", "environment")
 
 DESIGNS: dict[AestheticTheme, dict] = {
     AestheticTheme.AURORA: {
@@ -51,11 +57,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Georgia", "body": "Segoe UI"},
         "layout": {"cover": "split", "glance": "aurora", "header": "caps",
                    "kpi": "hairline", "radius": 0},
-        "photos": {"cover": "mountain-lake", "company": "glass-facade-tree",
-                   "purpose": "leaf-dew", "environment": "lake-mist",
-                   "focus": "misty-conifers", "social": "meadow",
-                   "governance": "glass-tower", "action": "forest-path",
-                   "closing": "sea-mist"},
+        "photos": {"cover": "mountain-lake", "environment": "lake-mist"},
     },
     AestheticTheme.ANNUEL: {
         "label": {"fr": "Annuel", "en": "Annual"},
@@ -74,11 +76,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Georgia", "body": "Calibri"},
         "layout": {"cover": "editorial", "glance": "annuel", "header": "centered",
                    "kpi": "double_rule", "radius": 0},
-        "photos": {"cover": "wheat-field", "company": "glass-facade-tree",
-                   "purpose": "leaf-light", "environment": "hills-mist",
-                   "focus": "pine-rows", "social": "meadow",
-                   "governance": "glass-tower", "action": "forest-path",
-                   "closing": "sea-long-exposure"},
+        "photos": {"cover": "wheat-field", "environment": "hills-mist"},
     },
     AestheticTheme.INSTITUTIONNEL: {
         "label": {"fr": "Institutionnel", "en": "Institutional"},
@@ -97,11 +95,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Georgia", "body": "Segoe UI"},
         "layout": {"cover": "band", "glance": "institutionnel", "header": "monogram",
                    "kpi": "cards", "radius": 10},
-        "photos": {"cover": "fjord", "company": "glass-tower",
-                   "purpose": "agave", "environment": "alpine-lake",
-                   "focus": "lake-mist", "social": "wheat-field",
-                   "governance": "glass-facade-tree", "action": "hills-mist",
-                   "closing": "sea-cliff"},
+        "photos": {"cover": "fjord", "environment": "alpine-lake"},
     },
     AestheticTheme.PORTRAIT: {
         "label": {"fr": "Portrait", "en": "Portrait"},
@@ -120,11 +114,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Georgia", "body": "Segoe UI"},
         "layout": {"cover": "photo_card", "glance": "portrait", "header": "caps",
                    "kpi": "list", "radius": 0},
-        "photos": {"cover": "forest-green", "company": "glass-facade-tree",
-                   "purpose": "leaf-dew", "environment": "misty-conifers",
-                   "focus": "forest-dark-mist", "social": "meadow",
-                   "governance": "glass-tower", "action": "forest-path",
-                   "closing": "sea-mist"},
+        "photos": {"cover": "forest-green", "environment": "misty-conifers"},
     },
     AestheticTheme.TERRE: {
         "label": {"fr": "Terre", "en": "Earth"},
@@ -143,11 +133,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Segoe UI Light", "body": "Segoe UI"},
         "layout": {"cover": "duo", "glance": "terre", "header": "caps",
                    "kpi": "hairline", "radius": 3},
-        "photos": {"cover": "hills-mist", "company": "glass-facade-tree",
-                   "purpose": "leaf-light", "environment": "pine-rows",
-                   "focus": "forest-green", "social": "wheat-field",
-                   "governance": "glass-tower", "action": "forest-path",
-                   "closing": "sea-long-exposure"},
+        "photos": {"cover": "hills-mist", "environment": "pine-rows"},
     },
     AestheticTheme.GALERIE: {
         "label": {"fr": "Galerie", "en": "Gallery"},
@@ -166,11 +152,7 @@ DESIGNS: dict[AestheticTheme, dict] = {
         "office": {"display": "Segoe UI Light", "body": "Segoe UI"},
         "layout": {"cover": "mosaic", "glance": "galerie", "header": "plain",
                    "kpi": "hairline", "radius": 0},
-        "photos": {"cover": "alpine-lake", "company": "glass-tower",
-                   "purpose": "agave", "environment": "lake-mist",
-                   "focus": "misty-conifers", "social": "wheat-field",
-                   "governance": "glass-facade-tree", "action": "hills-mist",
-                   "closing": "sea-mist"},
+        "photos": {"cover": "alpine-lake", "environment": "lake-mist"},
     },
 }
 
