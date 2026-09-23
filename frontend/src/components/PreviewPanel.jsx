@@ -1,14 +1,4 @@
-const THEME_STYLES = {
-  corporate_blue: { primary: '#1B3A6B', secondary: '#2E86C1', accent: '#F39C12', bg: '#f0f4fa', env: '#27AE60', social: '#2E86C1', gov: '#8E44AD' },
-  green_nature:   { primary: '#1A5C38', secondary: '#27AE60', accent: '#F1C40F', bg: '#f0faf4', env: '#27AE60', social: '#2980B9', gov: '#8E44AD' },
-  dark_premium:   { primary: '#0D1117', secondary: '#58A6FF', accent: '#F7C948', bg: '#161b22', env: '#3FB950', social: '#58A6FF', gov: '#BC8CFF' },
-  minimal_white:  { primary: '#212121', secondary: '#1E88E5', accent: '#FF6F00', bg: '#f9f9f9', env: '#43A047', social: '#1E88E5', gov: '#7B1FA2' },
-  sunset_terracotta: { primary: '#9A3412', secondary: '#E76F51', accent: '#F4A261', bg: '#FDF6F0', env: '#2A9D8F', social: '#E76F51', gov: '#6D597A' },
-  ocean_deep:     { primary: '#0F4C5C', secondary: '#277DA1', accent: '#00BFA6', bg: '#F0FAFB', env: '#43AA8B', social: '#277DA1', gov: '#577590' },
-  royal_purple:   { primary: '#2B1055', secondary: '#7E9BF5', accent: '#FFD54F', bg: '#241047', env: '#2E9E62', social: '#7E9BF5', gov: '#C08CF5' },
-}
-
-const DARK_THEMES = ['dark_premium', 'royal_purple']
+import { useDesigns } from '../hooks/useDesigns'
 
 const RATING_COLOR = { AAA: '#00875a', AA: '#27AE60', A: '#2ECC71', BBB: '#F39C12', BB: '#E67E22', B: '#E74C3C', CCC: '#922B21' }
 
@@ -59,12 +49,17 @@ function KpiGrid({ items }) {
 }
 
 export default function PreviewPanel({ scores, form }) {
+  const { designs } = useDesigns()
   if (!scores || !form) return null
-  const t = THEME_STYLES[form.aesthetic_theme] || THEME_STYLES.corporate_blue
-  const isDark = DARK_THEMES.includes(form.aesthetic_theme)
-  const textColor = isDark ? '#e6edf3' : '#1a2332'
-  const cardBg = isDark ? '#1c2128' : '#ffffff'
-  const borderColor = isDark ? '#30363d' : '#e2e8f0'
+  // Couleurs du gabarit retenu, servies par /api/designs (report_designs.py) :
+  // l'aperçu annonce le livrable, il ne suit donc pas le thème de l'interface.
+  const d = (designs.find(x => x.id === form.aesthetic_theme) || designs[0])?.colors
+  if (!d) return null
+  const t = { primary: d.primary, secondary: d.muted, accent: d.accent, bg: d.paper,
+              env: d.env, social: d.social, gov: d.gov }
+  const textColor = d.ink
+  const cardBg = d.surface
+  const borderColor = d.rule
 
   const envData = form.environmental || {}
   const socData = form.social || {}

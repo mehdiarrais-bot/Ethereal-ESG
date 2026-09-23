@@ -14,139 +14,42 @@ def _hexstr(rgb: RGBColor) -> str:
     """RGBColor -> '#RRGGBB' pour visual_kit."""
     return "#" + str(rgb)
 
-# Color palettes per theme
-THEMES = {
-    AestheticTheme.CORPORATE_BLUE: {
-        "bg_primary": RGBColor(0x1B, 0x3A, 0x6B),
-        "bg_secondary": RGBColor(0xF4, 0xF7, 0xFD),
-        "accent": RGBColor(0xF3, 0x9C, 0x12),
-        "env": RGBColor(0x27, 0xAE, 0x60),
-        "social": RGBColor(0x2E, 0x86, 0xC1),
-        "gov": RGBColor(0x8E, 0x44, 0xAD),
-        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
-        "text_dark": RGBColor(0x2C, 0x3E, 0x50),
-        "subtitle": RGBColor(0xAE, 0xC6, 0xE8),
-        "muted": RGBColor(0x6B, 0x7C, 0x93),
-        "card_bg": RGBColor(0xEB, 0xF2, 0xFB),
-    },
-    AestheticTheme.GREEN_NATURE: {
-        "bg_primary": RGBColor(0x1A, 0x5C, 0x38),
-        "bg_secondary": RGBColor(0xF3, 0xFB, 0xF5),
-        "accent": RGBColor(0xF1, 0xC4, 0x0F),
-        "env": RGBColor(0x2E, 0xCC, 0x71),
-        "social": RGBColor(0x34, 0x98, 0xDB),
-        "gov": RGBColor(0xE6, 0x7E, 0x22),
-        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
-        "text_dark": RGBColor(0x1A, 0x33, 0x25),
-        "subtitle": RGBColor(0xA9, 0xDB, 0xBC),
-        "muted": RGBColor(0x5E, 0x8C, 0x72),
-        "card_bg": RGBColor(0xDD, 0xF3, 0xE4),
-    },
-    AestheticTheme.DARK_PREMIUM: {
-        "bg_primary": RGBColor(0x0D, 0x11, 0x17),
-        "bg_secondary": RGBColor(0x16, 0x1B, 0x22),
-        "accent": RGBColor(0xF7, 0xC9, 0x48),
-        "env": RGBColor(0x3F, 0xB9, 0x50),
-        "social": RGBColor(0x58, 0xA6, 0xFF),
-        "gov": RGBColor(0xBC, 0x8C, 0xFF),
-        "text_light": RGBColor(0xE6, 0xED, 0xF3),
-        "text_dark": RGBColor(0xE6, 0xED, 0xF3),
-        "subtitle": RGBColor(0x8B, 0x94, 0x9E),
-        "muted": RGBColor(0x8B, 0x94, 0x9E),
-        "card_bg": RGBColor(0x1F, 0x25, 0x2E),
-    },
-    AestheticTheme.MINIMAL_WHITE: {
-        "bg_primary": RGBColor(0x21, 0x21, 0x21),
-        "bg_secondary": RGBColor(0xFF, 0xFF, 0xFF),
-        "accent": RGBColor(0xFF, 0x6F, 0x00),
-        "env": RGBColor(0x43, 0xA0, 0x47),
-        "social": RGBColor(0x1E, 0x88, 0xE5),
-        "gov": RGBColor(0x8E, 0x24, 0xAA),
-        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
-        "text_dark": RGBColor(0x21, 0x21, 0x21),
-        "subtitle": RGBColor(0x9E, 0x9E, 0x9E),
-        "muted": RGBColor(0x9E, 0x9E, 0x9E),
-        "card_bg": RGBColor(0xFF, 0xFF, 0xFF),
-    },
-    AestheticTheme.SUNSET_TERRACOTTA: {
-        "bg_primary": RGBColor(0x9A, 0x34, 0x12),
-        "bg_secondary": RGBColor(0xFD, 0xF3, 0xEC),
-        "accent": RGBColor(0xF4, 0xA2, 0x61),
-        "env": RGBColor(0x2A, 0x9D, 0x8F),
-        "social": RGBColor(0xE7, 0x6F, 0x51),
-        "gov": RGBColor(0x6D, 0x59, 0x7A),
-        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
-        "text_dark": RGBColor(0x4A, 0x2C, 0x22),
-        "subtitle": RGBColor(0xF2, 0xC9, 0xB0),
-        "muted": RGBColor(0xA8, 0x70, 0x5F),
-        "card_bg": RGBColor(0xFA, 0xE5, 0xD8),
-    },
-    AestheticTheme.OCEAN_DEEP: {
-        "bg_primary": RGBColor(0x0F, 0x4C, 0x5C),
-        "bg_secondary": RGBColor(0xEF, 0xF9, 0xFB),
-        "accent": RGBColor(0x00, 0xBF, 0xA6),
-        "env": RGBColor(0x43, 0xAA, 0x8B),
-        "social": RGBColor(0x27, 0x7D, 0xA1),
-        "gov": RGBColor(0x57, 0x75, 0x90),
-        "text_light": RGBColor(0xFF, 0xFF, 0xFF),
-        "text_dark": RGBColor(0x12, 0x3B, 0x44),
-        "subtitle": RGBColor(0xA8, 0xD8, 0xE0),
-        "muted": RGBColor(0x5C, 0x8A, 0x96),
-        "card_bg": RGBColor(0xDC, 0xF1, 0xF5),
-    },
-    AestheticTheme.ROYAL_PURPLE: {
-        "bg_primary": RGBColor(0x2B, 0x10, 0x55),
-        "bg_secondary": RGBColor(0x24, 0x10, 0x47),
-        "accent": RGBColor(0xFF, 0xD5, 0x4F),
-        "env": RGBColor(0x2E, 0x9E, 0x62),
-        "social": RGBColor(0x7E, 0x9B, 0xF5),
-        "gov": RGBColor(0xC0, 0x8C, 0xF5),
-        "text_light": RGBColor(0xF2, 0xED, 0xFB),
-        "text_dark": RGBColor(0xF2, 0xED, 0xFB),
-        "subtitle": RGBColor(0xB9, 0xA6, 0xE0),
-        "muted": RGBColor(0xB9, 0xA6, 0xE0),
-        "card_bg": RGBColor(0x3A, 0x21, 0x70),
-    },
+# Mise en page PPTX par gabarit (couleurs et polices : report_designs).
+# Les six gabarits sont clairs : aucune diapositive sombre.
+_PPTX_LAYOUT = {
+    AestheticTheme.AURORA: {"header": "minimal", "card": "flat", "cover": "classic"},
+    AestheticTheme.ANNUEL: {"header": "minimal", "card": "outline", "cover": "minimal"},
+    AestheticTheme.INSTITUTIONNEL: {"header": "band", "card": "rounded", "cover": "classic"},
+    AestheticTheme.PORTRAIT: {"header": "minimal", "card": "flat", "cover": "luxe"},
+    AestheticTheme.TERRE: {"header": "pill", "card": "rounded", "cover": "organic"},
+    AestheticTheme.GALERIE: {"header": "minimal", "card": "outline", "cover": "minimal"},
 }
 
-# Design language per theme: fonts, header style, card style, cover layout
-STYLES = {
-    AestheticTheme.CORPORATE_BLUE: {
-        "font_title": "Calibri", "font_body": "Calibri",
-        "header": "band", "card": "flat", "cover": "classic",
-        "dark_slides": False, "uppercase_titles": False,
-    },
-    AestheticTheme.GREEN_NATURE: {
-        "font_title": "Trebuchet MS", "font_body": "Trebuchet MS",
-        "header": "pill", "card": "rounded", "cover": "organic",
-        "dark_slides": False, "uppercase_titles": False,
-    },
-    AestheticTheme.DARK_PREMIUM: {
-        "font_title": "Georgia", "font_body": "Georgia",
-        "header": "hairline", "card": "dark", "cover": "luxe",
-        "dark_slides": True, "uppercase_titles": True,
-    },
-    AestheticTheme.MINIMAL_WHITE: {
-        "font_title": "Segoe UI", "font_body": "Segoe UI",
-        "header": "minimal", "card": "outline", "cover": "minimal",
-        "dark_slides": False, "uppercase_titles": True,
-    },
-    AestheticTheme.SUNSET_TERRACOTTA: {
-        "font_title": "Cambria", "font_body": "Calibri",
-        "header": "pill", "card": "rounded", "cover": "organic",
-        "dark_slides": False, "uppercase_titles": False,
-    },
-    AestheticTheme.OCEAN_DEEP: {
-        "font_title": "Segoe UI", "font_body": "Segoe UI",
-        "header": "band", "card": "flat", "cover": "classic",
-        "dark_slides": False, "uppercase_titles": False,
-    },
-    AestheticTheme.ROYAL_PURPLE: {
-        "font_title": "Georgia", "font_body": "Georgia",
-        "header": "hairline", "card": "dark", "cover": "luxe",
-        "dark_slides": True, "uppercase_titles": True,
-    },
-}
+
+def _rgb(hexstr: str) -> RGBColor:
+    h = hexstr.lstrip("#")
+    return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def pptx_theme(theme: AestheticTheme) -> dict:
+    """Palette PPTX convertie depuis le gabarit."""
+    from report_designs import colors_of
+    c = colors_of(theme)
+    return {"bg_primary": _rgb(c["primary"]), "bg_secondary": _rgb(c["paper"]),
+            "accent": _rgb(c["accent"]), "env": _rgb(c["env"]), "social": _rgb(c["social"]),
+            "gov": _rgb(c["gov"]), "text_light": _rgb(c["on_primary"]), "text_dark": _rgb(c["ink"]),
+            "subtitle": _rgb(c["accent_on_primary"]), "muted": _rgb(c["muted"]),
+            "card_bg": _rgb(c["panel"])}
+
+
+def pptx_style(theme: AestheticTheme) -> dict:
+    """Langage de mise en page PPTX : polices système sûres du gabarit."""
+    from report_designs import design, DEFAULT_DESIGN
+    d = design(theme)
+    return dict(_PPTX_LAYOUT.get(theme, _PPTX_LAYOUT[DEFAULT_DESIGN]),
+                font_title=d["office"]["display"], font_body=d["office"]["body"],
+                dark_slides=False, uppercase_titles=False)
+
 
 SLIDE_W = Inches(13.33)
 SLIDE_H = Inches(7.5)
@@ -328,18 +231,20 @@ def _cover_tag(TR, scores):
 
 
 def cover_classic(slide, theme, style, request, scores, subtitle, TR):
+    # Couverture sur la primaire sombre : accents en « subtitle »
+    # (accent_on_primary du gabarit), lisibles sur fond foncé.
     ft, fb = style["font_title"], style["font_body"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
-    add_bg_rect(slide, 0, 0, Inches(0.18), SLIDE_H, theme["accent"])
+    add_bg_rect(slide, 0, 0, Inches(0.18), SLIDE_H, theme["subtitle"])
     # Aplat sombre en bas pour ancrer la composition (magazine)
     add_bg_rect(slide, 0, Inches(5.4), SLIDE_W, Inches(2.1), theme["bg_primary"])
 
     # Kicker + nom géant + accroche (bloc éditorial gauche)
     add_text(slide, subtitle.upper(), Inches(0.65), Inches(1.15), Inches(9), Inches(0.5),
-             font_size=15, bold=True, color=theme["accent"], font=fb)
+             font_size=15, bold=True, color=theme["subtitle"], font=fb)
     add_text(slide, request.company.name.upper(), Inches(0.6), Inches(1.75), Inches(9.2), Inches(1.9),
              font_size=52, bold=True, color=theme["text_light"], font=ft)
-    add_bg_rect(slide, Inches(0.65), Inches(3.75), Inches(2.0), Inches(0.06), theme["accent"])
+    add_bg_rect(slide, Inches(0.65), Inches(3.75), Inches(2.0), Inches(0.06), theme["subtitle"])
     add_text(slide, _cover_tag(TR, scores), Inches(0.65), Inches(4.0), Inches(8.5), Inches(0.7),
              font_size=21, italic=True, color=theme["subtitle"], font=fb)
 
@@ -348,10 +253,10 @@ def cover_classic(slide, theme, style, request, scores, subtitle, TR):
              Inches(0.65), Inches(6.55), Inches(8), Inches(0.5),
              font_size=13, color=theme["subtitle"], font=fb)
     add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
-             font_size=82, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
+             font_size=82, bold=True, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=ft)
     add_text(slide, "/100", Inches(8.55), Inches(6.75), Inches(2.4), Inches(0.4),
              font_size=14, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=fb)
-    add_shape(slide, ROUNDED_RECT, Inches(11.2), Inches(5.55), Inches(1.55), Inches(0.95), fill=theme["accent"])
+    add_shape(slide, ROUNDED_RECT, Inches(11.2), Inches(5.55), Inches(1.55), Inches(0.95), fill=theme["subtitle"])
     add_text(slide, scores.rating, Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
              font_size=32, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
@@ -386,7 +291,7 @@ def cover_organic(slide, theme, style, request, scores, subtitle, TR):
 
 def cover_luxe(slide, theme, style, request, scores, subtitle, TR):
     ft, fb = style["font_title"], style["font_body"]
-    gold = theme["accent"]
+    gold = theme["subtitle"]
     add_bg_rect(slide, 0, 0, SLIDE_W, SLIDE_H, theme["bg_primary"])
     # Fin cadre or (élégance)
     m, tk = Inches(0.4), Inches(0.015)
@@ -534,8 +439,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
 
-    theme = THEMES.get(request.aesthetic_theme, THEMES[AestheticTheme.CORPORATE_BLUE])
-    style = STYLES.get(request.aesthetic_theme, STYLES[AestheticTheme.CORPORATE_BLUE])
+    theme = pptx_theme(request.aesthetic_theme)
+    style = pptx_style(request.aesthetic_theme)
     if getattr(request, "custom_colors", None):
         from branding import brand_pptx_theme
         theme = brand_pptx_theme(theme, request.custom_colors)

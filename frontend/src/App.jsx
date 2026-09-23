@@ -43,7 +43,7 @@ const EMPTY_FORM = {
     esg_audit_conducted: null, sustainability_committee: null,
   },
   presentation_type: 'executive_summary',
-  aesthetic_theme: 'corporate_blue',
+  aesthetic_theme: 'aurora',
   report_type: 'full_report',
   language: 'fr',
   reporting_framework: 'csrd',
@@ -51,6 +51,7 @@ const EMPTY_FORM = {
   include_benchmarks: true,
   include_cover_image: true,
   custom_colors: null,
+  report_photos: null,
   consultant_notes: { global: '', env: '', social: '', gov: '' },
 }
 

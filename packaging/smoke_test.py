@@ -7,7 +7,9 @@ Verifie, sur le binaire reel (pas sur le code source) :
   - le serveur demarre et l'interface est servie (pas une 404 JSON) ;
   - les 5 livrables + le questionnaire sortent en FR et en EN, non vides,
     avec la bonne signature de format ;
-  - un dossier client sauvegarde atterrit dans ESG_DATA_DIR (hors de l'exe).
+  - un dossier client sauvegarde atterrit dans ESG_DATA_DIR (hors de l'exe) ;
+  - le rapport PDF est compose dans les polices embarquees du gabarit
+    (preuve que backend/assets/ a bien ete inclus dans l'executable).
 Toute anomalie fait echouer le script (code retour 1).
 """
 import json
@@ -34,7 +36,7 @@ PAYLOAD = {
     "governance": {"esg_audit_conducted": False, "sustainability_committee": True,
                    "data_breaches": 1, "independent_board_percent": 45},
     "taxonomy": {"turnover_aligned_percent": 38, "capex_aligned_percent": 52},
-    "aesthetic_theme": "corporate_blue",
+    "aesthetic_theme": "aurora",
 }
 
 # endpoint -> signature attendue en tete de fichier
@@ -91,6 +93,8 @@ def main(exe):
                 ok = status == 200 and len(out) > 1000 and out.lstrip()[:len(magic)] == magic
                 if name == "questionnaire" and f'<html lang="{lang}">'.encode() not in out:
                     ok = False  # servi dans la mauvaise langue
+                if name == "pdf" and b"Newsreader" not in out:
+                    ok = False  # assets/ non embarques : repli silencieux en base-14
                 print(f"  {'OK ' if ok else 'KO '} {label:<18} {len(out):>9} octets")
                 if not ok:
                     failures.append(f"{label} : statut {status}, {len(out)} octets")

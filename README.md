@@ -17,7 +17,7 @@ Aucune API externe, aucun compte, aucune donnée qui sort de la machine.
 
 ![Interface de configuration des livrables](docs/img/02-livrables.png)
 
-*L'interface : sept thèmes, déclinaison aux couleurs du client, score calculé en direct.*
+*L'interface : six gabarits éditoriaux, photos de l'entreprise, déclinaison aux couleurs du client, score calculé en direct.*
 
 ---
 
@@ -44,11 +44,12 @@ commercial du consultant qui l'utilise (« vos données ne quittent pas ma machi
 ## Ce que ça produit
 
 Six livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
-et déclinables en 7 thèmes graphiques.
+et déclinables en **6 gabarits éditoriaux** (Aurora, Annuel, Institutionnel, Portrait,
+Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 
 | Livrable | Contenu |
 |---|---|
-| **Rapport PDF** (~18 p.) | Structure en trois actes : Situation · Diagnostic · Plan d'action |
+| **Rapport PDF** (~20 p.) | Couverture photo, sommaire paginé, l'entreprise en bref, ESG en un coup d'œil, puis trois actes : Situation · Diagnostic · Plan d'action |
 | **Présentation** (21-23 slides) | Deck de comité de direction, titres porteurs de conclusion |
 | **Rapport Word** | Même contenu, éditable par le client |
 | **Synthèse une page** | Le document que le dirigeant transfère à son conseil |

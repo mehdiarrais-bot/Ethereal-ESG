@@ -31,6 +31,7 @@ export function useESGScore(form) {
     include_benchmarks: f.include_benchmarks,
     include_cover_image: f.include_cover_image ?? true,
     custom_colors: f.custom_colors || null,
+    report_photos: f.report_photos || null,
     consultant_notes: f.consultant_notes || null,
   })
 
@@ -40,10 +41,11 @@ export function useESGScore(form) {
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        // Le calcul de score n'utilise pas le logo : on l'exclut pour ne pas
-        // renvoyer ~2 Mo de base64 à chaque frappe.
+        // Le calcul de score n'utilise ni le logo ni les photos : on les exclut
+        // pour ne pas renvoyer plusieurs Mo de base64 à chaque frappe.
         const p = buildPayload(form)
         p.company = { ...p.company, logo_base64: null }
+        p.report_photos = null
         const res = await fetch('/api/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

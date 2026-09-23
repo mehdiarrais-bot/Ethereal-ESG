@@ -7,90 +7,41 @@ import matplotlib.patches as mpatches
 import math
 from models import ESGScores, AestheticTheme
 
-THEME_COLORS = {
-    AestheticTheme.CORPORATE_BLUE: {
-        "primary": "#1B3A6B",
-        "secondary": "#2E86C1",
-        "accent": "#F39C12",
-        "env": "#27AE60",
-        "social": "#2E86C1",
-        "gov": "#8E44AD",
-        "bg": "#FFFFFF",
-        "text": "#2C3E50",
-    },
-    AestheticTheme.GREEN_NATURE: {
-        "primary": "#1A5C38",
-        "secondary": "#27AE60",
-        "accent": "#F1C40F",
-        "env": "#2ECC71",
-        "social": "#3498DB",
-        "gov": "#E67E22",
-        "bg": "#F8FFF8",
-        "text": "#1A3325",
-    },
-    AestheticTheme.DARK_PREMIUM: {
-        "primary": "#0D1117",
-        "secondary": "#21262D",
-        "accent": "#F7C948",
-        "env": "#3FB950",
-        "social": "#58A6FF",
-        "gov": "#BC8CFF",
-        "bg": "#161B22",
-        "text": "#E6EDF3",
-    },
-    AestheticTheme.MINIMAL_WHITE: {
-        "primary": "#212121",
-        "secondary": "#616161",
-        "accent": "#FF6F00",
-        "env": "#43A047",
-        "social": "#1E88E5",
-        "gov": "#8E24AA",
-        "bg": "#FAFAFA",
-        "text": "#212121",
-    },
-    AestheticTheme.SUNSET_TERRACOTTA: {
-        "primary": "#9A3412",
-        "secondary": "#E76F51",
-        "accent": "#F4A261",
-        "env": "#2A9D8F",
-        "social": "#E76F51",
-        "gov": "#6D597A",
-        "bg": "#FDF6F0",
-        "text": "#4A2C22",
-    },
-    AestheticTheme.OCEAN_DEEP: {
-        "primary": "#0F4C5C",
-        "secondary": "#277DA1",
-        "accent": "#00BFA6",
-        "env": "#43AA8B",
-        "social": "#277DA1",
-        "gov": "#577590",
-        "bg": "#F4FBFC",
-        "text": "#123B44",
-    },
-    AestheticTheme.ROYAL_PURPLE: {
-        "primary": "#2B1055",
-        "secondary": "#B9A6E0",
-        "accent": "#FFD54F",
-        "env": "#2E9E62",
-        "social": "#7E9BF5",
-        "gov": "#C08CF5",
-        "bg": "#241047",
-        "text": "#F2EDFB",
-    },
-}
+def _theme_colors(theme) -> dict:
+    """Couleurs de graphique converties depuis le gabarit (report_designs)."""
+    from report_designs import colors_of
+    c = colors_of(theme)
+    return {"primary": c["primary"], "secondary": c["muted"], "accent": c["accent"],
+            "env": c["env"], "social": c["social"], "gov": c["gov"],
+            "bg": c["paper"], "text": c["ink"], "rule": c["rule"]}
 
 
-DARK_THEMES = {AestheticTheme.DARK_PREMIUM, AestheticTheme.ROYAL_PURPLE}
+def _use_design_font(theme) -> None:
+    """Police du corps du gabarit pour matplotlib (TTF embarquée)."""
+    from report_designs import design
+    from pdf_kit import font_path
+    from matplotlib import font_manager
+    fam = design(theme)["fonts"]["body"]
+    for style in ("Regular", "SemiBold"):
+        path = font_path(fam, style)
+        if path and path not in _REGISTERED_FONTS:
+            font_manager.fontManager.addfont(path)
+            _REGISTERED_FONTS.add(path)
+    name = None
+    path = font_path(fam, "Regular")
+    if path:
+        name = font_manager.FontProperties(fname=path).get_name()
+    plt.rcParams["font.family"] = [name, "DejaVu Sans"] if name else ["DejaVu Sans"]
+
+
+_REGISTERED_FONTS: set = set()
 
 
 def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict = None) -> dict:
-    c = dict(THEME_COLORS.get(theme, THEME_COLORS[AestheticTheme.CORPORATE_BLUE]))
-    if light_bg and theme in DARK_THEMES:
-        # Variante pour insertion sur page blanche (PDF)
-        c["bg"] = "#FFFFFF"
-        c["text"] = "#2C3E50"
-        c["secondary"] = "#5A6B7C"
+    """`light_bg` est conservé pour les appelants : les six gabarits sont tous
+    clairs, le fond du graphique reprend le papier du gabarit."""
+    c = _theme_colors(theme)
+    _use_design_font(theme)
     if brand:
         # Couleurs de marque du client : accent + primaire ; piliers inchangés
         from branding import brand_chart_colors

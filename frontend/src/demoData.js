@@ -48,7 +48,7 @@ export const DEMO_DATA = {
     sustainability_committee: true,
   },
   presentation_type: 'annual_report',
-  aesthetic_theme: 'corporate_blue',
+  aesthetic_theme: 'aurora',
   report_type: 'full_report',
   language: 'fr',
   include_recommendations: true,

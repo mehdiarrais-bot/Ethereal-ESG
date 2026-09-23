@@ -10,62 +10,28 @@ from docx.text.paragraph import Paragraph
 from models import ESGRequest, ESGScores, AestheticTheme
 from i18n import L
 
-THEME_HEX = {
-    AestheticTheme.CORPORATE_BLUE: {
-        "light": "EBF2FB", "primary": "1B3A6B", "secondary": "2E86C1", "accent": "F39C12",
-        "env": "27AE60", "social": "2E86C1", "gov": "8E44AD",
-    },
-    AestheticTheme.GREEN_NATURE: {
-        "light": "D5F5E3", "primary": "1A5C38", "secondary": "27AE60", "accent": "F1C40F",
-        "env": "2ECC71", "social": "3498DB", "gov": "E67E22",
-    },
-    AestheticTheme.DARK_PREMIUM: {
-        "light": "E8EBF0", "primary": "1A1F28", "secondary": "58A6FF", "accent": "F7C948",
-        "env": "3FB950", "social": "58A6FF", "gov": "BC8CFF",
-    },
-    AestheticTheme.MINIMAL_WHITE: {
-        "light": "F5F5F5", "primary": "212121", "secondary": "1E88E5", "accent": "FF6F00",
-        "env": "43A047", "social": "1E88E5", "gov": "8E24AA",
-    },
-    AestheticTheme.SUNSET_TERRACOTTA: {
-        "light": "FAE5D8", "primary": "9A3412", "secondary": "E76F51", "accent": "F4A261",
-        "env": "2A9D8F", "social": "E76F51", "gov": "6D597A",
-    },
-    AestheticTheme.OCEAN_DEEP: {
-        "light": "DCF1F5", "primary": "0F4C5C", "secondary": "277DA1", "accent": "00BFA6",
-        "env": "43AA8B", "social": "277DA1", "gov": "577590",
-    },
-    AestheticTheme.ROYAL_PURPLE: {
-        "light": "EDE6F7", "primary": "2B1055", "secondary": "5E35B1", "accent": "D4A017",
-        "env": "2E9E62", "social": "4A5FC1", "gov": "8E24AA",
-    },
+def docx_hex(theme: AestheticTheme) -> dict:
+    """Couleurs Word (hex sans « # ») converties depuis le gabarit."""
+    from report_designs import colors_of
+    c = colors_of(theme)
+    return {"light": c["panel"][1:], "primary": c["primary"][1:], "secondary": c["muted"][1:],
+            "accent": c["accent"][1:], "env": c["env"][1:], "social": c["social"][1:],
+            "gov": c["gov"][1:], "paper": c["paper"][1:], "ink": c["ink"][1:]}
+
+
+# Traitement des titres par gabarit ; polices système sûres (report_designs)
+_DOCX_HEADING = {
+    AestheticTheme.AURORA: ("plain", 22), AestheticTheme.ANNUEL: ("plain", 22),
+    AestheticTheme.INSTITUTIONNEL: ("plain", 22), AestheticTheme.PORTRAIT: ("plain", 22),
+    AestheticTheme.TERRE: ("shaded", 18), AestheticTheme.GALERIE: ("plain", 20),
 }
 
 
-# Design language per theme: fonts + heading treatment
-DOCX_STYLES = {
-    AestheticTheme.CORPORATE_BLUE: {
-        "font": "Calibri", "heading": "plain", "uppercase": False, "h1_size": 22,
-    },
-    AestheticTheme.GREEN_NATURE: {
-        "font": "Trebuchet MS", "heading": "shaded", "uppercase": False, "h1_size": 17,
-    },
-    AestheticTheme.DARK_PREMIUM: {
-        "font": "Georgia", "heading": "plain", "uppercase": True, "h1_size": 19,
-    },
-    AestheticTheme.MINIMAL_WHITE: {
-        "font": "Segoe UI", "heading": "plain", "uppercase": True, "h1_size": 14,
-    },
-    AestheticTheme.SUNSET_TERRACOTTA: {
-        "font": "Cambria", "heading": "shaded", "uppercase": False, "h1_size": 17,
-    },
-    AestheticTheme.OCEAN_DEEP: {
-        "font": "Segoe UI", "heading": "plain", "uppercase": False, "h1_size": 20,
-    },
-    AestheticTheme.ROYAL_PURPLE: {
-        "font": "Georgia", "heading": "plain", "uppercase": True, "h1_size": 19,
-    },
-}
+def docx_style(theme: AestheticTheme) -> dict:
+    from report_designs import design, DEFAULT_DESIGN
+    heading, size = _DOCX_HEADING.get(theme, _DOCX_HEADING[DEFAULT_DESIGN])
+    return {"font": design(theme)["office"]["body"], "font_title": design(theme)["office"]["display"],
+            "heading": heading, "uppercase": False, "h1_size": size}
 
 
 def hex_to_rgb(h: str) -> RGBColor:
@@ -90,7 +56,7 @@ def shade_paragraph(p: Paragraph, color_hex: str) -> None:
 
 
 def add_heading(doc, text, level, color_hex, size=None, style=None):
-    style = style or DOCX_STYLES[AestheticTheme.CORPORATE_BLUE]
+    style = style or docx_style(AestheticTheme.AURORA)
     if style["uppercase"]:
         text = text.upper()
     p = doc.add_paragraph()
@@ -199,11 +165,11 @@ def add_consultant_note(doc, text, colors, TR):
 def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                          logo_bytes: bytes = None, cover_art: bytes = None,
                          charts: dict = None) -> bytes:
-    colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
+    colors = docx_hex(request.aesthetic_theme)
     if getattr(request, "custom_colors", None):
         from branding import brand_docx_hex
         colors = brand_docx_hex(colors, request.custom_colors)
-    style = DOCX_STYLES.get(request.aesthetic_theme, DOCX_STYLES[AestheticTheme.CORPORATE_BLUE])
+    style = docx_style(request.aesthetic_theme)
     TR = L(request.language)
 
     from content_generator import pillar_headline, section_headlines
@@ -246,12 +212,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     title_run.font.size = Pt(32)
     title_run.bold = True
     title_run.font.name = style["font"]
-    if request.aesthetic_theme == AestheticTheme.DARK_PREMIUM:
-        # Luxe: white serif title on a dark band
-        title_run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        shade_paragraph(title_p, "0D1117")
-        title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    elif request.aesthetic_theme == AestheticTheme.GREEN_NATURE:
+    title_run.font.name = style["font_title"]
+    if request.aesthetic_theme == AestheticTheme.TERRE:
         title_run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         shade_paragraph(title_p, colors["primary"])
         title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT

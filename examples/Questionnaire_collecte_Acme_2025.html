@@ -83,6 +83,7 @@
 
 <script>
 const SCHEMA = [{"section": "company", "fields": [{"csv": "Nom", "key": "name", "type": "str"}, {"csv": "Secteur", "key": "sector", "type": "str"}, {"csv": "Pays", "key": "country", "type": "str"}, {"csv": "Chiffre d'affaires", "key": "revenue_eur", "type": "num"}, {"csv": "Annee de reporting", "key": "reporting_year", "type": "int"}, {"csv": "Horizon des objectifs", "key": "target_year", "type": "int"}, {"csv": "Nom du presentateur", "key": "presenter_name", "type": "str"}, {"csv": "Fonction du presentateur", "key": "presenter_title", "type": "str"}]}, {"section": "environmental", "fields": [{"csv": "Emissions co2 totales", "key": "co2_emissions_tonnes", "type": "num"}, {"csv": "Consommation energie", "key": "energy_consumption_mwh", "type": "num"}, {"csv": "Energie renouvelable", "key": "renewable_energy_percent", "type": "num"}, {"csv": "Consommation eau", "key": "water_consumption_m3", "type": "num"}, {"csv": "Dechets generes", "key": "waste_generated_tonnes", "type": "num"}, {"csv": "Taux de recyclage", "key": "waste_recycled_percent", "type": "num"}, {"csv": "Initiatives biodiversite", "key": "biodiversity_initiatives", "type": "int"}, {"csv": "Scope 1", "key": "scope1_emissions", "type": "num"}, {"csv": "Scope 2", "key": "scope2_emissions", "type": "num"}, {"csv": "Scope 3", "key": "scope3_emissions", "type": "num"}]}, {"section": "social", "fields": [{"csv": "Effectif total", "key": "total_employees", "type": "int"}, {"csv": "Femmes dans l'effectif", "key": "female_employees_percent", "type": "num"}, {"csv": "Turnover", "key": "employee_turnover_percent", "type": "num"}, {"csv": "Formation", "key": "training_hours_per_employee", "type": "num"}, {"csv": "Accidents de travail", "key": "work_accidents", "type": "int"}, {"csv": "Taux de frequence", "key": "accident_frequency_rate", "type": "num"}, {"csv": "Investissement communaute", "key": "community_investment_eur", "type": "num"}, {"csv": "Fournisseurs locaux", "key": "local_suppliers_percent", "type": "num"}, {"csv": "Satisfaction client", "key": "customer_satisfaction_score", "type": "num"}, {"csv": "Salaries handicapes", "key": "disabled_employees_percent", "type": "num"}]}, {"section": "governance", "fields": [{"csv": "Membres du ca", "key": "board_members", "type": "int"}, {"csv": "Femmes au ca", "key": "female_board_percent", "type": "num"}, {"csv": "Administrateurs independants", "key": "independent_board_percent", "type": "num"}, {"csv": "Violations ethiques", "key": "ethics_violations", "type": "int"}, {"csv": "Cas de corruption", "key": "corruption_cases", "type": "int"}, {"csv": "Violations de donnees", "key": "data_breaches", "type": "int"}, {"csv": "Budget rse", "key": "csr_budget_eur", "type": "num"}, {"csv": "Audit esg", "key": "esg_audit_conducted", "type": "bool"}, {"csv": "Comite de durabilite", "key": "sustainability_committee", "type": "bool"}]}, {"section": "taxonomy", "fields": [{"csv": "Ca aligne taxonomie", "key": "turnover_aligned_percent", "type": "num"}, {"csv": "Capex aligne taxonomie", "key": "capex_aligned_percent", "type": "num"}, {"csv": "Opex aligne taxonomie", "key": "opex_aligned_percent", "type": "num"}]}];
+const T = {"one": " champ renseigné", "many": " champs renseignés", "of": " sur ", "saved": "enregistré", "confirm": "Effacer toutes les réponses saisies ?", "csv_head": ["Champ", "Valeur"], "csv_prefix": "donnees_esg_"};
 const STORE = "esg_collecte_Acme_Industries";
 const all = () => Array.from(document.querySelectorAll("[data-key]"));
 
@@ -93,9 +94,9 @@ function save() {
   const n = Object.keys(d).length, tot = all().length;
   document.getElementById("pf").style.width = (100 * n / tot) + "%";
   document.getElementById("pl").textContent =
-    n + (n > 1 ? " champs renseignés" : " champ renseigné") + " sur " + tot;
+    n + (n > 1 ? T.many : T.one) + T.of + tot;
   const sv = document.getElementById("sv");
-  sv.textContent = "enregistré";
+  sv.textContent = T.saved;
   clearTimeout(window._t); window._t = setTimeout(() => sv.textContent = "", 1600);
 }
 
@@ -123,7 +124,7 @@ document.querySelectorAll(".yn-btn").forEach(btn => {
 });
 
 document.getElementById("clear").addEventListener("click", () => {
-  if (!confirm("Effacer toutes les réponses saisies ?")) return;
+  if (!confirm(T.confirm)) return;
   all().forEach(el => el.value = "");
   document.querySelectorAll(".yn-btn").forEach(b => b.classList.remove("on"));
   try { localStorage.removeItem(STORE); } catch (e) {}
@@ -134,7 +135,7 @@ document.getElementById("dl").addEventListener("click", () => {
   const vals = {};
   all().forEach(el => vals[el.dataset.key] = el.value);
   // Format « Champ;Valeur » — celui que la plateforme sait réimporter
-  const rows = [["Champ", "Valeur"]];
+  const rows = [T.csv_head];
   SCHEMA.forEach(sec => sec.fields.forEach(f => rows.push([f.csv, vals[f.key] || ""])));
   const csv = rows.map(r => r.map(c => {
     const s = String(c);
@@ -143,7 +144,7 @@ document.getElementById("dl").addEventListener("click", () => {
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "donnees_esg_Acme_Industries.csv";
+  a.download = T.csv_prefix + "Acme_Industries.csv";
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
 });
