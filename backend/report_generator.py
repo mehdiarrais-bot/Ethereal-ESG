@@ -454,6 +454,12 @@ def compose_report(request, scores, content, chart_images, logo_bytes=None):
     3. Composition finale avec les numéros de page définitifs.
     `mise en page` = {"pages": [(page, séquence, remplissage)], "content_pages": [...],
     "densities": {...}} — lue par les tests de pagination."""
+    import typo
+    with typo.language(request.language):
+        return _compose_report(request, scores, content, chart_images, logo_bytes)
+
+
+def _compose_report(request, scores, content, chart_images, logo_bytes):
     args = (request, scores, content, chart_images, logo_bytes)
     opts = {"densities": {}, "inline_focus": False}
     anchors, layout = _trial(*args, opts, {})

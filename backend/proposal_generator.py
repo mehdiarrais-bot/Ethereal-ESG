@@ -174,6 +174,8 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
         r1.font.size = Pt(9); r1.font.color.rgb = hex_to_rgb("7F8C8D")
 
     buf = io.BytesIO()
+    from typo import fix_docx
+    fix_docx(doc, request.language)  # nombres à la française (typo.py)
     doc.save(buf)
     buf.seek(0)
     return buf.read()

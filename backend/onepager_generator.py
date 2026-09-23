@@ -18,6 +18,12 @@ from pdf_kit import Kit, clean as pdf_txt
 
 
 def generate_onepager_pdf(request: ESGRequest, scores: ESGScores) -> bytes:
+    import typo
+    with typo.language(request.language):  # nombres à la française via pdf_txt
+        return _onepager(request, scores)
+
+
+def _onepager(request: ESGRequest, scores: ESGScores) -> bytes:
     from content_generator import risks_opportunities, enriched_recommendations
     from esg_advanced import esg_maturity
 

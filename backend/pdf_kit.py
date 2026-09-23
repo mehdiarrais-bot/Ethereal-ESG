@@ -87,8 +87,10 @@ _PDF_CHARS = str.maketrans({
 
 
 def clean(v) -> str:
-    """Texte sûr pour les polices : glyphes indisponibles translittérés."""
-    s = str(v).translate(_PDF_CHARS)
+    """Texte sûr pour les polices : glyphes indisponibles translittérés,
+    nombres à la typographie de la langue du livrable (typo.py)."""
+    from typo import fix
+    s = fix(str(v)).translate(_PDF_CHARS)
     return s.encode('cp1252', 'ignore').decode('cp1252')
 
 

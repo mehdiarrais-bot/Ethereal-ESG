@@ -620,6 +620,8 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     buf = io.BytesIO()
+    from typo import fix_docx
+    fix_docx(doc, request.language)  # nombres à la française (typo.py)
     doc.save(buf)
     buf.seek(0)
     return buf.read()

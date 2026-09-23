@@ -1063,6 +1063,8 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
                  font_size=8, color=theme["muted"], align=PP_ALIGN.RIGHT, font=fb)
 
     buf = io.BytesIO()
+    from typo import fix_pptx
+    fix_pptx(prs, request.language)  # nombres à la française (typo.py)
     prs.save(buf)
     buf.seek(0)
     return buf.read()
