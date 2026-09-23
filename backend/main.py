@@ -12,7 +12,7 @@ from starlette.datastructures import MutableHeaders
 
 from models import ESGRequest, ESGScores, AestheticTheme, decode_logo
 from esg_calculator import calculate_esg_scores
-from image_bank import cover_art
+from image_bank import cover_banner
 from chart_generator import radar_chart, score_bars_chart, emissions_breakdown_chart, gauge_chart
 from ppt_generator import generate_pptx
 from report_generator import generate_pdf_report
@@ -33,11 +33,54 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "no-referrer",
 }
 
-MAX_BODY_BYTES = 2_500_000  # 2,5 Mo (logo base64 inclus)
+# 14 Mo : logo (1,5 Mo) et jusqu'à cinq photos de 1,5 Mo, encodés en base64
+# (+37 %). Le navigateur réduit les photos avant envoi (~300 Ko chacune).
+MAX_BODY_BYTES = 14_000_000
+# Sauvegarde de tous les dossiers : chaque dossier peut porter photos et logo
+MAX_ARCHIVE_BYTES = 200_000_000
+
+
+# ── Protection de l'API locale contre les sites web tiers ─────────────────
+# L'application écoute sur la machine du consultant et manipule des dossiers
+# clients sans authentification. Deux attaques depuis une page web ouverte
+# dans son navigateur ont été reproduites (audit du 2026-09-24) :
+#   - requête intersite (CSRF) : un formulaire multipart vers
+#     /api/clients-import écrasait un dossier ;
+#   - rebinding DNS : un domaine tiers résolu vers 127.0.0.1 lisait l'API.
+# Parade : nom d'hôte sur liste blanche, et refus de toute requête d'écriture
+# annoncée par le navigateur comme venant d'une autre origine.
+_DEFAULT_HOSTS = "localhost,127.0.0.1,[::1]"
+ALLOWED_HOSTS = {h.strip().lower() for h in
+                 os.environ.get("ESG_ALLOWED_HOSTS", _DEFAULT_HOSTS).split(",") if h.strip()}
+_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def _hostname(value: str) -> str:
+    """« localhost:8000 » -> « localhost » ; « [::1]:8000 » -> « [::1] »."""
+    value = value.strip().lower()
+    if value.startswith("["):
+        return value.split("]")[0] + "]"
+    return value.rsplit(":", 1)[0] if value.count(":") == 1 else value
+
+
+def request_refusal(method: str, headers) -> str | None:
+    """Motif de refus d'une requête, ou None si elle est acceptable."""
+    if _hostname(headers.get("host", "")) not in ALLOWED_HOSTS:
+        return "Hôte non autorisé"
+    if method in _SAFE_METHODS:
+        return None
+    origin = headers.get("origin")
+    if origin is not None:
+        from urllib.parse import urlsplit
+        if origin == "null" or _hostname(urlsplit(origin).netloc) not in ALLOWED_HOSTS:
+            return "Origine non autorisée"
+    if headers.get("sec-fetch-site") == "cross-site":
+        return "Requête intersite refusée"
+    return None
 
 
 class SecurityMiddleware:
-    """Pure ASGI middleware: body size limit + security headers."""
+    """Pure ASGI middleware: origine/hôte, body size limit + security headers."""
 
     def __init__(self, app: ASGIApp):
         self.app = app
@@ -46,15 +89,22 @@ class SecurityMiddleware:
         if scope["type"] == "http":
             request = Request(scope, receive)
 
+            refusal = request_refusal(request.method, request.headers)
+            if refusal:
+                resp = JSONResponse(status_code=403, content={"detail": refusal})
+                await resp(scope, receive, send)
+                return
+
             # Body size check for POST requests
+            limit = MAX_ARCHIVE_BYTES if request.url.path == "/api/clients-import" else MAX_BODY_BYTES
             if request.method == "POST":
                 cl = request.headers.get("content-length")
-                if cl and int(cl) > MAX_BODY_BYTES:
+                if cl and int(cl) > limit:
                     resp = JSONResponse(status_code=413, content={"detail": "Request too large"})
                     await resp(scope, receive, send)
                     return
                 body = await request.body()
-                if len(body) > MAX_BODY_BYTES:
+                if len(body) > limit:
                     resp = JSONResponse(status_code=413, content={"detail": "Request too large"})
                     await resp(scope, receive, send)
                     return
@@ -139,6 +189,20 @@ def warmup_endpoint():
     return {"status": "warming"}
 
 
+@app.get("/api/designs")
+def designs_endpoint():
+    """Les six gabarits éditoriaux, lus dans report_designs (source unique) :
+    le sélecteur et l'aperçu du frontend n'embarquent aucune palette."""
+    from report_designs import DESIGNS, CLIENT_PHOTO_SLOTS
+    return {
+        "designs": [{"id": theme.value, "label": d["label"], "tagline": d["tagline"],
+                     "colors": d["colors"], "fonts": {"display": d["fonts"]["display"],
+                                                      "body": d["fonts"]["body"]}}
+                    for theme, d in DESIGNS.items()],
+        "photo_slots": list(CLIENT_PHOTO_SLOTS),
+    }
+
+
 @app.post("/api/calculate")
 def calculate(request: ESGRequest):
     """Calculate ESG scores without generating documents."""
@@ -158,9 +222,17 @@ def clients_list():
 @app.get("/api/clients/{client_id}")
 def clients_get(client_id: str):
     try:
-        return client_store.get_client(client_id)
+        d = client_store.get_client(client_id)
     except (FileNotFoundError, ValueError):
         raise HTTPException(status_code=404, detail="Dossier introuvable")
+    # Dossier enregistré avant les gabarits éditoriaux (2026-09-23) : le
+    # sélecteur ne connaît plus l'ancien thème, on le relit sous le gabarit
+    # le plus proche (même table que la validation de ESGRequest).
+    from report_designs import LEGACY_THEMES
+    form = d.get("form")
+    if isinstance(form, dict) and form.get("aesthetic_theme") in LEGACY_THEMES:
+        form["aesthetic_theme"] = LEGACY_THEMES[form["aesthetic_theme"]]
+    return d
 
 
 @app.post("/api/clients")
@@ -228,10 +300,12 @@ def clients_export():
 async def clients_import(file: UploadFile = File(...)):
     """Restaure une sauvegarde zip de dossiers (fusion par identifiant)."""
     data = await file.read()
-    if len(data) > MAX_BODY_BYTES:
+    if len(data) > MAX_ARCHIVE_BYTES:
         raise HTTPException(status_code=413, detail="Archive trop volumineuse")
     try:
         return client_store.import_archive(data)
+    except ValueError as e:  # bornes dépassées : motif explicite
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception:
         raise HTTPException(status_code=422, detail="Archive invalide")
 
@@ -279,12 +353,12 @@ async def import_file(file: UploadFile = File(...)):
 
 
 def build_extras(request: ESGRequest) -> tuple:
-    """Logo décodé + illustration de couverture générée localement."""
+    """Logo décodé + bandeau photo de couverture du gabarit."""
     logo_bytes = decode_logo(request.company.logo_base64)
     art = None
     if request.include_cover_image:
         try:
-            art = cover_art(request.aesthetic_theme, request.company.name)
+            art = cover_banner(request)
         except Exception as e:
             print(f"Cover art error: {e}")
     return logo_bytes, art
@@ -582,4 +656,6 @@ elif getattr(sys, "frozen", False):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Poste local par défaut : exposer l'API au réseau (Docker, serveur)
+    # est un choix explicite, via ESG_HOST et ESG_ALLOWED_HOSTS.
+    uvicorn.run(app, host=os.environ.get("ESG_HOST", "127.0.0.1"), port=8000)

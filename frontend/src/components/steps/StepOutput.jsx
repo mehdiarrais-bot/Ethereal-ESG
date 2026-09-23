@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import PreviewPanel from '../PreviewPanel'
-
-const THEMES = [
-  { id: 'corporate_blue', name: 'Corporate Blue', desc: 'Professionnel, sobre — finance & industrie', colors: ['#1B3A6B', '#2E86C1', '#F39C12'] },
-  { id: 'green_nature', name: 'Green Nature', desc: 'Verdoyant, impact-first — rapports RSE', colors: ['#1A5C38', '#27AE60', '#F1C40F'] },
-  { id: 'dark_premium', name: 'Dark Premium', desc: 'Elegant, haut de gamme — investisseurs', colors: ['#0D1117', '#58A6FF', '#F7C948'] },
-  { id: 'minimal_white', name: 'Minimal White', desc: 'Epure, moderne — focus sur les donnees', colors: ['#212121', '#1E88E5', '#FF6F00'] },
-  { id: 'sunset_terracotta', name: 'Terracotta Sunset', desc: 'Chaleureux, organique — marques engagees', colors: ['#9A3412', '#E76F51', '#F4A261'] },
-  { id: 'ocean_deep', name: 'Ocean Profond', desc: 'Teal & cyan — maritime, energie, eau', colors: ['#0F4C5C', '#277DA1', '#00BFA6'] },
-  { id: 'royal_purple', name: 'Royal Violet', desc: 'Violet & or — prestige, luxe, culture', colors: ['#2B1055', '#5E35B1', '#FFD54F'] },
-]
+import { DesignPicker, PhotoSlots } from '../DesignPicker'
 
 const PRES_TYPES = [
   { id: 'executive_summary', name: 'Synthese Executive', desc: 'Vue dirigeant condensee' },
@@ -44,22 +35,11 @@ function autoBrand(name) {
   return { primary: hsl(hue, 0.42, 0.20), accent: hsl(accentHue, 0.72, 0.55) }
 }
 
-function Swatch({ colors }) {
-  return (
-    <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
-      {colors.map(c => (
-        <div key={c} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: '1px solid var(--border-strong)' }} />
-      ))}
-    </div>
-  )
-}
-
-function OptionCard({ item, selected, onClick, type }) {
+function OptionCard({ item, selected, onClick }) {
   return (
     <button className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick} type="button">
       <div className="option-name">{item.name}</div>
       <div className="option-desc">{item.desc}</div>
-      {type === 'theme' && <Swatch colors={item.colors} />}
       {selected && <div className="option-check">✓</div>}
     </button>
   )
@@ -95,13 +75,13 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         <div className="card-title">📊 Configuration des Livrables</div>
 
         <div className="output-section">
-          <div className="output-section-title">🎨 Theme Esthetique</div>
-          <div className="options-grid options-grid-4">
-            {THEMES.map(t => (
-              <OptionCard key={t.id} item={t} selected={form.aesthetic_theme === t.id}
-                onClick={() => set('aesthetic_theme')(t.id)} type="theme" />
-            ))}
-          </div>
+          <div className="output-section-title">🎨 Gabarit du rapport</div>
+          <DesignPicker value={form.aesthetic_theme} onChange={set('aesthetic_theme')} />
+        </div>
+
+        <div className="output-section">
+          <div className="output-section-title">🖼️ Photos de l'entreprise (facultatif)</div>
+          <PhotoSlots photos={form.report_photos} onChange={set('report_photos')} />
         </div>
 
         <div className="output-section">
@@ -353,7 +333,38 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
           gap: 14px;
         }
-        .options-grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .design-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .design-card {
+          position: relative; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
+          border: 1px solid var(--border); border-radius: var(--radius);
+          background: var(--bg-surface); color: var(--text);
+          transition: border-color var(--fast), background var(--fast);
+        }
+        .design-card img { display: block; width: 100%; aspect-ratio: 610 / 424; object-fit: cover; background: var(--bg-inset); }
+        .design-card:hover { border-color: var(--brand); }
+        .design-card.selected { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-ring); background: var(--brand-soft); }
+        .design-meta { padding: 10px 14px 12px; border-top: 1px solid var(--border); }
+        .design-error { font-size: 12px; color: var(--danger); margin-top: 8px; }
+        .photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .photo-slot { display: flex; flex-direction: column; gap: 6px; position: relative; }
+        .photo-slot img, .photo-add {
+          width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-sm);
+          object-fit: cover; border: 1px solid var(--border);
+        }
+        .photo-add {
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          border: 2px dashed var(--border); color: var(--brand-hover); font-size: 13px;
+          background: var(--bg-subtle); transition: border-color var(--fast);
+        }
+        .photo-add:hover { border-color: var(--brand-hover); }
+        .photo-add input[type=file] { display: none; }
+        .photo-remove {
+          position: absolute; top: 6px; right: 6px; font-size: 11px; cursor: pointer;
+          background: var(--bg-surface); color: var(--danger);
+          border: 1px solid var(--danger); border-radius: var(--radius-sm); padding: 3px 7px;
+        }
+        .photo-label { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+        .photo-hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
         .lang-toggle { display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; }
         .lang-btn {
           padding: 10px 22px; border: none; background: var(--bg-surface);
@@ -510,7 +521,8 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         }
 
         @media (max-width: 900px) {
-          .options-grid-4 { grid-template-columns: repeat(2, 1fr); }
+          .design-grid { grid-template-columns: repeat(2, 1fr); }
+          .photo-grid { grid-template-columns: repeat(3, 1fr); }
         }
       `}</style>
     </div>

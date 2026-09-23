@@ -13,8 +13,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from models import ESGRequest, ESGScores
 from i18n import L
-from docx_generator import THEME_HEX, DOCX_STYLES, hex_to_rgb, shade_cell, shade_paragraph, add_hr
-from models import AestheticTheme
+from docx_generator import docx_hex, hex_to_rgb, shade_cell, shade_paragraph, add_hr
 
 
 def _h(doc, text, size, color_hex, bold=True, space_before=14, space_after=4):
@@ -31,7 +30,7 @@ def _h(doc, text, size, color_hex, bold=True, space_before=14, space_after=4):
 def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     from content_generator import compliance_assessment, maturity_text, roadmap_12m
     en = request.language == "en"
-    colors = THEME_HEX.get(request.aesthetic_theme, THEME_HEX[AestheticTheme.CORPORATE_BLUE])
+    colors = docx_hex(request.aesthetic_theme)
     if getattr(request, "custom_colors", None):
         from branding import brand_docx_hex
         colors = brand_docx_hex(colors, request.custom_colors)
@@ -175,6 +174,8 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
         r1.font.size = Pt(9); r1.font.color.rgb = hex_to_rgb("7F8C8D")
 
     buf = io.BytesIO()
+    from typo import fix_docx
+    fix_docx(doc, request.language)  # nombres à la française (typo.py)
     doc.save(buf)
     buf.seek(0)
     return buf.read()

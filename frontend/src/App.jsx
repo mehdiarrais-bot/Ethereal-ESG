@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import StepCompany from './components/steps/StepCompany'
@@ -12,6 +12,7 @@ import ClientsPanel from './components/ClientsPanel'
 import PortfolioView from './components/PortfolioView'
 import { useESGScore } from './hooks/useESGScore'
 import { DEMO_DATA } from './demoData'
+import { sessionAfter, mayDiscard } from './lib/formSession.mjs'
 import './App.css'
 
 const STEPS = [
@@ -43,7 +44,7 @@ const EMPTY_FORM = {
     esg_audit_conducted: null, sustainability_committee: null,
   },
   presentation_type: 'executive_summary',
-  aesthetic_theme: 'corporate_blue',
+  aesthetic_theme: 'aurora',
   report_type: 'full_report',
   language: 'fr',
   reporting_framework: 'csrd',
@@ -51,6 +52,7 @@ const EMPTY_FORM = {
   include_benchmarks: true,
   include_cover_image: true,
   custom_colors: null,
+  report_photos: null,
   consultant_notes: { global: '', env: '', social: '', gov: '' },
 }
 
@@ -94,7 +96,25 @@ export default function App() {
     fetch('/api/warmup').catch(() => {})
   }, [])
 
-  useEffect(() => { setClientDirty(true) }, [form])
+  // Un remplacement programmatique du formulaire (chargement, démo, nouveau)
+  // ne compte pas comme une modification : seul l'utilisateur rend la saisie
+  // « non enregistrée ». Remplace l'ancien setTimeout de 100 ms.
+  const programmaticChange = useRef(true)
+  useEffect(() => {
+    if (programmaticChange.current) { programmaticChange.current = false; return }
+    setClientDirty(true)
+  }, [form])
+
+  const replaceForm = (next, session) => {
+    programmaticChange.current = true
+    setForm(next)
+    setClientId(session.clientId)
+    setClientHistory(session.history)
+    setClientActions(session.actions)
+    setClientDirty(false)
+    setError(null)
+  }
+  const confirmDiscard = () => mayDiscard(clientDirty, (msg) => window.confirm(msg))
 
   const saveClient = async () => {
     if (!form.company?.name) {
@@ -125,16 +145,13 @@ export default function App() {
   }
 
   const loadClient = async (id) => {
+    if (!confirmDiscard()) return
     setError(null)
     try {
       const res = await fetch(`/api/clients/${id}`)
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
       const d = await res.json()
-      setForm(hydrateForm(d.form))
-      setClientId(d.id)
-      setClientHistory(d.score_history || [])
-      setClientActions(d.completed_actions || [])
-      setTimeout(() => setClientDirty(false), 100)
+      replaceForm(hydrateForm(d.form), sessionAfter('load', d))
       setStep(0)
     } catch (e) {
       setError(`Chargement : ${e.message}`)
@@ -169,17 +186,16 @@ export default function App() {
     setForm(f => ({ ...f, [section]: { ...f[section], ...data } }))
   }, [])
 
+  // La démonstration détache le dossier ouvert (DETTE.md § 7) : sinon
+  // « Enregistrer » écrasait le dossier réel avec les données exemple.
   const loadDemo = () => {
-    setForm(DEMO_DATA)
-    setError(null)
+    if (!confirmDiscard()) return
+    replaceForm(DEMO_DATA, sessionAfter('demo'))
   }
 
   const resetForm = () => {
-    setForm(EMPTY_FORM)
-    setClientId(null)
-    setClientHistory([])
-    setClientActions([])
-    setError(null)
+    if (!confirmDiscard()) return
+    replaceForm(EMPTY_FORM, sessionAfter('reset'))
   }
 
   const importFile = async (file) => {

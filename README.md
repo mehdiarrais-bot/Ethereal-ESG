@@ -17,7 +17,7 @@ Aucune API externe, aucun compte, aucune donnée qui sort de la machine.
 
 ![Interface de configuration des livrables](docs/img/02-livrables.png)
 
-*L'interface : sept thèmes, déclinaison aux couleurs du client, score calculé en direct.*
+*L'interface : six gabarits éditoriaux, photos de l'entreprise, déclinaison aux couleurs du client, score calculé en direct.*
 
 ---
 
@@ -44,13 +44,14 @@ commercial du consultant qui l'utilise (« vos données ne quittent pas ma machi
 ## Ce que ça produit
 
 Six livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
-et déclinables en 7 thèmes graphiques.
+et déclinables en **6 gabarits éditoriaux** (Aurora, Annuel, Institutionnel, Portrait,
+Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 
 | Livrable | Contenu |
 |---|---|
-| **Rapport PDF** (~18 p.) | Structure en trois actes : Situation · Diagnostic · Plan d'action |
-| **Présentation** (21-23 slides) | Deck de comité de direction, titres porteurs de conclusion |
-| **Rapport Word** | Même contenu, éditable par le client |
+| **Rapport PDF** (~20 p.) | Couverture photo, sommaire paginé, l'entreprise en bref, ESG en un coup d'œil, puis trois actes : Situation · Diagnostic · Plan d'action |
+| **Présentation** (21-23 slides) | Deck de comité de direction, titres porteurs de conclusion ; l'analyse détaillée du rapport en notes de l'orateur |
+| **Rapport Word** | Même texte analytique que le PDF, éditable par le client |
 | **Synthèse une page** | Le document que le dirigeant transfère à son conseil |
 | **Lettre de mission** | Proposition commerciale bâtie sur le pré-diagnostic réel du prospect |
 | **Questionnaire de collecte** | Fichier HTML autonome envoyé au client : il le remplit hors ligne, renvoie un CSV réimporté sans ressaisie |
@@ -158,15 +159,18 @@ Les analyses libres du consultant sont injectées dans des encarts dédiés
 - **Système de branding** avec garde-fous de luminance : la couleur primaire est assombrie
   si elle porte du texte blanc, l'accent éclairci s'il devient illisible ; les couleurs
   sémantiques des piliers sont préservées.
-- **Encodage typographique** maîtrisé (cp1252/WinAnsi) pour que les accents, l'euro et les
-  guillemets français survivent dans les PDF avec polices base-14.
+- **Typographie** : polices embarquées (SIL OFL), nombres à la française dans tous les
+  livrables FR (« 21 500 MWh », « 6,2 », « 42 % »), pagination sans veuve, orpheline ni page
+  presque vide.
 - **Rédaction déterministe** : accords grammaticaux réels (« deux points forts consolidés »,
   jamais « 2 point(s) fort(s) »), déduplication des formules, aucun artefact de publipostage.
 - **Persistance robuste** : écriture atomique (fichier temporaire + `os.replace`), validation
   Pydantic stricte de toutes les entrées, middleware ASGI de limitation de taille et
-  d'en-têtes de sécurité.
-- **34 tests** couvrant les cinq livrables × deux langues × plusieurs thèmes, les endpoints
-  de gestion des dossiers, la qualité rédactionnelle et le déterminisme du branding.
+  d'en-têtes de sécurité, refus des requêtes venant d'un site web tiers (origine et nom
+  d'hôte contrôlés), import de sauvegarde borné et validé.
+- **Tests** : suite pytest (livrables × langues × six gabarits, sécurité, pagination,
+  typographie, parité des livrables, garde-fous rédactionnels) et tests Node de la logique
+  d'interface (`npm test`).
 
 ```
 backend/

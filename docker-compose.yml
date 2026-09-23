@@ -9,6 +9,10 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    environment:
+      # Noms d'hôte sous lesquels l'application est servie (protection contre
+      # le rebinding DNS). Ajouter ici le nom ou l'IP du serveur si besoin.
+      ESG_ALLOWED_HOSTS: "localhost,127.0.0.1,[::1]"
     restart: unless-stopped
 
   frontend:

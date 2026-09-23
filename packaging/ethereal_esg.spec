@@ -13,6 +13,9 @@ if not os.path.isfile(os.path.join(FRONTEND_DIST, "index.html")):
     raise SystemExit("frontend/dist/index.html absent : lancer `npm run build` avant PyInstaller.")
 
 datas = [(FRONTEND_DIST, "frontend_dist")]
+# Polices (OFL) et photos d'illustration (domaine public / CC0) des gabarits
+# éditoriaux, lues via pdf_kit.assets_dir() (sys._MEIPASS/assets une fois figé).
+datas += [(os.path.join(BACKEND, "assets"), "assets")]
 # Gabarits par defaut de python-docx / python-pptx, donnees matplotlib.
 datas += collect_data_files("docx")
 datas += collect_data_files("pptx")

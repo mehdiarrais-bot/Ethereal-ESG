@@ -37,13 +37,13 @@ class PresentationType(str, Enum):
 
 
 class AestheticTheme(str, Enum):
-    CORPORATE_BLUE = "corporate_blue"
-    GREEN_NATURE = "green_nature"
-    DARK_PREMIUM = "dark_premium"
-    MINIMAL_WHITE = "minimal_white"
-    SUNSET_TERRACOTTA = "sunset_terracotta"
-    OCEAN_DEEP = "ocean_deep"
-    ROYAL_PURPLE = "royal_purple"
+    """Gabarits éditoriaux des livrables — jetons dans report_designs.py."""
+    AURORA = "aurora"
+    ANNUEL = "annuel"
+    INSTITUTIONNEL = "institutionnel"
+    PORTRAIT = "portrait"
+    TERRE = "terre"
+    GALERIE = "galerie"
 
 
 class ReportType(str, Enum):
@@ -135,6 +135,35 @@ _LOGO_RE = re.compile(r'^data:image/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\r\n]+)$
 MAX_LOGO_BYTES = 1_500_000  # 1,5 Mo décodé
 
 
+MAX_PHOTO_BYTES = 1_500_000  # 1,5 Mo décodé par photo (réduite côté navigateur)
+
+
+def _check_image_data_url(v: str, max_bytes: int, what: str) -> str:
+    """Valide une image data-URL PNG/JPEG : encodage, poids, lisibilité, taille."""
+    m = _LOGO_RE.match(v) if isinstance(v, str) else None
+    if not m:
+        raise ValueError(f"{what} invalide : format PNG ou JPEG attendu")
+    import base64, io as _io
+    try:
+        raw = base64.b64decode(m.group(2), validate=False)
+    except Exception:
+        raise ValueError(f"{what} invalide : encodage base64 illisible")
+    if len(raw) > max_bytes:
+        raise ValueError(f"{what} trop volumineux (max {max_bytes / 1e6:.1f} Mo)".replace(".", ","))
+    try:
+        from PIL import Image as PILImage
+        img = PILImage.open(_io.BytesIO(raw))
+        img.verify()
+        img = PILImage.open(_io.BytesIO(raw))
+        if img.width > 4000 or img.height > 4000:
+            raise ValueError(f"{what} trop grand (max 4000×4000 pixels)")
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError(f"{what} invalide : le fichier n'est pas une image lisible")
+    return v
+
+
 def decode_logo(data_url: Optional[str]) -> Optional[bytes]:
     """Décode un logo data-URL déjà validé. Retourne None si absent/invalide."""
     if not data_url:
@@ -197,28 +226,7 @@ class CompanyInfo(BaseModel):
     def check_logo(cls, v):
         if not v:
             return None
-        m = _LOGO_RE.match(v)
-        if not m:
-            raise ValueError("Logo invalide : format PNG ou JPEG attendu")
-        import base64, io as _io
-        try:
-            raw = base64.b64decode(m.group(2), validate=False)
-        except Exception:
-            raise ValueError("Logo invalide : encodage base64 illisible")
-        if len(raw) > MAX_LOGO_BYTES:
-            raise ValueError("Logo trop volumineux (max 1,5 Mo)")
-        try:
-            from PIL import Image as PILImage
-            img = PILImage.open(_io.BytesIO(raw))
-            img.verify()
-            img = PILImage.open(_io.BytesIO(raw))
-            if img.width > 4000 or img.height > 4000:
-                raise ValueError("Logo trop grand (max 4000×4000 pixels)")
-        except ValueError:
-            raise
-        except Exception:
-            raise ValueError("Logo invalide : le fichier n'est pas une image lisible")
-        return v
+        return _check_image_data_url(v, MAX_LOGO_BYTES, "Logo")
 
     @field_validator('revenue_eur', mode='after')
     @classmethod
@@ -235,7 +243,7 @@ class ESGRequest(BaseModel):
     governance: GovernanceData
     taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
     presentation_type: PresentationType = PresentationType.EXECUTIVE_SUMMARY
-    aesthetic_theme: AestheticTheme = AestheticTheme.CORPORATE_BLUE
+    aesthetic_theme: AestheticTheme = AestheticTheme.AURORA
     report_type: ReportType = ReportType.FULL_REPORT
     language: str = Field("fr", pattern=r'^(fr|en)$')
     # Référentiel visé : CSRD complet ou VSME (norme volontaire PME, EFRAG).
@@ -244,9 +252,37 @@ class ESGRequest(BaseModel):
     include_recommendations: bool = True
     include_benchmarks: bool = True
     include_cover_image: bool = True
+    # Photos fournies par l'entreprise, par emplacement (cf. report_designs.
+    # CLIENT_PHOTO_SLOTS) : data-URL PNG/JPEG. Un emplacement vide est comblé
+    # par la banque locale de photos d'illustration.
+    report_photos: Optional[dict] = None
     # Actions du plan précédent marquées « réalisées » par le consultant
     # (suivi de mission) : [{title, year}, ...]
     completed_actions: Optional[list] = None
+
+    @field_validator('aesthetic_theme', mode='before')
+    @classmethod
+    def map_legacy_theme(cls, v):
+        """Les dossiers enregistrés avant le 2026-09-23 portent les sept
+        anciens thèmes : ils sont relus sous le gabarit le plus proche."""
+        from report_designs import LEGACY_THEMES
+        return LEGACY_THEMES.get(v, v) if isinstance(v, str) else v
+
+    @field_validator('report_photos', mode='before')
+    @classmethod
+    def check_photos(cls, v):
+        if not v:
+            return None
+        if not isinstance(v, dict):
+            raise ValueError("Photos : dictionnaire emplacement -> image attendu")
+        from report_designs import CLIENT_PHOTO_SLOTS
+        out = {}
+        for slot, data_url in v.items():
+            if slot not in CLIENT_PHOTO_SLOTS:
+                raise ValueError(f"Emplacement photo inconnu : {slot}")
+            if data_url:
+                out[slot] = _check_image_data_url(data_url, MAX_PHOTO_BYTES, "Photo")
+        return out or None
 
     @field_validator('completed_actions', mode='before')
     @classmethod

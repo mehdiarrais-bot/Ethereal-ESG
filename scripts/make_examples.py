@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 OUT = os.path.join(ROOT, "examples")
 
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
-                    GovernanceData, TaxonomyData)
+                    GovernanceData, TaxonomyData, AestheticTheme)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import generate_esg_content                           # noqa: E402
 from ppt_generator import generate_pptx                                      # noqa: E402
@@ -49,7 +49,7 @@ DEMO = ESGRequest(
         female_board_percent=44),
     taxonomy=TaxonomyData(turnover_aligned_percent=38, capex_aligned_percent=52,
                           opex_aligned_percent=20),
-    language="fr", aesthetic_theme="corporate_blue",
+    language="fr", aesthetic_theme="aurora",
     include_recommendations=True, include_benchmarks=True,
     # Historique : fait apparaître l'évolution N-1 et la trajectoire
     previous_scores={"year": 2024, "env": 58.0, "social": 50.0, "gov": 60.0, "total": 55.9},
@@ -98,6 +98,16 @@ def main():
     for name, data in files.items():
         path = os.path.join(OUT, name)
         with open(path, "wb") as f:
+            f.write(data)
+        print(f"  {name:42s} {len(data) // 1024:5d} Ko")
+
+    # Un rapport PDF par gabarit éditorial, pour comparer les six rendus
+    os.makedirs(os.path.join(OUT, "gabarits"), exist_ok=True)
+    for theme in AestheticTheme:
+        req = DEMO.model_copy(update={"aesthetic_theme": theme})
+        data = generate_pdf_report(req, scores, content, charts_light, logo_bytes=logo)
+        name = os.path.join("gabarits", f"Rapport-ESG-{theme.value}.pdf")
+        with open(os.path.join(OUT, name), "wb") as f:
             f.write(data)
         print(f"  {name:42s} {len(data) // 1024:5d} Ko")
 

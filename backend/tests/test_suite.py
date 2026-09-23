@@ -22,7 +22,7 @@ from esg_calculator import calculate_esg_scores
 from content_generator import generate_esg_content
 
 
-def make_request(lang="fr", theme="corporate_blue", **overrides):
+def make_request(lang="fr", theme="aurora", **overrides):
     base = dict(
         company=CompanyInfo(name="Acme Industries", sector="Industrie manufacturière",
                             country="France", revenue_eur=48_000_000,
@@ -50,7 +50,7 @@ def scores():
 
 # ── Livrables : chaque format, chaque langue, plusieurs thèmes ────────────
 
-THEMES = ["corporate_blue", "dark_premium", "minimal_white", "green_nature"]
+THEMES = ["aurora", "annuel", "institutionnel", "portrait", "terre", "galerie"]
 
 
 @pytest.mark.parametrize("lang", ["fr", "en"])
