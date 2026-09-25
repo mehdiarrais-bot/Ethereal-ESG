@@ -9,6 +9,7 @@ from pptx.dml.color import RGBColor
 from pptx.slide import Slide
 from pptx.shapes.autoshape import Shape
 from pptx.enum.text import PP_ALIGN
+from esg_calculator import NON_NOTE, score_label
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
 from visual_kit import pillar_hero, icon_png, ring_png
 from i18n import L
@@ -236,8 +237,10 @@ def kpi_grid(slide, kpis, theme, style, color: RGBColor, top_start=Inches(1.3), 
 # ── Covers ────────────────────────────────────────────────────────────────
 
 def _cover_tag(TR, scores):
-    b = "high" if scores.total_esg_score >= 75 else "good" if scores.total_esg_score >= 60 \
-        else "mid" if scores.total_esg_score >= 45 else "low"
+    total = scores.total_esg_score
+    if total is None:  # sans score global : aucun jugement
+        return TR["cover_tag_none"]
+    b = "high" if total >= 75 else "good" if total >= 60 else "mid" if total >= 45 else "low"
     return TR["cover_tag_" + b]
 
 
@@ -263,12 +266,12 @@ def cover_classic(slide, theme, style, request, scores, subtitle, TR):
     add_text(slide, f"{TR['exercise']} {request.company.reporting_year}   |   {request.company.sector}   |   {request.company.country}",
              Inches(0.65), Inches(6.55), Inches(8), Inches(0.5),
              font_size=13, color=theme["subtitle"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
+    add_text(slide, score_label(scores.total_esg_score), Inches(8.55), Inches(5.35), Inches(2.4), Inches(1.6),
              font_size=82, bold=True, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=ft)
     add_text(slide, "/100", Inches(8.55), Inches(6.75), Inches(2.4), Inches(0.4),
              font_size=14, color=theme["subtitle"], align=PP_ALIGN.RIGHT, font=fb)
     add_shape(slide, ROUNDED_RECT, Inches(11.2), Inches(5.55), Inches(1.55), Inches(0.95), fill=theme["subtitle"])
-    add_text(slide, scores.rating, Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
+    add_text(slide, scores.rating or NON_NOTE, Inches(11.2), Inches(5.68), Inches(1.55), Inches(0.7),
              font_size=32, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
@@ -293,10 +296,10 @@ def cover_organic(slide, theme, style, request, scores, subtitle, TR):
              Inches(1.15), Inches(5.65), Inches(7), Inches(0.5), font_size=13, color=theme["subtitle"], font=fb)
     add_text(slide, f"{TR['chart_global']}", Inches(1.15), Inches(6.15), Inches(7), Inches(0.5),
              font_size=13, bold=True, color=theme["text_light"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.7), Inches(5.42), Inches(2.2), Inches(1.4),
+    add_text(slide, score_label(scores.total_esg_score), Inches(8.7), Inches(5.42), Inches(2.2), Inches(1.4),
              font_size=54, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
     add_shape(slide, OVAL, Inches(11.15), Inches(5.62), Inches(1.0), Inches(1.0), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(11.15), Inches(5.78), Inches(1.0), Inches(0.6),
+    add_text(slide, scores.rating or NON_NOTE, Inches(11.15), Inches(5.78), Inches(1.0), Inches(0.6),
              font_size=24, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=ft)
 
 
@@ -319,9 +322,9 @@ def cover_luxe(slide, theme, style, request, scores, subtitle, TR):
     add_text(slide, _cover_tag(TR, scores), Inches(1), Inches(3.75), Inches(11.33), Inches(0.6),
              font_size=17, italic=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=ft)
     # Note mise en scène (le grand signe de qualité)
-    add_text(slide, scores.rating, Inches(1), Inches(4.6), Inches(11.33), Inches(1.3),
+    add_text(slide, scores.rating or NON_NOTE, Inches(1), Inches(4.6), Inches(11.33), Inches(1.3),
              font_size=64, bold=True, color=gold, align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, f"{TR['chart_global']}  {scores.total_esg_score:.0f} / 100", Inches(1), Inches(6.0),
+    add_text(slide, f"{TR['chart_global']}  {score_label(scores.total_esg_score)} / 100", Inches(1), Inches(6.0),
              Inches(11.33), Inches(0.5), font_size=15, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=fb)
     add_text(slide, f"{TR['exercise']} {request.company.reporting_year}  •  {request.company.sector}  •  {request.company.country}",
              Inches(1), Inches(6.55), Inches(11.33), Inches(0.4),
@@ -346,9 +349,9 @@ def cover_minimal(slide, theme, style, request, scores, subtitle, TR):
              font_size=13, color=theme["muted"], font=fb)
     add_text(slide, request.company.country, Inches(0.7), Inches(5.95), Inches(5), Inches(0.4),
              font_size=13, color=theme["muted"], font=fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(8.3), Inches(5.0), Inches(2.6), Inches(1.6),
+    add_text(slide, score_label(scores.total_esg_score), Inches(8.3), Inches(5.0), Inches(2.6), Inches(1.6),
              font_size=88, bold=True, color=theme["accent"], align=PP_ALIGN.RIGHT, font=ft)
-    add_text(slide, f"/100  —  {TR['note']} {scores.rating}", Inches(6.9), Inches(6.5), Inches(4.0), Inches(0.4),
+    add_text(slide, f"/100  —  {TR['note']} {scores.rating or NON_NOTE}", Inches(6.9), Inches(6.5), Inches(4.0), Inches(0.4),
              font_size=15, bold=True, color=theme["text_dark"], align=PP_ALIGN.RIGHT, font=fb)
 
 
@@ -396,12 +399,13 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
              font_size=_fit_title(24, subtitle), bold=True, color=white, font=ft)
 
     # Anneau de score en bas du héros
-    try:
-        ring = ring_png(score, 320, _hexstr(theme["accent"]))
-        add_image_from_bytes(slide, ring, Inches(1.4), Inches(4.75), Inches(1.75), Inches(1.75))
-    except Exception:
-        pass
-    add_text(slide, f"{score:.0f}", Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
+    if score is not None:  # pilier non noté : ni anneau ni chiffre, « — »
+        try:
+            ring = ring_png(score, 320, _hexstr(theme["accent"]))
+            add_image_from_bytes(slide, ring, Inches(1.4), Inches(4.75), Inches(1.75), Inches(1.75))
+        except Exception:
+            pass
+    add_text(slide, score_label(score), Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
              font_size=38, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
     add_text(slide, t["score_100_caps"], Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
              font_size=11, bold=True, color=white, align=PP_ALIGN.CENTER, font=fb)
@@ -472,7 +476,7 @@ class _Deck:
     ro: dict                  # risks_opportunities
     gaps: list                # compliance_assessment
     roadmap: list             # roadmap_12m
-    verdict: str | None       # score_verdict (None en abstention, DETTE § 14)
+    verdict: str              # score_verdict, ou la phrase « pas de score global »
     insights: dict            # pillar_insights
     headlines: dict           # pillar_headline
     section_heads: dict       # section_headlines
@@ -504,7 +508,8 @@ class _Deck:
 def _deck(request: ESGRequest, scores: ESGScores, chart_images: dict) -> _Deck:
     from content_generator import (pillar_insights, score_verdict, pillar_headline,
                                    section_headlines, risks_opportunities,
-                                   compliance_assessment, enriched_recommendations, roadmap_12m)
+                                   compliance_assessment, enriched_recommendations, roadmap_12m,
+                                   SANS_SCORE_GLOBAL)
     prs = Presentation()
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
@@ -522,7 +527,8 @@ def _deck(request: ESGRequest, scores: ESGScores, chart_images: dict) -> _Deck:
         charts=chart_images, theme=theme, style=style, t=t, ref=ref,
         all_recs=all_recs, recs=all_recs if request.include_recommendations else [],
         ro=risks_opportunities(request, scores), gaps=compliance_assessment(request, scores),
-        roadmap=roadmap_12m(request, scores), verdict=score_verdict(request, scores),
+        roadmap=roadmap_12m(request, scores),
+        verdict=score_verdict(request, scores) or SANS_SCORE_GLOBAL[request.language].format(n=request.company.name),
         insights=pillar_insights(request, scores), headlines=pillar_headline(request, scores),
         section_heads=section_headlines(request, scores),
         header_color=theme["accent"] if style["header"] == "hairline" else theme["bg_primary"])
@@ -665,20 +671,21 @@ def _dashboard_hero(d: _Deck, slide: Slide) -> None:
     add_text(slide, t["exec_kicker"].format(y=request.company.reporting_year),
              Inches(0.55), Inches(0.75), Inches(3.9), Inches(0.5),
              font_size=13, bold=True, color=theme["accent"], font=d.fb)
-    add_text(slide, f"{scores.total_esg_score:.0f}", Inches(0.2), Inches(1.85), Inches(4.35), Inches(2.1),
+    add_text(slide, score_label(scores.total_esg_score), Inches(0.2), Inches(1.85), Inches(4.35), Inches(2.1),
              font_size=125, bold=True, color=white, align=PP_ALIGN.CENTER, font=d.ft)
     add_text(slide, "/ 100", Inches(0.2), Inches(3.95), Inches(4.35), Inches(0.55),
              font_size=22, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=d.fb)
     # badge note
     add_shape(slide, ROUNDED_RECT, Inches(1.55), Inches(4.75), Inches(1.65), Inches(0.85), fill=theme["accent"])
-    add_text(slide, scores.rating, Inches(1.55), Inches(4.9), Inches(1.65), Inches(0.6),
+    add_text(slide, scores.rating or NON_NOTE, Inches(1.55), Inches(4.9), Inches(1.65), Inches(0.6),
              font_size=30, bold=True, color=theme["bg_primary"], align=PP_ALIGN.CENTER, font=d.ft)
     add_text(slide, t["global_score_caption"], Inches(0.2), Inches(5.85), Inches(4.35), Inches(0.4),
              font_size=12, bold=True, color=theme["subtitle"], align=PP_ALIGN.CENTER, font=d.fb)
     # Évolution vs exercice précédent (dossier client multi-exercices)
     prev = getattr(request, "previous_scores", None)
-    if prev:
-        delta = scores.total_esg_score - prev["total"]
+    from content_generator import _ecart
+    delta = _ecart(scores.total_esg_score, prev.get("total")) if prev else None
+    if prev and delta is not None:
         dcolor = (RGBColor(0x4C, 0xAF, 0x50) if delta >= 0.5
                   else RGBColor(0xE7, 0x4C, 0x3C) if delta <= -0.5 else theme["subtitle"])
         dlabel = (f"+{delta:.0f} pts" if delta >= 0.5 else f"{delta:.0f} pts" if delta <= -0.5 else "=")
@@ -693,7 +700,7 @@ def _dashboard_detail(d: _Deck, slide: Slide) -> None:
     add_text(slide, t["exec_title"], RX, Inches(0.65), Inches(7.9), Inches(0.9),
              font_size=34, bold=True, color=theme["text_dark"], font=d.ft)
     add_bg_rect(slide, RX + Inches(0.03), Inches(1.62), Inches(1.6), Inches(0.06), theme["accent"])
-    add_text(slide, d.verdict, RX, Inches(1.9), Inches(7.85), Inches(1.5),  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
+    add_text(slide, d.verdict, RX, Inches(1.9), Inches(7.85), Inches(1.5),
              font_size=16, color=theme["text_dark"] if not dark else theme["subtitle"], font=d.fb)
 
     # ── Détail : barres piliers (gauche) + radar (droite) ───────────
@@ -708,11 +715,12 @@ def _dashboard_detail(d: _Deck, slide: Slide) -> None:
         y = Inches(4.05) + i * Inches(0.92)
         add_text(slide, label, RX, y, Inches(3.4), Inches(0.32),
                  font_size=12.5, bold=True, color=theme["text_dark"], font=d.fb)
-        add_text(slide, f"{sc:.0f}", RX + bar_w - Inches(0.6), y, Inches(0.6), Inches(0.32),
+        add_text(slide, score_label(sc), RX + bar_w - Inches(0.6), y, Inches(0.6), Inches(0.32),
                  font_size=13, bold=True, color=col, align=PP_ALIGN.RIGHT, font=d.ft)
         add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), bar_w, Inches(0.17), fill=track)
-        fill_w = max(Inches(0.17), Inches(3.4) * max(0, min(100, sc)) / 100)
-        add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), fill_w, Inches(0.17), fill=col)
+        if sc is not None:  # pilier non noté : piste vide et « — »
+            fill_w = max(Inches(0.17), Inches(3.4) * max(0, min(100, sc)) / 100)
+            add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), fill_w, Inches(0.17), fill=col)
 
     if "radar" in d.charts:
         add_image_from_bytes(slide, d.charts["radar"],
@@ -745,9 +753,11 @@ def _slide_positioning(d: _Deck) -> None:
         return
     from content_generator import benchmark_verdict, maturity_text
     bv = benchmark_verdict(d.request, d.scores)
+    if bv is None:  # moins de deux piliers notés : rien à positionner
+        return
     mat = maturity_text(d.request, d.scores)
     theme, t, dark = d.theme, d.t, d.dark
-    slide = d.content_slide(bv["title"], kicker=t["benchmark_kicker"])  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
+    slide = d.content_slide(bv["title"], kicker=t["benchmark_kicker"])
     add_image_from_bytes(slide, d.charts["benchmark"],
                          Inches(0.35), Inches(1.7), width=Inches(7.5))
     # Carte lecture métier (positionnement)
@@ -757,7 +767,7 @@ def _slide_positioning(d: _Deck) -> None:
     add_shape(slide, RECT, cx, Inches(1.75), Inches(0.09), Inches(2.35), fill=theme["accent"])
     add_text(slide, t["key_takeaway"], cx + Inches(0.3), Inches(1.93), cw - Inches(0.5), Inches(0.35),
              font_size=12, bold=True, color=theme["accent"] if not dark else theme["text_dark"], font=d.fb)
-    add_text(slide, bv["insight"], cx + Inches(0.3), Inches(2.35), cw - Inches(0.55), Inches(1.7),  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
+    add_text(slide, bv["insight"], cx + Inches(0.3), Inches(2.35), cw - Inches(0.55), Inches(1.7),
              font_size=14, color=theme["text_dark"], font=d.fb)
     # Échelle de maturité ESG (5 stades)
     add_text(slide, t["maturity_title"], cx + Inches(0.02), Inches(4.4), cw, Inches(0.35),
@@ -1181,7 +1191,7 @@ def _slide_conclusion(d: _Deck) -> None:
              Inches(11.5), Inches(0.9), font_size=30, bold=True, color=tl_color, font=d.ft)
     add_bg_rect(slide, Inches(0.68), Inches(1.62), Inches(1.8), Inches(0.06), theme["accent"])
     # Synthèse en grand (l'idée qui reste)
-    add_text(slide, d.verdict, Inches(0.65), Inches(1.95), Inches(12.0), Inches(1.3),  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
+    add_text(slide, d.verdict, Inches(0.65), Inches(1.95), Inches(12.0), Inches(1.3),
              font_size=20, bold=True, color=tl_color, font=d.ft)
 
     # Engagements prioritaires (les prochaines étapes)

@@ -31,7 +31,8 @@ def _h(doc, text, size, color_hex, bold=True, space_before=14, space_after=4):
 
 
 def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
-    from content_generator import compliance_assessment, maturity_text, roadmap_12m
+    from content_generator import compliance_assessment, maturity_text, roadmap_12m, maturite_libelle
+    from esg_calculator import score_label
     en = request.language == "en"
     colors = docx_hex(request.aesthetic_theme)
     if getattr(request, "custom_colors", None):
@@ -43,7 +44,8 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
 
     gaps = [g for g in compliance_assessment(request, scores) if g["status"] in ("no", "partial")]
     mat = maturity_text(request, scores)
-    mat_lbl = TR.get("mat_" + mat.get("key", "structured"), "")
+    mat_lbl = maturite_libelle(mat, TR)
+    total = score_label(scores.total_esg_score)
     phases = roadmap_12m(request, scores)
 
     doc = Document()
@@ -67,17 +69,28 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     # ── 1. Contexte & pré-diagnostic ───────────────────────────────────────
     _h(doc, "1. " + ("Context and preliminary assessment" if en else "Contexte et pré-diagnostic"),
        14, colors["primary"])
+    # Sans score global (moins de deux piliers notés), la lettre le dit au lieu
+    # d'imprimer un chiffre ; le référentiel est un cadre de lecture, pas une
+    # obligation présumée du prospect (DETTE § 11 et § 13).
+    no_total = scores.total_esg_score is None
     if en:
-        ctx = (f"A preliminary review of {name}'s ESG data yields an overall score of "
-               f"{scores.total_esg_score:.0f}/100 (indicative internal scale), with an ESG maturity "
-               f"assessed as {mat_lbl.lower()} ({mat['stage']}/5). In view of the CSRD/VSME requirements "
-               f"applicable to the SME/mid-cap market, the review identifies "
+        ctx = ((f"A preliminary review of {name}'s ESG data does not yet support an overall score "
+                f"(fewer than two pillars have rated indicators); ESG maturity is {mat_lbl.lower()}. ")
+               if no_total else
+               (f"A preliminary review of {name}'s ESG data yields an overall score of "
+                f"{total}/100 (indicative internal scale), with an ESG maturity "
+                f"assessed as {mat_lbl.lower()}. ")) + (
+               f"Against the ESRS and VSME reporting frameworks, the review identifies "
                f"{len(gaps)} coverage gap(s) to address.")
     else:
-        ctx = (f"Une revue préliminaire des données ESG de {name} aboutit à un score global de "
-               f"{scores.total_esg_score:.0f}/100 (échelle interne indicative), pour une maturité ESG "
-               f"évaluée comme {mat_lbl.lower()} ({mat['stage']}/5). Au regard des exigences CSRD/VSME "
-               f"applicables au marché PME/ETI, cette revue identifie "
+        ctx = ((f"Une revue préliminaire des données ESG de {name} ne permet pas encore d'établir un "
+                f"score global (moins de deux piliers disposent d'indicateurs notés) ; la maturité ESG "
+                f"est {mat_lbl.lower()}. ")
+               if no_total else
+               (f"Une revue préliminaire des données ESG de {name} aboutit à un score global de "
+                f"{total}/100 (échelle interne indicative), pour une maturité ESG "
+                f"évaluée comme {mat_lbl.lower()}. ")) + (
+               f"Au regard des référentiels ESRS et VSME, cette revue identifie "
                f"{len(gaps)} écart(s) de couverture à traiter.")
     doc.add_paragraph(ctx)
 

@@ -1,3 +1,5 @@
+import { scoreText, ratingText, gaugePercent } from '../lib/scoreText.mjs'
+
 export default function MiniScorebar({ scores, loading }) {
   if (!scores && !loading) return null
 
@@ -21,16 +23,16 @@ export default function MiniScorebar({ scores, loading }) {
               <div className="mini-bar-track">
                 <div
                   className="mini-bar-fill"
-                  style={{ width: `${score}%`, background: color }}
+                  style={{ width: `${gaugePercent(score)}%`, background: color }}
                 />
               </div>
-              <span className="mini-value" style={{ color }}>{score?.toFixed(0)}</span>
+              <span className="mini-value" style={{ color }}>{scoreText(score)}</span>
             </div>
           ))}
           <div className="mini-total">
             <span className="mini-total-label">Score</span>
-            <span className="mini-total-value">{scores.total_esg_score?.toFixed(1)}</span>
-            <span className="mini-rating">{scores.rating}</span>
+            <span className="mini-total-value">{scoreText(scores.total_esg_score, 1)}</span>
+            <span className="mini-rating">{ratingText(scores.rating)}</span>
           </div>
         </>
       )}

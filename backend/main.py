@@ -373,6 +373,12 @@ def build_extras(request: ESGRequest) -> tuple:
     return logo_bytes, art
 
 
+def _images(charts: dict) -> dict:
+    """Retire les graphiques non tracés (None) : un pilier non noté n'a ni
+    radar ni barre, et les livrables testent la présence d'une clé."""
+    return {k: v for k, v in charts.items() if v}
+
+
 def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
     """Graphiques ESG avancés : matérialité, objectifs, trajectoire carbone, taxonomie."""
     from esg_advanced import materiality_topics, taxonomy_summary
@@ -422,7 +428,7 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
             out["trend"] = score_trend_chart(pts, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Trend chart error: {e}")
-    return out
+    return _images(out)
 
 
 @app.post("/api/generate/pptx")
@@ -457,7 +463,7 @@ def generate_presentation(request: ESGRequest):
 
     chart_images.update(build_advanced_charts(request, scores, light_bg=False))
 
-    pptx_bytes = generate_pptx(request, scores, content, chart_images, logo_bytes=logo_bytes)
+    pptx_bytes = generate_pptx(request, scores, content, _images(chart_images), logo_bytes=logo_bytes)
 
     filename = f"ESG_{safe_name(request.company.name)}_{request.company.reporting_year}.pptx"
     return StreamingResponse(
@@ -496,7 +502,7 @@ def generate_report(request: ESGRequest):
 
     chart_images.update(build_advanced_charts(request, scores, light_bg=True))
 
-    pdf_bytes = generate_pdf_report(request, scores, content, chart_images, logo_bytes=logo_bytes)
+    pdf_bytes = generate_pdf_report(request, scores, content, _images(chart_images), logo_bytes=logo_bytes)
 
     type_suffix = {
         "white_paper": "Livre_Blanc",
@@ -583,8 +589,8 @@ def generate_pack(request: ESGRequest):
 
     base = f"{safe_name(request.company.name)}_{request.company.reporting_year}"
     files = {}
-    files[f"Presentation_{base}.pptx"] = generate_pptx(request, scores, content, charts_dark, logo_bytes=logo_bytes)
-    files[f"Rapport_ESG_{base}.pdf"] = generate_pdf_report(request, scores, content, charts_light, logo_bytes=logo_bytes)
+    files[f"Presentation_{base}.pptx"] = generate_pptx(request, scores, content, _images(charts_dark), logo_bytes=logo_bytes)
+    files[f"Rapport_ESG_{base}.pdf"] = generate_pdf_report(request, scores, content, _images(charts_light), logo_bytes=logo_bytes)
     files[f"Rapport_ESG_{base}.docx"] = generate_word_report(request, scores, content, logo_bytes=logo_bytes)
     files[f"Synthese_1page_{base}.pdf"] = generate_onepager_pdf(request, scores)
     files[f"Lettre_de_mission_{base}.docx"] = generate_proposal_docx(request, scores)

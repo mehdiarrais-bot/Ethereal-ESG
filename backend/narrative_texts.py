@@ -122,6 +122,7 @@ T = {
         # Piliers
         "score_pos": "Avec {s}/100, le pilier {p} se situe {d} points {dir} du score global ({t}/100).",
         "score_eq": "Avec {s}/100, le pilier {p} est aligné sur le score global.",
+        "score_alone": "Le pilier {p} obtient {s}/100 ; faute de deux piliers notés, il n'y a pas de score global de comparaison.",
         "above": "au-dessus", "below": "en dessous",
         "pillar_names": {"env": "environnemental", "social": "social", "gov": "de gouvernance"},
         "missing": "Restent à documenter : {items}. Leur collecte, au prochain exercice, fiabilisera la lecture de ce pilier.",
@@ -188,6 +189,7 @@ T = {
         "horizon": "The company's objectives are set for {ty}.",
         "score_pos": "At {s}/100, the {p} pillar stands {d} points {dir} the overall score ({t}/100).",
         "score_eq": "At {s}/100, the {p} pillar is in line with the overall score.",
+        "score_alone": "The {p} pillar scores {s}/100; with fewer than two rated pillars, there is no overall score to compare it with.",
         "above": "above", "below": "below",
         "pillar_names": {"env": "environmental", "social": "social", "gov": "governance"},
         "missing": "Still to be documented: {items}. Collecting them next year will make this pillar's reading more reliable.",

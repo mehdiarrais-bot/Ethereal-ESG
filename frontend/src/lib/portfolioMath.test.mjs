@@ -69,9 +69,12 @@ describe('computeSparklinePoints — structure', () => {
     assert.equal(descendante.up, false)
   })
 
-  test('valeur absente traitée comme 0 (h.total || 0)', () => {
-    const pts = computeSparklinePoints([{ total: null }, { total: 40 }])
-    assert.ok(pts) // ne plante pas, produit bien 2 points
+  test('exercice sans score global omis, jamais tracé comme un zéro', () => {
+    // Avant le 2026-09-25 : `h.total || 0` dessinait une chute à zéro.
+    assert.equal(computeSparklinePoints([{ total: null }, { total: 40 }]), null)
+    const pts = computeSparklinePoints([{ total: 50 }, { total: null }, { total: 60 }])
+    assert.equal(pts.xs.length, 2)
+    assert.equal(pts.up, true)
   })
 })
 

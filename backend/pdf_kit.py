@@ -373,10 +373,15 @@ def draw_radar(p: Px, cx, cy, r, values, labels, stroke="accent", fill_alpha=0.1
     for i in range(n):
         x2, y2 = pt(i, 100)
         p.line(cx, cy, x2, y2, color="rule", lw=0.5)
-    if previous:
+    # Un pilier non noté n'a pas de sommet : on ne trace que les polygones
+    # complets (un sommet posé à 0 dirait « score nul », ce qui est faux).
+    if previous and all(v is not None for v in previous):
         poly(previous, stroke_c="muted", lw=1.0, dash=(3, 2.5))
-    poly(values, fill=stroke, stroke_c=stroke, lw=1.6, alpha=fill_alpha)
+    if all(v is not None for v in values):
+        poly(values, fill=stroke, stroke_c=stroke, lw=1.6, alpha=fill_alpha)
     for i, v in enumerate(values):
+        if v is None:
+            continue
         x, y = pt(i, v)
         p.cv.setFillColor(p.color(stroke))
         p.cv.circle(p.x(x), p.y(y), 2.2, fill=1, stroke=0)

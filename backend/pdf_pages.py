@@ -6,6 +6,7 @@ Aucune donnée n'est inventée ici : une métrique absente n'est pas affichée,
 et le radar ne trace que les trois piliers du client (N-1 en pointillés
 quand l'historique existe), jamais une référence sectorielle.
 """
+from esg_calculator import score_label
 from pdf_kit import (Px, Kit, draw_radar, draw_header, draw_footer, paint_paper, esc, hexc,
                      SERIF_FAMILIES)
 
@@ -117,13 +118,13 @@ def glance_aurora(p: Px, k: Kit, g):
         if i:
             p.line(x, y0 + 16, x, y0 + h - 16, color="rule", lw=0.6)
         p.text(x + 16, y0 + 30, lab, "body", 10.5, color="muted", track=0.12, upper=True, max_w=cw - 24)
-        p.text(x + 16, y0 + 88, f"{val:.0f}", "display", 50, color=key)
+        p.text(x + 16, y0 + 88, score_label(val), "display", 50, color=key)
         p.text(x + 16, y0 + 112, _delta(g, key) or "/100", "body", 11, color="muted")
     x = 56 + 3 * cw
     p.rect(x, y0, cw, h, "primary")
     p.text(x + 16, y0 + 30, TR["ed_global"], "body", 10.5, color="accent_on_primary", track=0.12,
            upper=True, max_w=cw - 24)
-    p.text(x + 16, y0 + 88, f"{g['t']:.0f}", "display", 50, color="on_primary")
+    p.text(x + 16, y0 + 88, score_label(g['t']), "display", 50, color="on_primary")
     p.text(x + 16, y0 + 112, _global_line(g), "body", 11, color="on_primary", max_w=cw - 24)
     # Radar et métriques
     _radar(p, g, 215, 830, 120)
@@ -162,13 +163,13 @@ def glance_annuel(p: Px, k: Kit, g):
             p.line(x, y0 + 3, x, y0 + h - 3, color="rule", lw=0.6)
         p.text(x + cw / 2, y0 + 30, lab, "body", 11, color="muted", align="center", track=0.14,
                upper=True, max_w=cw - 16)
-        p.text(x + cw / 2, y0 + 90, f"{val:.0f}", "display", 54, color=key, align="center")
+        p.text(x + cw / 2, y0 + 90, score_label(val), "display", 54, color=key, align="center")
         p.text(x + cw / 2, y0 + 114, _delta(g, key) or "/100", "body", 12, color="muted", align="center")
     x = 76 + 3 * cw
     p.rect(x, y0 + 3, cw, h - 6, "primary")
     p.text(x + cw / 2, y0 + 30, TR["ed_global"], "body", 11, color="accent_on_primary",
            align="center", track=0.14, upper=True, max_w=cw - 16)
-    p.text(x + cw / 2, y0 + 90, f"{g['t']:.0f}", "display", 54, color="on_primary", align="center")
+    p.text(x + cw / 2, y0 + 90, score_label(g['t']), "display", 54, color="on_primary", align="center")
     p.text(x + cw / 2, y0 + 114, _global_line(g), "body", 12, color="on_primary", align="center",
            max_w=cw - 12)
     _radar(p, g, 397, 820, 118, label_size=13)
@@ -189,7 +190,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
         p.rect(x, y0, cw, h, "surface", radius=14)
         p.cv.setFillColor(k.c[key]); p.cv.circle(p.x(x + 20), p.y(y0 + 27), 3.4, fill=1, stroke=0)
         p.text(x + 30, y0 + 31, lab, "body_b", 12.5, color="ink", max_w=cw - 40)
-        p.text(x + 16, y0 + 92, f"{val:.0f}", "display", 56, color=key)
+        p.text(x + 16, y0 + 92, score_label(val), "display", 56, color=key)
         d = _delta(g, key)
         if d:
             tw = p.width(d, k.f["body"], 11 * 0.75) / 0.75
@@ -200,7 +201,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
     p.text(x + 16, y0 + 31, TR["ed_global"], "body_b", 12.5, color="on_primary", max_w=cw - 60)
     p.rect(x + cw - 44, y0 + 14, 30, 22, "accent_on_primary", radius=6)
     p.text(x + cw - 29, y0 + 30, g["rating"], "body_b", 12.5, color="primary", align="center")
-    p.text(x + 16, y0 + 92, f"{g['t']:.0f}", "display", 56, color="on_primary")
+    p.text(x + 16, y0 + 92, score_label(g['t']), "display", 56, color="on_primary")
     d = _delta(g, "total")
     if d:
         p.text(x + 16, y0 + 116, d, "body", 11, color="on_primary")
@@ -230,21 +231,21 @@ def glance_portrait(p: Px, k: Kit, g):
            max_h=90)
     p.text(738, 486, TR["ed_global"], "body", 11, color="muted", align="right", track=0.14, upper=True)
     w = p.text(700, 546, "/100", "body", 15, color="muted", align="right")
-    p.text(738 - w - 44, 546, f"{g['t']:.0f}", "display", 64, color="ink", align="right")
+    p.text(738 - w - 44, 546, score_label(g['t']), "display", 64, color="ink", align="right")
     p.text(738, 568, _global_line(g), "body", 12.5, color="muted", align="right")
     cw = (682 - 40) / 2
     cols = (("env", TR["ed_env"], g["e"], g["env_m"]), ("social", TR["ed_soc"], g["s"], g["soc_m"]))
     for i, (key, lab, val, items) in enumerate(cols):
         x = 56 + i * (cw + 40)
         p.text(x, 628, lab, "display", 20, color="ink")
-        p.text(x + cw, 632, f"{val:.0f}", "display", 36, color=key, align="right")
+        p.text(x + cw, 632, score_label(val), "display", 36, color=key, align="right")
         p.rect(x, 644, cw, 2, key)
         _metric_list(p, g, x, 648, cw, items[:3], row_h=42, size=13)
     p.line(56, 836, 738, 836, color="ink", lw=0.8)
     _radar(p, g, 190, 950, 76, stroke="ink", label_size=11, alpha=0.08)
     x = 340
     p.text(x, 880, TR["ed_gov"], "display", 18, color="ink")
-    p.text(738, 884, f"{g['g']:.0f}", "display", 26, color="gov", align="right")
+    p.text(738, 884, score_label(g['g']), "display", 26, color="gov", align="right")
     if g["gov_line"]:
         p.para(x, 896, 398, esc(g["gov_line"]), k.ps("gl", 12.5 * 0.75, color="muted", leading=18 * 0.75))
     _legend(p, g, x, 990, stroke="ink", horizontal=True)
@@ -257,7 +258,7 @@ def glance_terre(p: Px, k: Kit, g):
     p.text(56, 120, "01 — " + TR["toc_part1"], "body", 13, color="accent")
     p.text(56, 170, TR["ed_glance"], "display", 48, color="ink", max_w=520)
     w = p.text(738, 168, "/100", "body", 15, color="muted", align="right")
-    p.text(738 - w - 6, 168, f"{g['t']:.0f}", "display", 62, color="ink", align="right")
+    p.text(738 - w - 6, 168, score_label(g['t']), "display", 62, color="ink", align="right")
     p.text(738, 190, _global_line(g), "body", 12.5, color="muted", align="right")
     cw, y0 = (682 - 14) / 2, 214
     tiles = (("env", "environment", TR["ed_env"], g["e"], g["env_m"]),
@@ -267,7 +268,7 @@ def glance_terre(p: Px, k: Kit, g):
         p.rect(x, y0, cw, 430, f"{key}_soft", radius=3)
         photo_or_tile(p, k, slot, key, lab, x, y0, cw, 190)
         p.text(x + 20, y0 + 232, lab, "body", 12, color=key, track=0.1, upper=True)
-        p.text(x + cw - 20, y0 + 240, f"{val:.0f}", "display", 44, color=key, align="right")
+        p.text(x + cw - 20, y0 + 240, score_label(val), "display", 44, color=key, align="right")
         d = _delta(g, key)
         if d:
             p.text(x + 20, y0 + 256, d, "body", 12.5, color="muted")
@@ -277,7 +278,7 @@ def glance_terre(p: Px, k: Kit, g):
     _radar(p, g, 250, 850, 118)
     x = 500
     p.text(x, 760, TR["ed_gov"], "body", 12, color="ink", track=0.1, upper=True)
-    p.text(738, 764, f"{g['g']:.0f}", "display", 32, color="gov", align="right")
+    p.text(738, 764, score_label(g['g']), "display", 32, color="gov", align="right")
     if g["gov_line"]:
         p.para(x, 778, 238, esc(g["gov_line"]), k.ps("gl", 12.5 * 0.75, color="muted", leading=18 * 0.75))
     _legend(p, g, x, 900)
@@ -296,15 +297,16 @@ def glance_galerie(p: Px, k: Kit, g):
     photo_or_tile(p, k, "governance", "gov", TR["ed_gov"], sx, 368, sw, 150)
     y0 = 560
     p.text(64, y0 + 10, TR["ed_global"], "body", 11, color="muted", track=0.14, upper=True)
-    p.text(64, y0 + 82, f"{g['t']:.0f}", "display", 70, color="ink")
+    p.text(64, y0 + 82, score_label(g['t']), "display", 70, color="ink")
     p.text(64, y0 + 106, _global_line(g), "body", 12.5, color="muted", max_w=200)
     x, w = 290, 440
     for i, (key, lab, val) in enumerate(_pillars(g)):
         yy = y0 + 22 + i * 34
         p.text(x, yy, lab, "body", 13.5, color="ink", max_w=120)
         p.rect(x + 130, yy - 6, w - 180, 3, "rule")
-        p.rect(x + 130, yy - 6, (w - 180) * max(0, min(100, val)) / 100, 3, key)
-        p.text(x + w, yy, f"{val:.0f}", "body_b", 13.5, color="ink", align="right")
+        if val is not None:  # pilier non noté : pas de barre
+            p.rect(x + 130, yy - 6, (w - 180) * max(0, min(100, val)) / 100, 3, key)
+        p.text(x + w, yy, score_label(val), "body_b", 13.5, color="ink", align="right")
     p.line(64, 716, 730, 716, color="ink", lw=0.8)
     _radar(p, g, 210, 880, 110, label_size=13, alpha=0.12)
     items = (g["env_m"][:2] + g["soc_m"][:2])
@@ -372,7 +374,7 @@ def cover_split(p, k, g):
     p.rect(42, y, 46, 1.2, "ink")
     p.para(42, y + 26, 220, esc(g["tagline"]), k.ps("tg", 12.5 * 0.75, color="muted", leading=19 * 0.75))
     p.text(42, 890, TR["ed_global"], "body", 10, color="muted", track=0.12, upper=True)
-    w = p.text(42, 948, f"{g['t']:.0f}", "display", 52, color="accent")
+    w = p.text(42, 948, score_label(g['t']), "display", 52, color="accent")
     p.text(42 + w + 8, 948, f"/100  ·  {TR['note']} {g['rating']}", "body", 13, color="muted")
     pres = _presenter(g)
     if pres:
@@ -399,7 +401,7 @@ def cover_editorial(p, k, g):
     for yy in (870, 873, 947, 950):
         p.line(196, yy, 598, yy, color="ink", lw=0.6)
     p.text(397, 897, TR["ed_global"], "body", 10.5, color="muted", align="center", track=0.14, upper=True)
-    p.text(397, 934, f"{g['t']:.0f}/100  ·  {TR['note']} {g['rating']}", "display", 26, color="accent",
+    p.text(397, 934, f"{score_label(g['t'])}/100  ·  {TR['note']} {g['rating']}", "display", 26, color="accent",
            align="center")
     p.text(397, 990, _cover_meta(g), "body", 11, color="muted", align="center", max_w=640)
     pres = _presenter(g)
@@ -421,7 +423,7 @@ def cover_band(p, k, g):
     p.image(k.photo("cover"), 56, y0, 682, 520, radius=16)
     p.rect(80, y0 + 520 - 116, 300, 92, "surface", radius=14)
     p.text(100, y0 + 520 - 86, TR["ed_global"], "body_b", 12, color="ink")
-    p.text(100, y0 + 520 - 40, f"{g['t']:.0f}", "display", 46, color="ink")
+    p.text(100, y0 + 520 - 40, score_label(g['t']), "display", 46, color="ink")
     p.text(170, y0 + 520 - 42, "/100", "body", 14, color="muted")
     p.rect(300, y0 + 520 - 100, 58, 40, "accent", radius=8)
     p.text(329, y0 + 520 - 72, g["rating"], "body_b", 20, color="surface", align="center")
@@ -449,7 +451,7 @@ def cover_photo_card(p, k, g):
     yy += p.para(x + 34, yy, w - 68, esc(g["tagline"]),
                  k.ps("tg", 15 * 0.75, color="muted", leading=22 * 0.75)) + 22
     p.line(x + 34, yy, x + w - 34, yy, color="rule", lw=0.7)
-    ww = p.text(x + 34, yy + 58, f"{g['t']:.0f}", "display", 48, color="ink")
+    ww = p.text(x + 34, yy + 58, score_label(g['t']), "display", 48, color="ink")
     p.text(x + 34 + ww + 8, yy + 56, f"/100  ·  {TR['note']} {g['rating']}", "body", 14, color="muted")
     p.text(x + 34, yy + 88, _cover_meta(g), "body", 10.5, color="muted", max_w=w - 68)
     pres = _presenter(g)
@@ -469,14 +471,14 @@ def cover_duo(p, k, g):
                k.ps("cn", 54 * 0.75, font="display", color="ink", leading=56 * 0.75))
     p.para(56, 730 + h, 440, esc(g["tagline"]), k.ps("tg", 15 * 0.75, color="muted", leading=22 * 0.75))
     w = p.text(738, 760, "/100", "body", 15, color="muted", align="right")
-    p.text(738 - w - 6, 760, f"{g['t']:.0f}", "display", 72, color="ink", align="right")
+    p.text(738 - w - 6, 760, score_label(g['t']), "display", 72, color="ink", align="right")
     p.text(738, 784, f"{TR['note']} {g['rating']}", "body", 13, color="muted", align="right")
     cw = (682 - 28) / 3
     for i, (key, lab, val) in enumerate(_pillars(g)):
         x = 56 + i * (cw + 14)
         p.rect(x, 900, cw, 110, f"{key}_soft", radius=3)
         p.text(x + 18, 930, lab, "body", 11, color=key, track=0.1, upper=True, max_w=cw - 30)
-        p.text(x + 18, 990, f"{val:.0f}", "display", 44, color=key)
+        p.text(x + 18, 990, score_label(val), "display", 44, color=key)
     p.text(56, 1050, _cover_meta(g), "body", 10.5, color="muted", max_w=520)
     p.text(738, 1050, g["refs"], "body_b", 10.5, color="accent", align="right")
     pres = _presenter(g)
@@ -502,7 +504,7 @@ def cover_mosaic(p, k, g):
     p.para(64, y1, 360, esc(g["tagline"]), k.ps("tg", 15 * 0.75, color="muted", leading=22 * 0.75))
     p.text(730, y1 + 20, TR["ed_global"], "body", 10.5, color="muted", align="right", track=0.14, upper=True)
     w = p.text(730, y1 + 86, "/100", "body", 15, color="muted", align="right")
-    p.text(730 - w - 6, y1 + 86, f"{g['t']:.0f}", "display", 64, color="ink", align="right")
+    p.text(730 - w - 6, y1 + 86, score_label(g['t']), "display", 64, color="ink", align="right")
     p.text(730, y1 + 108, f"{TR['note']} {g['rating']}", "body", 12.5, color="muted", align="right")
     p.text(64, 1050, _cover_meta(g), "body", 10.5, color="muted", max_w=560)
     pres = _presenter(g)

@@ -796,6 +796,9 @@ Constat d'origine :
   pour un score dont un pilier sans aucun indicateur renseigné vaut encore
   50/100 (`backend/esg_calculator.py:99`, `:149`, `:197` — chantier
   « exactitude du scoring » en cours, non consigné dans ce registre)
+  — **traité le 2026-09-25 (option C1)** : pilier sans indicateur « non
+  noté » (None), global sur les piliers notés, rien sous deux piliers ;
+  voir § 14 et § 16
   (lien R4).
 - **Réserve de lecture** : la numérotation « R4 / R5 » vient de l'analyse
   « Menus » et **n'a pas de cible dans ce registre**. À résoudre — soit en
@@ -872,7 +875,7 @@ l'ancien code).
 - **À revoir** à l'adoption de la loi de transposition française : dater
   et citer le nouveau texte dans `CSRD_CHAMP`.
 
-## 14. Abstention non gérée par le Word et le PowerPoint — LATENT
+## 14. Abstention non gérée par le Word et le PowerPoint — **traité le 2026-09-25**
 
 Relevé par Pyright (mode standard) le 2026-09-25.
 
@@ -893,6 +896,13 @@ Relevé par Pyright (mode standard) le 2026-09-25.
   plantera (TypeError / KeyError).
 - **Marquage** : chaque ligne porte `# pyright: ignore[...]  # abstention
   non gérée, DETTE § 14` ; les retirer fait partie de la correction.
+- **Traité avec le § 11 (option C1)** : le calculateur rendant désormais
+  `None`, toutes les abstentions sont gérées dans les cinq livrables
+  (positionnement « suppose au moins deux piliers notés », maturité « non
+  évaluée », verdict remplacé par « pas de score global », titre de pilier
+  « non noté »). Plus aucun `pyright: ignore` pour ce motif. Vérifié par
+  génération des cinq livrables FR/EN sur 7 combinaisons de piliers
+  partiels (`tests/test_pilier_non_note.py`).
 
 ## 15. Valeurs en dur dans les générateurs Word et PowerPoint — OUVERT
 
@@ -916,6 +926,50 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
 - **À faire** : faire passer ces couleurs par des jetons de
   `report_designs.py` (états `danger` / `muted`, comme l'interface), et
   remplacer les replis par une erreur explicite ou une clé i18n.
+
+
+## 16. « Le silence paie » — aggravé par le § 11 (C1), OUVERT, à arbitrer
+
+- **Constat** (test témoin `test_temoin_le_silence_paie`) : un pilier est
+  noté dès qu'un seul indicateur de sa grille est renseigné, et chaque
+  indicateur pèse autant. Une PME qui déclare peu peut donc devancer une
+  PME transparente. Mesures du 2026-09-25, après C1 :
+  A transparente (15 champs) 69,5 (A) ; B silencieuse (3 champs) **75,4
+  (AA)** (était 66,5 : son pilier social vide ne vaut plus 50, et sa
+  gouvernance — un seul champ, « comité = oui » — vaut 100) ; C = B + un
+  chiffre honnête 77,0 (AA) ; D vide : aucun score.
+- **Invariant cible** : `test_le_silence_ne_doit_pas_surpasser_la_transparence`
+  (xfail strict) — toujours faux.
+- **Pistes, à arbitrer** : (a) ne noter un pilier qu'au-delà d'un nombre
+  minimal d'indicateurs de sa grille (par ex. 3) ; (b) afficher la
+  complétude de chaque pilier à côté de son score (CLAUDE.md fait déjà de
+  la complétude l'information de pilotage) ; (c) les deux. Toute
+  pénalité chiffrée pour absence serait un barème à sourcer.
+
+## 17. Donnée absente lue comme « non » — audit et comité, OUVERT
+
+- **Constat** : `if not gov.esg_audit_conducted` / `if not
+  gov.sustainability_committee` traitent `None` (non renseigné) comme
+  `False`. Un dossier sans aucune donnée de gouvernance se voit attribuer
+  « Absence d'audit ESG indépendant », « Pas de comité de durabilité » et
+  le risque « Reporting non audité » : des faits jamais déclarés.
+- **Où** : `esg_calculator.py` (points faibles FR/EN), `content_generator.py`
+  (`risks_opportunities`, titres de gouvernance) ; les recommandations et
+  la liste des lacunes de reporting peuvent légitimement viser une donnée
+  absente.
+- **Correction proposée** : `is False` pour tout ce qui affirme un fait ;
+  laisser les recommandations et les lacunes telles quelles.
+
+## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, OUVERT
+
+- **Constat** : `esg_maturity` rend un rang de 0 à 4. Le PDF, le Word, la
+  synthèse une page et la lettre impriment « Structurée (2/5) » ; la
+  diapositive de positionnement numérote ses cases 1 à 5 et allume la
+  « 3 ». Le premier stade s'imprimerait « Initiée (0/5) ».
+- **Correction proposée** : afficher `stage + 1` partout (« 3/5 »).
+  `content_generator.maturite_libelle` sert déjà le Word, la synthèse une
+  page et la lettre ; restent le PDF (mise en forme propre, deux phrases
+  de synthèse dans `deepen_content`) et la diapositive.
 
 ---
 

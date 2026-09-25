@@ -72,7 +72,7 @@ def carbon_thresholds_for(sector: str | None) -> Tuple[list, bool]:
 
 
 def calculate_environmental_score(env: EnvironmentalData, revenue: float | None = None,
-                                  sector: str | None = None) -> Tuple[float, dict]:
+                                  sector: str | None = None) -> Tuple[float | None, dict]:
     scores = {}
     details = {}
 
@@ -115,13 +115,13 @@ def calculate_environmental_score(env: EnvironmentalData, revenue: float | None 
         scores["biodiversity"] = min(100, env.biodiversity_initiatives * 20)
 
     if not scores:
-        return 50.0, details
+        return None, details  # aucun indicateur : pilier non calculable
 
     env_score = sum(scores.values()) / len(scores)
     return round(env_score, 1), details
 
 
-def calculate_social_score(social: SocialData) -> Tuple[float, dict]:
+def calculate_social_score(social: SocialData) -> Tuple[float | None, dict]:
     scores = {}
     details = {}
 
@@ -164,13 +164,13 @@ def calculate_social_score(social: SocialData) -> Tuple[float, dict]:
         scores["community"] = min(100, (social.community_investment_eur / 100000) * 20)
 
     if not scores:
-        return 50.0, details
+        return None, details  # aucun indicateur : pilier non calculable
 
     social_score = sum(scores.values()) / len(scores)
     return round(social_score, 1), details
 
 
-def calculate_governance_score(gov: GovernanceData) -> Tuple[float, dict]:
+def calculate_governance_score(gov: GovernanceData) -> Tuple[float | None, dict]:
     scores = {}
     details = {}
 
@@ -216,10 +216,37 @@ def calculate_governance_score(gov: GovernanceData) -> Tuple[float, dict]:
         scores["csr_budget"] = min(100, (gov.csr_budget_eur / 500000) * 100)
 
     if not scores:
-        return 50.0, details
+        return None, details  # aucun indicateur : pilier non calculable
 
     gov_score = sum(scores.values()) / len(scores)
     return round(gov_score, 1), details
+
+
+# Pondération des piliers dans le score global (inchangée depuis l'origine).
+PILLAR_WEIGHTS = {"env": 0.40, "social": 0.35, "gov": 0.25}
+
+
+def global_score(pillars: dict[str, float | None]) -> float | None:
+    """Moyenne pondérée des piliers CALCULABLES, pondérations renormalisées.
+
+    Avant le 2026-09-25, un pilier sans aucun indicateur valait 50/100 et
+    pesait dans le score global et la note lettrée : un chiffre inventé
+    (DETTE § 11). Il est désormais écarté ; sous deux piliers calculables,
+    il n'y a pas de score global (la note d'un seul pilier présentée comme
+    « globale » tromperait le lecteur)."""
+    known = {k: v for k, v in pillars.items() if v is not None}
+    if len(known) < 2:
+        return None
+    weight = sum(PILLAR_WEIGHTS[k] for k in known)
+    return round(sum(v * PILLAR_WEIGHTS[k] for k, v in known.items()) / weight, 1)
+
+
+NON_NOTE = "—"  # affichage d'un score non calculable, dans tous les formats
+
+
+def score_label(value: float | None, decimals: int = 0) -> str:
+    """Score prêt à imprimer : « — » quand il n'est pas calculable, jamais 0 ni 50."""
+    return NON_NOTE if value is None else f"{value:.{decimals}f}"
 
 
 def get_rating(score: float) -> str:
@@ -241,7 +268,7 @@ def get_rating(score: float) -> str:
 
 def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalData, social: SocialData, gov: GovernanceData) -> List[str]:
     strengths = []
-    if env_score >= 70:
+    if env_score is not None and env_score >= 70:
         strengths.append("Excellente performance environnementale globale")
     if env.renewable_energy_percent and env.renewable_energy_percent >= 50:
         strengths.append(f"Fort taux d'énergie renouvelable ({env.renewable_energy_percent:.0f}%)")
@@ -259,9 +286,9 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
         strengths.append("Comité de durabilité opérationnel au niveau du CA")
     if gov.female_board_percent and gov.female_board_percent >= 40:
         strengths.append(f"Parité exemplaire au Conseil d'Administration ({gov.female_board_percent:.0f}%)")
-    if social_score >= 70:
+    if social_score is not None and social_score >= 70:
         strengths.append("Politique sociale exemplaire — capital humain valorisé")
-    if gov_score >= 75:
+    if gov_score is not None and gov_score >= 75:
         strengths.append("Gouvernance de haute qualité et transparente")
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
         strengths.append("Reporting complet des émissions Scope 1, 2 et 3")
@@ -272,7 +299,7 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
 
 def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalData, social: SocialData, gov: GovernanceData) -> List[str]:
     weaknesses = []
-    if env_score < 50:
+    if env_score is not None and env_score < 50:
         weaknesses.append("Performance environnementale globale insuffisante")
     if env.renewable_energy_percent is not None and env.renewable_energy_percent < 30:
         weaknesses.append(f"Faible part d'énergie renouvelable ({env.renewable_energy_percent:.0f}%)")
@@ -305,7 +332,7 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
         weaknesses.append("Absence d'audit ESG indépendant")
     if not gov.sustainability_committee:
         weaknesses.append("Pas de comité de durabilité au niveau du Conseil")
-    if gov_score < 50:
+    if gov_score is not None and gov_score < 50:
         weaknesses.append("Structure de gouvernance à renforcer significativement")
     return weaknesses[:5]
 
@@ -332,7 +359,7 @@ def generate_recommendations(env: EnvironmentalData, social: SocialData, gov: Go
 
 def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
     r = []
-    if env_score >= 70: r.append("Excellent overall environmental performance")
+    if env_score is not None and env_score >= 70: r.append("Excellent overall environmental performance")
     if env.renewable_energy_percent and env.renewable_energy_percent >= 50:
         r.append(f"High share of renewable energy ({env.renewable_energy_percent:.0f}%)")
     if env.waste_recycled_percent and env.waste_recycled_percent >= 65:
@@ -347,8 +374,8 @@ def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
     if gov.sustainability_committee: r.append("Sustainability committee operating at Board level")
     if gov.female_board_percent and gov.female_board_percent >= 40:
         r.append(f"Exemplary gender balance on the Board ({gov.female_board_percent:.0f}%)")
-    if social_score >= 70: r.append("Exemplary social policy — human capital valued")
-    if gov_score >= 75: r.append("High-quality, transparent governance")
+    if social_score is not None and social_score >= 70: r.append("Exemplary social policy — human capital valued")
+    if gov_score is not None and gov_score >= 75: r.append("High-quality, transparent governance")
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
         r.append("Full Scope 1, 2 and 3 emissions reporting")
     if not r: r.append("ESG approach being structured and formalised")
@@ -357,7 +384,7 @@ def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
 
 def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov):
     r = []
-    if env_score < 50: r.append("Insufficient overall environmental performance")
+    if env_score is not None and env_score < 50: r.append("Insufficient overall environmental performance")
     if env.renewable_energy_percent is not None and env.renewable_energy_percent < 30:
         r.append(f"Low share of renewable energy ({env.renewable_energy_percent:.0f}%)")
     elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
@@ -384,7 +411,7 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
                  else f"{gov.data_breaches} data breaches — cybersecurity to strengthen")
     if not gov.esg_audit_conducted: r.append("No independent ESG audit")
     if not gov.sustainability_committee: r.append("No sustainability committee at Board level")
-    if gov_score < 50: r.append("Governance structure to strengthen significantly")
+    if gov_score is not None and gov_score < 50: r.append("Governance structure to strengthen significantly")
     return r[:5]
 
 
@@ -417,8 +444,8 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     social_score, social_details = calculate_social_score(request.social)
     gov_score, gov_details = calculate_governance_score(request.governance)
 
-    total = round((env_score * 0.40 + social_score * 0.35 + gov_score * 0.25), 1)
-    rating = get_rating(total)
+    total = global_score({"env": env_score, "social": social_score, "gov": gov_score})
+    rating = get_rating(total) if total is not None else None
 
     if lang == "en":
         strengths = generate_strengths_en(env_score, social_score, gov_score, request.environmental, request.social, request.governance)

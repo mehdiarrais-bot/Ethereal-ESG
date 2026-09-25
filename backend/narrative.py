@@ -159,8 +159,13 @@ def score_position(request, scores, pillar: str) -> str:
     t = T[request.language]
     s = {"env": scores.environmental_score, "social": scores.social_score,
          "gov": scores.governance_score}[pillar]
-    diff = round(s - scores.total_esg_score)
     name = t["pillar_names"][pillar]
+    if s is None:  # pilier non noté (DETTE § 11)
+        from content_generator import PILIER_NON_NOTE
+        return PILIER_NON_NOTE[request.language][pillar]
+    if scores.total_esg_score is None:
+        return t["score_alone"].format(s=f"{s:.0f}", p=name)
+    diff = round(s - scores.total_esg_score)
     if diff == 0:
         return t["score_eq"].format(s=f"{s:.0f}", p=name)
     return t["score_pos"].format(s=f"{s:.0f}", p=name, d=abs(diff),

@@ -1,4 +1,5 @@
 import { useDesigns } from '../hooks/useDesigns'
+import { scoreText, ratingText, gaugePercent } from '../lib/scoreText.mjs'
 
 const RATING_COLOR = { AAA: '#00875a', AA: '#27AE60', A: '#2ECC71', BBB: '#F39C12', BB: '#E67E22', B: '#E74C3C', CCC: '#922B21' }
 
@@ -17,12 +18,12 @@ const REPORT_LABELS = {
 }
 
 function ScoreBar({ label, value, color }) {
-  const pct = Math.min(100, Math.max(0, value || 0))
+  const pct = gaugePercent(value)
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color }}>{pct.toFixed(1)}/100</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color }}>{scoreText(value, 1)}/100</span>
       </div>
       <div style={{ background: '#e0e7ef', borderRadius: 99, height: 8, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, background: color, height: '100%', borderRadius: 99, transition: 'width 0.5s' }} />
@@ -139,9 +140,9 @@ export default function PreviewPanel({ scores, form }) {
               background: RATING_COLOR[scores.rating] || '#888',
               color: 'white', borderRadius: 12, padding: '8px 20px',
               fontWeight: 900, fontSize: 28, letterSpacing: 2
-            }}>{scores.rating}</div>
+            }}>{ratingText(scores.rating)}</div>
             <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>Score ESG global</div>
-            <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>{scores.total_esg_score?.toFixed(1)}/100</div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>{scoreText(scores.total_esg_score, 1)}/100</div>
           </div>
         </div>
       </div>

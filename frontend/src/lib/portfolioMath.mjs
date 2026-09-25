@@ -19,8 +19,11 @@
  * pour la démonstration chiffrée. Décision de correction laissée à part.
  */
 export function computeSparklinePoints(history, { W = 140, H = 36, P = 4 } = {}) {
-  if (!history || history.length < 2) return null
-  const vals = history.map(h => h.total || 0)
+  // Un exercice sans score global (moins de deux piliers notés) n'est pas un
+  // zéro : il est omis de la courbe (avant : `h.total || 0`, chute inventée).
+  history = (history || []).filter(h => h.total != null)
+  if (history.length < 2) return null
+  const vals = history.map(h => h.total)
   const lo = Math.min(...vals), hi = Math.max(...vals)
   const span = Math.max(hi - lo, 4)        // évite une courbe plate sur données identiques
   const pad = span * 0.25

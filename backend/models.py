@@ -377,16 +377,18 @@ class ESGRequest(BaseModel):
 
 
 class ESGScores(BaseModel):
-    environmental_score: float
-    social_score: float
-    governance_score: float
-    total_esg_score: float
+    # None : pilier sans aucun indicateur, ou moins de deux piliers pour le
+    # global (esg_calculator.global_score). Jamais de valeur par défaut.
+    environmental_score: Optional[float]
+    social_score: Optional[float]
+    governance_score: Optional[float]
+    total_esg_score: Optional[float]
     carbon_intensity: Optional[float] = None
     energy_intensity: Optional[float] = None
     gender_parity_index: Optional[float] = None
     safety_index: Optional[float] = None
     governance_quality: Optional[float] = None
-    rating: str
+    rating: Optional[str]
     strengths: list[str]
     weaknesses: list[str]
     recommendations: list[str]

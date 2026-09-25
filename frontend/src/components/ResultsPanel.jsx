@@ -1,5 +1,6 @@
+import { scoreText, ratingText, gaugePercent } from '../lib/scoreText.mjs'
 function ScoreGauge({ label, score, color }) {
-  const pct = Math.min(100, Math.max(0, score))
+  const pct = gaugePercent(score)
   const r = 44
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - pct / 100)
@@ -18,7 +19,7 @@ function ScoreGauge({ label, score, color }) {
           style={{ stroke: color, transition: 'stroke-dashoffset 0.8s ease' }}
         />
         <text x="55" y="52" textAnchor="middle" fontSize="20" fontWeight="700" style={{ fill: color }}>
-          {score.toFixed(0)}
+          {scoreText(score)}
         </text>
         <text x="55" y="67" textAnchor="middle" fontSize="10" style={{ fill: 'var(--muted)' }}>
           /100
@@ -33,7 +34,7 @@ function RatingBadge({ rating }) {
   return (
     <div className="rating-badge">
       <div className="rating-label">Note ESG</div>
-      <div className="rating-value">{rating}</div>
+      <div className="rating-value">{ratingText(rating)}</div>
     </div>
   )
 }

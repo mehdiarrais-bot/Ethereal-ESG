@@ -295,6 +295,7 @@ def test_sector_carbon_grids_differ():
                                              revenue_eur=48e6, reporting_year=2025))
         return calculate_esg_scores(r).environmental_score
     services, industry = env_score("Services"), env_score("Industrie manufacturière")
+    assert industry is not None and services is not None
     assert industry > services  # même intensité, grille sectorielle différente
 
 
@@ -926,7 +927,9 @@ def test_positionnement_interne_est_vrai_et_coherent():
     s = calculate_esg_scores(r)
     bv = benchmark_verdict(r, s)
     assert bv is not None
-    pil = {"env": s.environmental_score, "social": s.social_score, "gov": s.governance_score}
+    notes = {"env": s.environmental_score, "social": s.social_score, "gov": s.governance_score}
+    pil = {k: v for k, v in notes.items() if v is not None}
+    assert len(pil) == 3                      # dossier complet : trois piliers notés
     assert bv["lead"] == max(pil, key=lambda k: pil[k])
     assert bv["lag"] == min(pil, key=lambda k: pil[k])
     assert bv["gap"] == pil[bv["lead"]] - pil[bv["lag"]]
@@ -1624,11 +1627,21 @@ def test_temoin_le_silence_paie():
       A = 69,5 (A)  (+3,5)   B = 66,5 (A)  (inchange)
       C = 77,0 (AA) (+14)    D = 50,0 (BB) (inchange)
     Le defaut structurel n'est PAS corrige : voir l'invariant cible ci-dessous.
+
+    Mis a jour le 2026-09-25 (un pilier sans indicateur n'est plus note 50 :
+    il sort du global, ponderations renormalisees ; sous deux piliers notes,
+    ni score ni note) :
+      A = 69,5 (A)   (inchange : trois piliers notes)
+      B = 75,4 (AA)  (+8,9 : son pilier social vide ne vaut plus 50, et sa
+                     gouvernance -- un seul champ, comite = oui -- vaut 100)
+      C = 77,0 (AA)  (inchange)
+      D = aucun score, aucune note (etait 50,0 BB : une note sans donnee)
+    Le « silence paie » s'AGGRAVE pour B : DETTE § 16.
     """
     for dossier, total, note in ((dossier_a_transparente(), 69.5, "A"),
-                                 (dossier_b_silencieuse(), 66.5, "A"),
+                                 (dossier_b_silencieuse(), 75.4, "AA"),
                                  (dossier_c_un_chiffre_honnete(), 77.0, "AA"),
-                                 (dossier_vide(), 50.0, "BB")):
+                                 (dossier_vide(), None, None)):
         s = calculate_esg_scores(dossier)
         assert (s.total_esg_score, s.rating) == (total, note)
 
@@ -1658,6 +1671,7 @@ def test_le_silence_ne_doit_pas_surpasser_la_transparence():
     transparente.social.accident_frequency_rate = 20
     a = calculate_esg_scores(transparente).total_esg_score
     b = calculate_esg_scores(dossier_b_silencieuse()).total_esg_score
+    assert a is not None and b is not None
     assert a > b, (
         f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "
         f"declarer ses chiffres coute des points.")
@@ -1723,13 +1737,15 @@ def test_score_verdict_sabstient_sans_score_global():
 
 def test_pillar_headline_sabstient_pilier_par_pilier():
     """Les trois cles restent rendues -- les appelants les indexent -- mais
-    un pilier absent ne recoit AUCUNE conclusion."""
+    un pilier absent ne recoit AUCUNE conclusion : depuis le 2026-09-25 (le
+    calculateur rend None pour un pilier vide), son titre dit qu'il n'est pas
+    noté au lieu de valoir None, que Word et PowerPoint imprimaient tel quel."""
     from content_generator import pillar_headline
     r = make_request()
     out = pillar_headline(r, _scores_partiels(env=70.0, social=None, gov=55.0))
     assert set(out) == {"env", "social", "gov"}
-    assert out["social"] is None
-    assert out["env"] and out["gov"]
+    assert out["social"] == "Pilier non noté : indicateurs à collecter"
+    assert out["env"] and out["gov"] and "non noté" not in out["env"] + out["gov"]
 
 
 def test_benchmark_verdict_sabstient_sous_deux_piliers():

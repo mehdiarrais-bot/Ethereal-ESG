@@ -81,7 +81,7 @@ LABELS = {
         
         "tax_kpi_cap": "Part maximale d'activités alignées à la Taxonomie UE",
         "tax_insight": "Parts d'activités déclarées comme alignées à la Taxonomie UE par l'entreprise. Le respect du principe DNSH et des garanties minimales sociales (diligence raisonnable au sens des Principes directeurs de l'OCDE et des Nations unies) n'est pas évalué dans ce rapport.",
-        "cover_tag_high": "Une démarche ESG de premier plan", "cover_tag_good": "Une performance ESG solide et engagée", "cover_tag_mid": "Une trajectoire ESG en construction", "cover_tag_low": "Une transformation ESG engagée",
+        "cover_tag_high": "Une démarche ESG de premier plan", "cover_tag_good": "Une performance ESG solide et engagée", "cover_tag_mid": "Une trajectoire ESG en construction", "cover_tag_low": "Une transformation ESG engagée", "cover_tag_none": "Un premier état des lieux ESG",
         "benchmark_kicker": "POSITIONNEMENT",
         "maturity_title": "MATURITÉ ESG", "roadmap_kicker": "FEUILLE DE ROUTE 12 MOIS", "roadmap_title": "Un plan d'action ESG sur 12 mois", "quick_win": "QUICK WIN", "bench_you": "Score", "bench_best": "point fort",
         "ro_kicker": "RISQUES & OPPORTUNITÉS", "ro_title": "Où se concentrent vos risques et vos leviers de valeur", "risks_head": "Risques majeurs", "opps_head": "Opportunités majeures",
@@ -122,6 +122,7 @@ LABELS = {
         "trend_kicker": "TRAJECTOIRE", "trend_title": "Une trajectoire ESG mesurée exercice après exercice",
         "cap_trend": "Évolution pluriannuelle du score ESG (global et par pilier)",
         "mat_initiated": "Initiée", "mat_structuring": "En structuration", "mat_structured": "Structurée", "mat_advanced": "Avancée", "mat_exemplary": "Exemplaire",
+        "mat_none": "non évaluée (pas de score global)", "bench_not_rated": "Non noté",
         "conclusion_title": "Conclusion & Engagements",
         "esg_score_line": "Score ESG : {s}/100  —  Note : {r}",
         # PDF-only
@@ -253,7 +254,7 @@ LABELS = {
         
         "tax_kpi_cap": "Highest share of EU Taxonomy-aligned activities",
         "tax_insight": "Shares of activities reported by the company as EU Taxonomy-aligned. Compliance with the DNSH principle and minimum safeguards (due diligence under the OECD Guidelines and the UN Guiding Principles) is not assessed in this report.",
-        "cover_tag_high": "A leading ESG performance", "cover_tag_good": "A solid, committed ESG performance", "cover_tag_mid": "An ESG trajectory in the making", "cover_tag_low": "An ESG transformation under way",
+        "cover_tag_high": "A leading ESG performance", "cover_tag_good": "A solid, committed ESG performance", "cover_tag_mid": "An ESG trajectory in the making", "cover_tag_low": "An ESG transformation under way", "cover_tag_none": "A first ESG baseline",
         "benchmark_kicker": "POSITIONING",
         "maturity_title": "ESG MATURITY", "roadmap_kicker": "12-MONTH ROADMAP", "roadmap_title": "A 12-month ESG action plan", "quick_win": "QUICK WIN", "bench_you": "Score", "bench_best": "strong point",
         "ro_kicker": "RISKS & OPPORTUNITIES", "ro_title": "Where your risks and value levers concentrate", "risks_head": "Major risks", "opps_head": "Major opportunities",
@@ -290,6 +291,7 @@ LABELS = {
         "trend_kicker": "TRAJECTORY", "trend_title": "An ESG trajectory measured year after year",
         "cap_trend": "Multi-year evolution of the ESG score (overall and per pillar)",
         "mat_initiated": "Initiated", "mat_structuring": "Structuring", "mat_structured": "Structured", "mat_advanced": "Advanced", "mat_exemplary": "Exemplary",
+        "mat_none": "not assessed (no overall score)", "bench_not_rated": "Not rated",
         "conclusion_title": "Conclusion & Commitments",
         "esg_score_line": "ESG Score: {s}/100  —  Rating: {r}",
         # PDF-only

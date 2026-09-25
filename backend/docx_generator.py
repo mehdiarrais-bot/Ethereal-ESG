@@ -11,6 +11,7 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.document import Document as DocumentObject
 from docx.text.paragraph import Paragraph
+from esg_calculator import NON_NOTE, score_label
 from models import ESGRequest, ESGScores, AestheticTheme
 from i18n import L
 
@@ -131,7 +132,7 @@ def add_score_block(doc, label, score, color_hex):
     run = p.add_run(f"{label} : ")
     run.font.size = Pt(11)
     run.bold = True
-    score_run = p.add_run(f"{score:.1f}/100")
+    score_run = p.add_run(f"{score:.1f}/100" if score is not None else NON_NOTE)
     score_run.font.size = Pt(14)
     score_run.bold = True
     score_run.font.color.rgb = hex_to_rgb(color_hex)
@@ -375,7 +376,7 @@ def _cover_scores(r: _Report) -> None:
 
         val_cell = summary_table.rows[1].cells[i]
         val_cell.paragraphs[0].clear()
-        rv = val_cell.paragraphs[0].add_run(f"{val:.1f}")
+        rv = val_cell.paragraphs[0].add_run(score_label(val, 1))
         rv.font.size = Pt(24)
         rv.bold = True
         rv.font.color.rgb = hex_to_rgb(col)
@@ -384,7 +385,7 @@ def _cover_scores(r: _Report) -> None:
     doc.add_paragraph()
 
     rating_p = doc.add_paragraph()
-    rating_run = rating_p.add_run(f"{TR['note']} : {scores.rating}")
+    rating_run = rating_p.add_run(f"{TR['note']} : {scores.rating or NON_NOTE}")
     rating_run.font.size = Pt(16)
     rating_run.bold = True
     rating_run.font.color.rgb = hex_to_rgb(colors["accent"])
@@ -439,7 +440,7 @@ def _executive(r: _Report) -> None:
     add_hr(r.doc, r.colors["secondary"])
     exec_text = r.content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
-        f"avec un score global de {scores.total_esg_score}/100 (note {scores.rating}).")
+        f"avec un score global de {score_label(scores.total_esg_score, 1)}/100 (note {scores.rating or NON_NOTE}).")
     r.doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
     if r.notes.get("global"):
         add_consultant_note(r.doc, r.notes["global"], r.colors, r.TR)
@@ -612,22 +613,24 @@ def _positioning(r: _Report) -> None:
 
     r.heading(TR["pdf_diag"], 1, colors["primary"])
     add_hr(doc, colors["accent"])
-    p = doc.add_paragraph()
-    r_ = p.add_run(bv["title"]); r_.bold = True; r_.font.size = Pt(12)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
-    r_.font.color.rgb = hex_to_rgb(colors["secondary"])
-    r.text(NR.bench_intro(r.request), after=4)
-    cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
-    cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
+    if bv is None:  # moins de deux piliers notés : rien à positionner
+        from content_generator import POSITIONNEMENT_IMPOSSIBLE
+        r.text(POSITIONNEMENT_IMPOSSIBLE[r.lang])
+    else:
+        p = doc.add_paragraph()
+        r_ = p.add_run(bv["title"]); r_.bold = True; r_.font.size = Pt(12)
+        r_.font.color.rgb = hex_to_rgb(colors["secondary"])
+        r.text(NR.bench_intro(r.request), after=4)
+        cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
+        cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
+        _positioning_table(r, bv["rows"])
+        ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
+        ins.add_run(bv["insight"]).font.size = Pt(10)
+        shade_paragraph(ins, r.light)
 
-    _positioning_table(r, bv["rows"])  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
-
-    ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
-    ins.add_run(bv["insight"]).font.size = Pt(10)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
-    shade_paragraph(ins, r.light)
-
-    mat_lbl = TR.get("mat_" + mt.get("key", "structured"), "")
+    from content_generator import maturite_libelle
     mp = doc.add_paragraph(); mp.paragraph_format.space_before = Pt(8)
-    mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {mat_lbl} ({mt["stage"]}/5)')
+    mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {maturite_libelle(mt, TR)}')
     mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
     doc.add_paragraph(mt["next_hint"])
 
@@ -639,10 +642,10 @@ def _positioning_table(r: _Report, bench_rows: list) -> None:
     rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_delta_col"], TR["bench_reading_col"])]
     for row in bench_rows:
         delta = row["delta"]
-        rows.append((pil_lbl[row["key"]], f"{row['score']:.0f}",
-                     "—" if delta == 0 else f"{delta:.0f} pts", row["reading"]))
-    rows.append((TR.get("score_global_short", "Global"), f"{scores.total_esg_score:.0f}",
-                 "", scores.rating))
+        rows.append((pil_lbl[row["key"]], score_label(row["score"]),
+                     "—" if not delta else f"{delta:.0f} pts", row["reading"] or TR["bench_not_rated"]))
+    rows.append((TR.get("score_global_short", "Global"), score_label(scores.total_esg_score),
+                 "", scores.rating or NON_NOTE))
     tbl = doc.add_table(rows=len(rows), cols=4)
     tbl.style = "Table Grid"
     for ci, val in enumerate(rows[0]):

@@ -50,13 +50,16 @@ def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict | None
     return c
 
 
-def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
+def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes | None:
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
 
     categories = [LB['chart_env'], LB['chart_soc'], LB['chart_gov']]
-    values = [scores.environmental_score, scores.social_score, scores.governance_score]
+    notes = [scores.environmental_score, scores.social_score, scores.governance_score]
+    if any(v is None for v in notes):
+        return None  # pilier non noté : pas de radar plutôt qu'un sommet inventé
+    values: list[float] = [v for v in notes if v is not None]
     values_plot = values + [values[0]]
 
     angles = [n / float(3) * 2 * math.pi for n in range(3)]
@@ -90,7 +93,7 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False
     return buf.read()
 
 
-def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
+def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes | None:
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
@@ -98,10 +101,17 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor=bg)
     ax.set_facecolor(bg)
 
-    categories = [LB['chart_env'], LB['chart_soc'], LB['chart_gov'], LB['chart_global']]
-    values = [scores.environmental_score, scores.social_score,
-              scores.governance_score, scores.total_esg_score]
-    bar_colors = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
+    series = [(LB['chart_env'], scores.environmental_score, colors["env"]),
+              (LB['chart_soc'], scores.social_score, colors["social"]),
+              (LB['chart_gov'], scores.governance_score, colors["gov"]),
+              (LB['chart_global'], scores.total_esg_score, colors["accent"])]
+    series = [(c, v, col) for c, v, col in series if v is not None]  # non noté : pas de barre
+    if not series:
+        plt.close(fig)
+        return None
+    categories = [c for c, _, _ in series]
+    values = [v for _, v, _ in series]
+    bar_colors = [col for _, _, col in series]
 
     bars = ax.barh(categories, values, color=bar_colors, height=0.5, alpha=0.9)
 
@@ -289,12 +299,16 @@ def score_trend_chart(history: list, theme: AestheticTheme, light_bg: bool = Fal
         ("gov", LB["chart_gov"], colors["gov"], 1.6, 0.75),
     ]
     for key, label, col, lw, alpha in series:
-        vals = [h[key] for h in history]
-        ax.plot(years, vals, "o-", color=col, linewidth=lw, alpha=alpha,
+        # Exercice où la série n'est pas notée : point omis, jamais tracé à 0.
+        pts = [(h["year"], h[key]) for h in history if h.get(key) is not None]
+        if not pts:
+            continue
+        xs, vals = [x for x, _ in pts], [v for _, v in pts]
+        ax.plot(xs, vals, "o-", color=col, linewidth=lw, alpha=alpha,
                 markersize=7 if key == "total" else 5, label=label,
                 zorder=4 if key == "total" else 3)
         # étiquette de la dernière valeur (lecture directe)
-        ax.annotate(f"{vals[-1]:.0f}", (years[-1], vals[-1]),
+        ax.annotate(f"{vals[-1]:.0f}", (xs[-1], vals[-1]),
                     textcoords="offset points", xytext=(10, -3),
                     fontsize=10 if key == "total" else 8.5, fontweight="bold", color=col)
 
@@ -474,7 +488,7 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
+def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes | None:
     """Barres des trois piliers + score global, série unique.
 
     La série « Secteur » a été retirée : elle s'appuyait sur une table de
@@ -488,18 +502,27 @@ def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, l
     fig, ax = plt.subplots(figsize=(7.4, 4.6), facecolor=bg)
     ax.set_facecolor(bg)
 
-    cats = [LB["chart_env"], LB["chart_soc"], LB["chart_gov"], LB["chart_global"]]
-    keys = ["env", "social", "gov", "global"]
-    vals = [comp[k] for k in keys]
+    series = [(LB["chart_env"], comp["env"], colors["env"]),
+              (LB["chart_soc"], comp["social"], colors["social"]),
+              (LB["chart_gov"], comp["gov"], colors["gov"])]
+    series = [s for s in series if s[1] is not None]   # piliers notés seulement
+    if len(series) < 2:               # rien à positionner
+        plt.close(fig)
+        return None
+    n_pil = len(series)
+    if comp["global"] is not None:
+        series.append((LB["chart_global"], comp["global"], colors["accent"]))
+    cats = [c for c, _, _ in series]
+    vals = [v for _, v, _ in series]
     ypos = list(range(len(cats)))
-    bar_cols = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
+    bar_cols = [col for _, _, col in series]
 
     ax.barh(ypos, vals, height=0.5, color=bar_cols, zorder=3)
-    meilleur = max(vals[:3])          # meilleur des trois piliers, hors global
+    meilleur = max(vals[:n_pil])      # meilleur des piliers notés, hors global
     for y, v in enumerate(vals):
         ax.text(v + 1.5, y, f"{v:.0f}", va="center", fontsize=11,
                 fontweight="bold", color=colors["text"])
-        if y < 3:                     # écart interne : sur les piliers seulement
+        if y < n_pil:                 # écart interne : sur les piliers seulement
             d = v - meilleur
             ax.text(107, y, LB["bench_best"] if d == 0 else f"{d:.0f} pts",
                     va="center", ha="right", fontsize=9.5,

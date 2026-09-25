@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import PreviewPanel from '../PreviewPanel'
 import { DesignPicker, PhotoSlots } from '../DesignPicker'
+import { scoreText, ratingText } from '../../lib/scoreText.mjs'
 
 const PRES_TYPES = [
   { id: 'executive_summary', name: 'Synthese Executive', desc: 'Vue dirigeant condensee' },
@@ -235,7 +236,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         <div className="generate-actions">
           {scores ? (
             <div className="score-preview-chip">
-              ✅ Score : <strong>{scores.total_esg_score?.toFixed(1)}/100</strong> — Note <strong>{scores.rating}</strong>
+              ✅ Score : <strong>{scoreText(scores.total_esg_score, 1)}/100</strong> — Note <strong>{ratingText(scores.rating)}</strong>
             </div>
           ) : (
             <div className="score-preview-chip score-preview-pending">

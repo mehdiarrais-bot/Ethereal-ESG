@@ -12,6 +12,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.lib.utils import simpleSplit
 
+from esg_calculator import NON_NOTE, score_label
 from models import ESGRequest, ESGScores
 from i18n import L
 from pdf_kit import Kit, clean as pdf_txt
@@ -70,24 +71,26 @@ def _onepager(request: ESGRequest, scores: ESGScores) -> bytes:
         + "  |  " + (TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" else TR["cover_refs"]),
         f, 9, soft)
     # Maturité
-    _mat_lbl = TR.get("mat_" + mat.get("key", "structured"), "")
-    txt(M, H - 3.75 * cm, (("ESG maturity: " if en else "Maturité ESG : ") + f"{_mat_lbl} ({mat['stage']}/5)"),
+    from content_generator import maturite_libelle
+    txt(M, H - 3.75 * cm, (("ESG maturity: " if en else "Maturité ESG : ") + maturite_libelle(mat, TR)),
         fb, 10, on_primary)
 
     # Score hero (droite du bandeau)
-    sc = f"{scores.total_esg_score:.0f}"
+    sc = score_label(scores.total_esg_score)
     c.setFont(fd, 54); c.setFillColor(on_primary)
     c.drawRightString(W - M - 2.5 * cm, H - 3.1 * cm, sc)
-    txt(W - M - 2.3 * cm, H - 3.1 * cm, "/100", f, 12, soft)
+    if scores.total_esg_score is not None:
+        txt(W - M - 2.3 * cm, H - 3.1 * cm, "/100", f, 12, soft)
     # Note
     c.setFillColor(soft)
     c.roundRect(W - M - 1.85 * cm, H - 2.0 * cm, 1.85 * cm, 0.85 * cm, 5, fill=1, stroke=0)
     c.setFont(fb, 20); c.setFillColor(pal["primary"])
-    c.drawCentredString(W - M - 0.925 * cm, H - 1.78 * cm, pdf_txt(scores.rating))
+    c.drawCentredString(W - M - 0.925 * cm, H - 1.78 * cm, pdf_txt(scores.rating or NON_NOTE))
     # Évolution N-1
     prev = getattr(request, "previous_scores", None)
-    if prev:
-        d = scores.total_esg_score - prev["total"]
+    from content_generator import _ecart
+    d = _ecart(scores.total_esg_score, prev.get("total")) if prev else None
+    if prev and d is not None:
         col = soft
         lbl = (f"+{d:.0f}" if d >= 0.5 else f"{d:.0f}" if d <= -0.5 else "=")
         c.setFont(fb, 12); c.setFillColor(col)
@@ -107,9 +110,10 @@ def _onepager(request: ESGRequest, scores: ESGScores) -> bytes:
         txt(M, by + 0.06 * cm, lab, fb, 9, pal["text"])
         bx = M + 3.2 * cm
         c.setFillColor(pal["rule"]); c.roundRect(bx, by, bw, 0.32 * cm, 3, fill=1, stroke=0)
-        c.setFillColor(col); c.roundRect(bx, by, bw * min(100, v) / 100, 0.32 * cm, 3, fill=1, stroke=0)
+        if v is not None:  # pilier non noté : piste vide et « — »
+            c.setFillColor(col); c.roundRect(bx, by, bw * min(100, v) / 100, 0.32 * cm, 3, fill=1, stroke=0)
         c.setFont(fb, 9); c.setFillColor(col)
-        c.drawString(bx + bw + 0.15 * cm, by + 0.04 * cm, f"{v:.0f}")
+        c.drawString(bx + bw + 0.15 * cm, by + 0.04 * cm, score_label(v))
 
     # ── Digest 2×2 ────────────────────────────────────────────────────────
     gy = y0 - 4.35 * cm

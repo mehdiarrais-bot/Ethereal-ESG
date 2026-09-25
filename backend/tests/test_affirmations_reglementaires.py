@@ -89,6 +89,8 @@ CSRD_PRESUMEE_APPLICABLE = [
     "exigé par l'ESRS E1 de la CSRD", "requis par la CSRD",
     "CSRD non-compliance", "CSRD compliance", "Rising CSRD requirements",
     "required under CSRD", "required by the CSRD",
+    # lettre de mission : présumait la CSRD applicable « au marché PME/ETI »
+    "exigences CSRD/VSME applicables", "CSRD/VSME requirements applicable",
 ]
 
 

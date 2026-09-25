@@ -1,3 +1,5 @@
+import { scoreText, ratingText } from '../lib/scoreText.mjs'
+
 export default function Header({ onLoadDemo, onReset, scores, showResults, onToggleResults, clientsPanel }) {
   return (
     <header className="header">
@@ -19,7 +21,7 @@ export default function Header({ onLoadDemo, onReset, scores, showResults, onTog
             {clientsPanel}
             {scores && (
               <button className="hdr-btn hdr-btn-score" onClick={onToggleResults}>
-                {scores.total_esg_score?.toFixed(1)} · {scores.rating} {showResults ? '◀' : '▶'}
+                {scoreText(scores.total_esg_score, 1)} · {ratingText(scores.rating)} {showResults ? '◀' : '▶'}
               </button>
             )}
             <button className="hdr-btn hdr-btn-demo" onClick={onLoadDemo}>

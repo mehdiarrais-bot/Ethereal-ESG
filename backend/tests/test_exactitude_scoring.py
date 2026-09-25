@@ -105,6 +105,7 @@ def test_corruption_penalise_le_score_et_se_lit_dans_le_texte():
     propre = calculate_esg_scores(_req(corruption_cases=0, sustainability_committee=True))
     un_cas = _req(corruption_cases=1, sustainability_committee=True)
     s = calculate_esg_scores(un_cas)
+    assert s.governance_score is not None and propre.governance_score is not None
     assert s.governance_score < propre.governance_score
     assert "un cas de corruption enregistré" in _gov_text(un_cas)
     assert any("corruption" in w for w in s.weaknesses)

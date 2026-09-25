@@ -22,6 +22,7 @@ from reportlab.platypus import (Flowable, BaseDocTemplate, PageTemplate, Frame, 
                                 Table, TableStyle, Image, PageBreak, KeepTogether,
                                 NextPageTemplate, CondPageBreak)
 
+from esg_calculator import NON_NOTE, score_label
 from models import ESGRequest, ESGScores
 from i18n import L
 from pdf_kit import (Kit, Px, FullPage, Anchor, PX, PAGE_W, PAGE_H, clean, esc, hexc,
@@ -337,15 +338,16 @@ def _facts(request, TR, lang):
 def page_context(request, scores, TR, type_label):
     from content_generator import score_verdict, hero_stat, pillar_headline, _band
     lang = request.language
-    band = _band(scores.total_esg_score) or "mid"
+    band = _band(scores.total_esg_score) or "none"  # sans score global : aucun jugement
     prev = getattr(request, "previous_scores", None) or None
     delta = prev_vals = prev_year = None
     if prev and all(prev.get(x) is not None for x in ("env", "social", "gov", "total")):
         prev_year = prev.get("year")
-        delta = {"env": scores.environmental_score - prev["env"],
-                 "social": scores.social_score - prev["social"],
-                 "gov": scores.governance_score - prev["gov"],
-                 "total": scores.total_esg_score - prev["total"]}
+        from content_generator import _ecart
+        delta = {"env": _ecart(scores.environmental_score, prev["env"]),
+                 "social": _ecart(scores.social_score, prev["social"]),
+                 "gov": _ecart(scores.governance_score, prev["gov"]),
+                 "total": _ecart(scores.total_esg_score, prev["total"])}
         prev_vals = [prev["env"], prev["social"], prev["gov"]]
     return {
         "TR": TR, "lang": lang, "company": request.company, "name": request.company.name,
@@ -743,9 +745,10 @@ def _pillar_intro(story, title, key, score_label, score, insight, note, text, k,
                   anchor):
     # 11 cm : titre, score, lecture et encart consultant restent ensemble
     section_head(story, title, key, k, S, anchors, anchor, keep_cm=11)
+    from esg_calculator import score_label as _lbl
+    sur_100 = f'<font color="{hexc(k.c["muted"])}">/100</font>' if score is not None else ""
     story.append(Paragraph(f'{esc(score_label)} : <font name="{k.f["display"]}" size="15" '
-                           f'color="{hexc(k.c[key])}">{score:.0f}</font>'
-                           f'<font color="{hexc(k.c["muted"])}">/100</font>', S["h2"]))
+                           f'color="{hexc(k.c[key])}">{_lbl(score)}</font>' + sur_100, S["h2"]))
     insight_callout(story, insight, key, k)
     if note:
         consultant_callout(story, note, k, TR)
@@ -910,39 +913,18 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
 
     story.append(_sp(k, 12))
     section_head(story, TR["pdf_diag"], "accent", k, S, anchors, "diag", keep_cm=10)
-    bench_head: list[Flowable] = [Paragraph(esc(bv["title"]), S["h2"]),
-                  Paragraph(esc(NR.bench_intro(request)), S["body"]),
-                  Paragraph(TR["pdf_bench_sub"], k.ps("bs", 8.4, font="body_i", color="muted",
-                                                      spaceAfter=6))]
-    # Positionnement INTERNE : les trois piliers comparés entre eux. Aucune
-    # donnée externe (la référence sectorielle d'origine était inventée).
-    center = k.ps("c", 8.8, color="ink", alignment=TA_CENTER)
-    lab = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
-    rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in
-             ("bench_metric_col", "bench_you", "bench_delta_col", "bench_reading_col")]]
-    for row in bv["rows"]:
-        d = row["delta"]
-        rcol = (_STATUS_HEX["good"] if row["role"] == "lead"
-                else _STATUS_HEX["bad"] if row["role"] == "lag" else hexc(k.c["ink"]))
-        rows.append([Paragraph(esc(lab[row["key"]]), S["small_b"]),
-                     Paragraph(f"{row['score']:.0f}", center),
-                     Paragraph("—" if d == 0 else f"{d:.0f} pts", center),
-                     Paragraph(f'<font color="{rcol}"><b>{esc(row["reading"])}</b></font>', center)])
-    rows.append([Paragraph(esc(TR.get("score_global_short", "Global")), S["small_b"]),
-                 Paragraph(f"<b>{scores.total_esg_score:.0f}</b>", center), Paragraph("", center),
-                 Paragraph(f"<b>{esc(scores.rating)}</b>", center)])
-    story.append(KeepTogether(bench_head + [data_table(rows, [CW * 0.36, CW * 0.17, CW * 0.19, CW * 0.28],
-                                                       k, total=True)]))
-    story.append(_sp(k, 8))
-    insight_callout(story, bv["insight"], "accent", k)
+    _positioning(story, request, scores, bv, k, S, TR)
 
     if "trend" in chart_images:
         story.append(Paragraph(TR["trend_title"], S["h2"]))
         _chart(story, chart_images, "trend", 16.5, 8.4, TR["cap_trend"], S)
 
-    mat_lbl = TR.get("mat_" + mt.get("key", "structured"), "")
-    story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : {esc(mat_lbl)} '
-                           f'<font color="{hexc(k.c["muted"])}">({mt["stage"]}/5)</font>', S["h2"]))
+    if mt["stage"] is None:  # sans score global : maturité non évaluée
+        story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : {esc(TR["mat_none"])}', S["h2"]))
+    else:
+        mat_lbl = TR.get("mat_" + mt["key"], "")
+        story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : {esc(mat_lbl)} '
+                               f'<font color="{hexc(k.c["muted"])}">({mt["stage"]}/5)</font>', S["h2"]))
     story.append(Paragraph(esc(mt["next_hint"]), S["body"]))
 
     # Couverture des exigences (libellés et couleurs : source unique gap_status)
@@ -976,6 +958,40 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
         opp.append(Paragraph(f'<font color="{hexc(k.c["env"])}"><b>{esc(it["tag"])}</b></font> — '
                              f'{esc(it["text"])}', k.ps("oi", 9, color="ink", leading=13, spaceAfter=5)))
     story.append(KeepTogether(_box(opp, k, k.c["env_soft"], left=k.c["env"])))
+
+
+def _positioning(story, request, scores, bv, k, S, TR):
+    """Positionnement INTERNE : les piliers notés comparés entre eux. Aucune
+    donnée externe (la référence sectorielle d'origine était inventée). Sous
+    deux piliers notés (bv None), la section le dit au lieu de classer."""
+    if bv is None:
+        from content_generator import POSITIONNEMENT_IMPOSSIBLE
+        story.append(Paragraph(esc(POSITIONNEMENT_IMPOSSIBLE[request.language]), S["body"]))
+        return
+    bench_head: list[Flowable] = [Paragraph(esc(bv["title"]), S["h2"]),
+                  Paragraph(esc(NR.bench_intro(request)), S["body"]),
+                  Paragraph(TR["pdf_bench_sub"], k.ps("bs", 8.4, font="body_i", color="muted",
+                                                      spaceAfter=6))]
+    center = k.ps("c", 8.8, color="ink", alignment=TA_CENTER)
+    lab = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
+    rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in
+             ("bench_metric_col", "bench_you", "bench_delta_col", "bench_reading_col")]]
+    for row in bv["rows"]:
+        d = row["delta"]
+        rcol = (_STATUS_HEX["good"] if row["role"] == "lead"
+                else _STATUS_HEX["bad"] if row["role"] == "lag" else hexc(k.c["ink"]))
+        rows.append([Paragraph(esc(lab[row["key"]]), S["small_b"]),
+                     Paragraph(score_label(row["score"]), center),
+                     Paragraph("—" if not d else f"{d:.0f} pts", center),
+                     Paragraph(f'<font color="{rcol}"><b>{esc(row["reading"] or TR["bench_not_rated"])}</b></font>',
+                               center)])
+    rows.append([Paragraph(esc(TR.get("score_global_short", "Global")), S["small_b"]),
+                 Paragraph(f"<b>{score_label(scores.total_esg_score)}</b>", center), Paragraph("", center),
+                 Paragraph(f"<b>{esc(scores.rating or NON_NOTE)}</b>", center)])
+    story.append(KeepTogether(bench_head + [data_table(rows, [CW * 0.36, CW * 0.17, CW * 0.19, CW * 0.28],
+                                                       k, total=True)]))
+    story.append(_sp(k, 8))
+    insight_callout(story, bv["insight"], "accent", k)
 
 
 def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, recs, priority_reading):
@@ -1075,7 +1091,7 @@ def _closing(story, request, scores, content, k, S, TR, anchors):
     section_head(story, title, "accent", k, S, anchors, "concl", keep_cm=10)
     story.append(Paragraph(esc(content.get("conclusion",
                                            f"{request.company.name} — score ESG "
-                                           f"{scores.total_esg_score}/100 (note {scores.rating}).")),
+                                           f"{score_label(scores.total_esg_score, 1)}/100 (note {scores.rating or NON_NOTE}).")),
                            S["body"]))
     if content.get("methodology"):
         story.append(_sp(k, 10))
