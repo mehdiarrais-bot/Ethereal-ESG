@@ -872,6 +872,29 @@ Relevé par Pyright (mode standard) le 2026-09-25.
 - **Marquage** : chaque ligne porte `# pyright: ignore[...]  # abstention
   non gérée, DETTE § 14` ; les retirer fait partie de la correction.
 
+## 15. Valeurs en dur dans les générateurs Word et PowerPoint — OUVERT
+
+Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
+(découpage à rendu identique : rien n'a été changé ici).
+
+- **Couleurs hors gabarit** : `docx_generator.py` écrit 16 hexadécimaux en
+  dur (`E74C3C` rouge des points faibles et des risques ×5, `7F8C8D` gris
+  des légendes ×5, `F5F5F5`, `F0F2F5`, `5A6572`, `2E7D32`) ;
+  `ppt_generator.py` 23 `RGBColor(...)` (dont le rouge `E74C3C` ×4, les
+  pastilles P1-P3, l'orange et le vert d'évolution). CLAUDE.md : « aucune
+  couleur en dur », « aucun ne redéfinit une palette » — ces couleurs ne
+  suivent ni le gabarit ni la couleur du client. `tests/test_designs.py`
+  ne les voit pas.
+- **Replis en français dans le Word anglais** : si une clé de contenu
+  manque, le Word affiche « Analyse des données environnementales. »,
+  « … présente son rapport ESG … », « … réaffirme son engagement … » ou
+  « Rapport ESG », quelle que soit la langue. Dormant (generate_esg_content
+  fournit toujours ces clés), mais contraire à « échouer bruyamment en
+  développement ».
+- **À faire** : faire passer ces couleurs par des jetons de
+  `report_designs.py` (états `danger` / `muted`, comme l'interface), et
+  remplacer les replis par une erreur explicite ou une clé i18n.
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une

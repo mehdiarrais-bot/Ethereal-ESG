@@ -1,5 +1,6 @@
 import io
-from typing import cast
+from dataclasses import dataclass
+from typing import Any, cast
 
 from docx import Document
 from docx.styles.style import ParagraphStyle
@@ -165,33 +166,41 @@ def add_consultant_note(doc, text, colors, TR):
     shade_paragraph(np_, colors.get("light", "F0F2F5"))
     np_.paragraph_format.space_after = Pt(8)
 
-def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
-                         logo_bytes: bytes | None = None, cover_art: bytes | None = None,
-                         charts: dict | None = None) -> bytes:
-    colors = docx_hex(request.aesthetic_theme)
-    if getattr(request, "custom_colors", None):
-        from branding import brand_docx_hex
-        colors = brand_docx_hex(colors, request.custom_colors)
-    style = docx_style(request.aesthetic_theme)
-    TR = L(request.language)
+@dataclass
+class _Report:
+    """Ce que lisent les sections du rapport Word, calculé une fois (avant :
+    risques, écarts et feuille de route étaient recalculés dans la fonction).
+    Le texte analytique vient de narrative.py, partagé avec le PDF."""
+    doc: Any
+    request: ESGRequest
+    scores: ESGScores
+    content: dict
+    colors: dict
+    style: dict
+    TR: dict
+    ref: str                  # référentiel affiché (CSRD ou VSME)
+    ro: dict                  # risks_opportunities
+    gaps: list                # compliance_assessment
+    recs: list                # enriched_recommendations, vides sans recommandations
+    roadmap: list             # roadmap_12m
+    headlines: dict           # pillar_headline
+    section_heads: dict       # section_headlines
+    notes: dict               # analyses du consultant
+    charts: dict
 
-    from content_generator import (pillar_headline, section_headlines, risks_opportunities,
-                                   compliance_assessment, enriched_recommendations, roadmap_12m)
-    import narrative as NR
-    _hl = pillar_headline(request, scores)
-    _shl = section_headlines(request, scores)
-    # Texte analytique partagé avec le rapport PDF (narrative.py) : le Word
-    # porte le même contenu, éditable.
-    lang = request.language
-    ref = TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" \
-        else TR["cover_refs"]
-    _ro_all = risks_opportunities(request, scores)
-    _gaps_all = compliance_assessment(request, scores)
-    _recs_all = enriched_recommendations(request, scores) if request.include_recommendations else []
-    _rm_all = roadmap_12m(request, scores)
+    @property
+    def lang(self) -> str:
+        return self.request.language
 
-    def add_text(text, size=10.5, italic=False, shade=None, after=8):
-        par = doc.add_paragraph()
+    @property
+    def light(self) -> str:
+        return self.colors.get("light", "F0F2F5")
+
+    def heading(self, text: str, level: int, color_hex: str) -> None:
+        add_heading(self.doc, text, level, color_hex, style=self.style)
+
+    def text(self, text, size=10.5, italic=False, shade=None, after=8):
+        par = self.doc.add_paragraph()
         run = par.add_run(text)
         run.font.size = Pt(size)
         run.italic = italic
@@ -200,28 +209,51 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         par.paragraph_format.space_after = Pt(after)
         return par
 
-    def add_reading(pillar, color_hex):
-        """« Lecture des indicateurs » + leviers du plan d'action (comme le PDF)."""
-        add_heading(doc, NR.T[lang]["reading_title"], 2, color_hex, style=style)
-        for para in NR.pillar_paragraphs(request, scores, pillar):
-            add_text(para)
-        if request.include_recommendations:
-            add_text(NR.levers_sentence(request, _recs_all, pillar))
-
-    def add_conclusion(text, color_hex):
+    def conclusion(self, text: str, color_hex: str) -> None:
         """Sous-titre en gras = la conclusion de la section (information scent)."""
-        p = doc.add_paragraph()
+        p = self.doc.add_paragraph()
         run = p.add_run(text)
         run.bold = True
         run.font.size = Pt(12.5)
         run.font.color.rgb = hex_to_rgb(color_hex)
         p.paragraph_format.space_after = Pt(6)
 
+    def reading(self, pillar: str, color_hex: str) -> None:
+        """« Lecture des indicateurs » + leviers du plan d'action (comme le PDF)."""
+        import narrative as NR
+        self.heading(NR.T[self.lang]["reading_title"], 2, color_hex)
+        for para in NR.pillar_paragraphs(self.request, self.scores, pillar):
+            self.text(para)
+        if self.request.include_recommendations:
+            self.text(NR.levers_sentence(self.request, self.recs, pillar))
+
+    def image(self, key: str, width_cm: float) -> None:
+        if key in self.charts:
+            try:
+                pic_p = self.doc.add_paragraph()
+                pic_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                pic_p.add_run().add_picture(io.BytesIO(self.charts[key]), width=Cm(width_cm))
+                pic_p.paragraph_format.space_after = Pt(8)
+            except Exception:
+                pass
+
+
+def _report(request: ESGRequest, scores: ESGScores, content: dict, charts: dict | None) -> _Report:
+    from content_generator import (pillar_headline, section_headlines, risks_opportunities,
+                                   compliance_assessment, enriched_recommendations, roadmap_12m)
+    colors = docx_hex(request.aesthetic_theme)
+    if getattr(request, "custom_colors", None):
+        from branding import brand_docx_hex
+        colors = brand_docx_hex(colors, request.custom_colors)
+    style = docx_style(request.aesthetic_theme)
+    TR = L(request.language)
+    ref = TR["cover_refs_vsme"] if getattr(request, "reporting_framework", "csrd") == "vsme" \
+        else TR["cover_refs"]
+
     doc = Document()
     normal = cast(ParagraphStyle, doc.styles['Normal'])
     normal.font.name = style["font"]
     normal.font.size = Pt(10.5)
-
     # Page margins
     for section in doc.sections:
         section.top_margin = Cm(2)
@@ -229,7 +261,36 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         section.left_margin = Cm(2.5)
         section.right_margin = Cm(2.5)
 
-    # ── Cover ─────────────────────────────────────────────────────────────
+    return _Report(
+        doc=doc, request=request, scores=scores, content=content, colors=colors, style=style,
+        TR=TR, ref=ref, ro=risks_opportunities(request, scores),
+        gaps=compliance_assessment(request, scores),
+        recs=enriched_recommendations(request, scores) if request.include_recommendations else [],
+        roadmap=roadmap_12m(request, scores), headlines=pillar_headline(request, scores),
+        section_heads=section_headlines(request, scores),
+        notes=getattr(request, "consultant_notes", None) or {}, charts=charts or {})
+
+
+def _cover(r: _Report, logo_bytes: bytes | None, cover_art: bytes | None) -> None:
+    """Couverture : identité, illustration, scores, note ; puis saut de page."""
+    _cover_identity(r, logo_bytes)
+    _cover_meta(r)
+    # Illustration de couverture (générée localement)
+    if cover_art:
+        try:
+            art_p = r.doc.add_paragraph()
+            art_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            art_p.add_run().add_picture(io.BytesIO(cover_art), width=Cm(16))
+            art_p.paragraph_format.space_after = Pt(12)
+        except Exception:
+            pass
+    _cover_scores(r)
+    r.doc.add_page_break()
+
+
+def _cover_identity(r: _Report, logo_bytes: bytes | None) -> None:
+    """Logo et nom de l'entreprise, filet d'accent."""
+    doc, request, colors, style = r.doc, r.request, r.colors, r.style
     # Logo entreprise
     if logo_bytes:
         try:
@@ -256,6 +317,10 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
 
     add_hr(doc, colors["accent"])
 
+
+def _cover_meta(r: _Report) -> None:
+    """Type de rapport, exercice / secteur / pays, présentateur."""
+    doc, request, colors, TR = r.doc, r.request, r.colors, r.TR
     type_map = {
         "white_paper": TR["rep_white_paper"],
         "full_report": TR["rep_full_report"],
@@ -287,17 +352,10 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         pres_run.font.color.rgb = hex_to_rgb(colors["secondary"])
         pres_p.paragraph_format.space_after = Pt(12)
 
-    # Illustration de couverture (générée localement)
-    if cover_art:
-        try:
-            art_p = doc.add_paragraph()
-            art_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            art_p.add_run().add_picture(io.BytesIO(cover_art), width=Cm(16))
-            art_p.paragraph_format.space_after = Pt(12)
-        except Exception:
-            pass
 
-    # Score summary table
+def _cover_scores(r: _Report) -> None:
+    """Tableau des trois piliers + score global, puis la note lettrée."""
+    doc, scores, colors, TR = r.doc, r.scores, r.colors, r.TR
     summary_table = doc.add_table(rows=2, cols=4)
     summary_table.style = 'Table Grid'
     headers = [TR["chart_env"], TR["chart_soc"], TR["chart_gov"], TR["score_global_short"]]
@@ -309,10 +367,10 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         hdr_cell = summary_table.rows[0].cells[i]
         shade_cell(hdr_cell, colors.get("light", "F5F5F5"))
         hdr_cell.paragraphs[0].clear()
-        r = hdr_cell.paragraphs[0].add_run(hdr)
-        r.font.size = Pt(9)
-        r.bold = True
-        r.font.color.rgb = hex_to_rgb(colors["secondary"])
+        run = hdr_cell.paragraphs[0].add_run(hdr)
+        run.font.size = Pt(9)
+        run.bold = True
+        run.font.color.rgb = hex_to_rgb(colors["secondary"])
         hdr_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         val_cell = summary_table.rows[1].cells[i]
@@ -333,228 +391,256 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     rating_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     rating_p.paragraph_format.space_after = Pt(24)
 
-    doc.add_page_break()
 
-    # ── Mot de la direction (citation) ────────────────────────────────────
-    if request.company.ceo_quote:
-        kp = doc.add_paragraph()
-        kr = kp.add_run(TR["quote_kicker"])
-        kr.bold = True; kr.font.size = Pt(9)
-        kr.font.color.rgb = hex_to_rgb(colors["accent"])
-        _q = request.company.ceo_quote.strip().strip('"“”')
-        qp = doc.add_paragraph()
-        qr = qp.add_run(f"« {_q} »" if request.language != "en" else f"“{_q}”")
-        qr.italic = True; qr.font.size = Pt(13)
-        qr.font.color.rgb = hex_to_rgb(colors["primary"])
-        shade_paragraph(qp, colors.get("light", "F0F2F5"))
-        qp.paragraph_format.space_after = Pt(4)
-        if request.company.presenter_name:
-            ap = doc.add_paragraph()
-            attrib = request.company.presenter_name
-            if request.company.presenter_title:
-                attrib += f" — {request.company.presenter_title}"
-            ar = ap.add_run(attrib)
-            ar.bold = True; ar.font.size = Pt(9.5)
-            ar.font.color.rgb = hex_to_rgb("7F8C8D")
-            ap.paragraph_format.space_after = Pt(18)
+def _ceo_quote(r: _Report) -> None:
+    """Mot de la direction (citation), s'il a été saisi."""
+    request, colors, doc = r.request, r.colors, r.doc
+    if not request.company.ceo_quote:
+        return
+    kp = doc.add_paragraph()
+    kr = kp.add_run(r.TR["quote_kicker"])
+    kr.bold = True; kr.font.size = Pt(9)
+    kr.font.color.rgb = hex_to_rgb(colors["accent"])
+    quote = request.company.ceo_quote.strip().strip('"“”')
+    qp = doc.add_paragraph()
+    qr = qp.add_run(f"« {quote} »" if request.language != "en" else f"“{quote}”")
+    qr.italic = True; qr.font.size = Pt(13)
+    qr.font.color.rgb = hex_to_rgb(colors["primary"])
+    shade_paragraph(qp, r.light)
+    qp.paragraph_format.space_after = Pt(4)
+    if request.company.presenter_name:
+        ap = doc.add_paragraph()
+        attrib = request.company.presenter_name
+        if request.company.presenter_title:
+            attrib += f" — {request.company.presenter_title}"
+        ar = ap.add_run(attrib)
+        ar.bold = True; ar.font.size = Pt(9.5)
+        ar.font.color.rgb = hex_to_rgb("7F8C8D")
+        ap.paragraph_format.space_after = Pt(18)
 
-    # ── L'entreprise en bref ──────────────────────────────────────────────
-    add_heading(doc, TR["ed_company"], 1, colors["primary"], style=style)
-    add_hr(doc, colors["secondary"])
-    for para in NR.company_paragraphs(request, ref):
-        add_text(para)
-    _inits = NR.initiatives(request)
-    if _inits:
-        add_heading(doc, TR["ed_initiatives"], 2, colors["secondary"], style=style)
-        add_bullet_list(doc, _inits, "•", colors["accent"])
 
-    # ── 1. Synthèse Exécutive ─────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s1"], 1, colors["primary"], style=style)
-    add_hr(doc, colors["secondary"])
-    exec_text = content.get("executive_summary",
+def _company(r: _Report) -> None:
+    """L'entreprise en bref + initiatives déclarées."""
+    import narrative as NR
+    r.heading(r.TR["ed_company"], 1, r.colors["primary"])
+    add_hr(r.doc, r.colors["secondary"])
+    for para in NR.company_paragraphs(r.request, r.ref):
+        r.text(para)
+    inits = NR.initiatives(r.request)
+    if inits:
+        r.heading(r.TR["ed_initiatives"], 2, r.colors["secondary"])
+        add_bullet_list(r.doc, inits, "•", r.colors["accent"])
+
+
+def _executive(r: _Report) -> None:
+    """1. Synthèse exécutive + analyse globale du consultant."""
+    request, scores = r.request, r.scores
+    r.heading(r.TR["pdf_s1"], 1, r.colors["primary"])
+    add_hr(r.doc, r.colors["secondary"])
+    exec_text = r.content.get("executive_summary",
         f"{request.company.name} présente son rapport ESG {request.company.reporting_year} "
         f"avec un score global de {scores.total_esg_score}/100 (note {scores.rating}).")
-    doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
-    _notes = getattr(request, "consultant_notes", None) or {}
-    if _notes.get("global"):
-        add_consultant_note(doc, _notes["global"], colors, TR)
+    r.doc.add_paragraph(exec_text).paragraph_format.space_after = Pt(12)
+    if r.notes.get("global"):
+        add_consultant_note(r.doc, r.notes["global"], r.colors, r.TR)
 
-    # ── 2. Environnement ──────────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s2"], 1, colors["env"], style=style)
-    add_hr(doc, colors["env"])
-    add_conclusion(_hl["env"], colors["env"])
-    if _notes.get("env"):
-        add_consultant_note(doc, _notes["env"], colors, TR)
-    add_score_block(doc, TR["score_env_label"], scores.environmental_score, colors["env"])
 
-    env_text = content.get("environmental", "Analyse des données environnementales.")
-    doc.add_paragraph(env_text).paragraph_format.space_after = Pt(8)
+def _env_kpis(env, k: dict) -> list:
+    kpis = []
+    if env.co2_emissions_tonnes is not None: kpis.append((k["co2"], f"{env.co2_emissions_tonnes:,.0f}"))
+    if env.renewable_energy_percent is not None: kpis.append((k["renewable"], f"{env.renewable_energy_percent:.1f}%"))
+    if env.energy_consumption_mwh is not None: kpis.append((k["energy"], f"{env.energy_consumption_mwh:,.0f}"))
+    if env.water_consumption_m3 is not None: kpis.append((k["water"], f"{env.water_consumption_m3:,.0f}"))
+    if env.waste_recycled_percent is not None: kpis.append((k["recycling"], f"{env.waste_recycled_percent:.1f}%"))
+    if env.scope1_emissions is not None: kpis.append((k["s1"], f"{env.scope1_emissions:,.0f}"))
+    if env.scope2_emissions is not None: kpis.append((k["s2"], f"{env.scope2_emissions:,.0f}"))
+    if env.scope3_emissions is not None: kpis.append((k["s3"], f"{env.scope3_emissions:,.0f}"))
+    return kpis
 
-    env = request.environmental
-    env_kpis = []
-    if env.co2_emissions_tonnes is not None: env_kpis.append((TR["kpit"]["co2"], f"{env.co2_emissions_tonnes:,.0f}"))
-    if env.renewable_energy_percent is not None: env_kpis.append((TR["kpit"]["renewable"], f"{env.renewable_energy_percent:.1f}%"))
-    if env.energy_consumption_mwh is not None: env_kpis.append((TR["kpit"]["energy"], f"{env.energy_consumption_mwh:,.0f}"))
-    if env.water_consumption_m3 is not None: env_kpis.append((TR["kpit"]["water"], f"{env.water_consumption_m3:,.0f}"))
-    if env.waste_recycled_percent is not None: env_kpis.append((TR["kpit"]["recycling"], f"{env.waste_recycled_percent:.1f}%"))
-    if env.scope1_emissions is not None: env_kpis.append((TR["kpit"]["s1"], f"{env.scope1_emissions:,.0f}"))
-    if env.scope2_emissions is not None: env_kpis.append((TR["kpit"]["s2"], f"{env.scope2_emissions:,.0f}"))
-    if env.scope3_emissions is not None: env_kpis.append((TR["kpit"]["s3"], f"{env.scope3_emissions:,.0f}"))
-    add_kpi_table(doc, env_kpis, colors)
-    add_reading("env", colors["env"])
-    _ghg = NR.ghg_paragraph(request)
-    if _ghg:
-        add_heading(doc, TR["ed_ghg_table"], 2, colors["env"], style=style)
-        add_text(_ghg)
 
-    # ── 3. Social ──────────────────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s3"], 1, colors["social"], style=style)
-    add_hr(doc, colors["social"])
-    add_conclusion(_hl["social"], colors["social"])
-    if _notes.get("social"):
-        add_consultant_note(doc, _notes["social"], colors, TR)
-    add_score_block(doc, TR["score_soc_label"], scores.social_score, colors["social"])
+def _social_kpis(soc, k: dict) -> list:
+    kpis = []
+    if soc.total_employees is not None: kpis.append((k["employees"], f"{soc.total_employees:,}"))
+    if soc.female_employees_percent is not None: kpis.append((k["women"], f"{soc.female_employees_percent:.1f}%"))
+    if soc.employee_turnover_percent is not None: kpis.append((k["turnover"], f"{soc.employee_turnover_percent:.1f}%"))
+    if soc.training_hours_per_employee is not None: kpis.append((k["training"], f"{soc.training_hours_per_employee:.0f}"))
+    if soc.accident_frequency_rate is not None: kpis.append((k["accident"], f"{soc.accident_frequency_rate:.2f}"))
+    if soc.customer_satisfaction_score is not None: kpis.append((k["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
+    return kpis
 
-    soc_text = content.get("social", "Analyse des données sociales.")
-    doc.add_paragraph(soc_text).paragraph_format.space_after = Pt(8)
 
-    soc = request.social
-    soc_kpis = []
-    if soc.total_employees is not None: soc_kpis.append((TR["kpit"]["employees"], f"{soc.total_employees:,}"))
-    if soc.female_employees_percent is not None: soc_kpis.append((TR["kpit"]["women"], f"{soc.female_employees_percent:.1f}%"))
-    if soc.employee_turnover_percent is not None: soc_kpis.append((TR["kpit"]["turnover"], f"{soc.employee_turnover_percent:.1f}%"))
-    if soc.training_hours_per_employee is not None: soc_kpis.append((TR["kpit"]["training"], f"{soc.training_hours_per_employee:.0f}"))
-    if soc.accident_frequency_rate is not None: soc_kpis.append((TR["kpit"]["accident"], f"{soc.accident_frequency_rate:.2f}"))
-    if soc.customer_satisfaction_score is not None: soc_kpis.append((TR["kpit"]["satisfaction"], f"{soc.customer_satisfaction_score:.1f}"))
-    add_kpi_table(doc, soc_kpis, colors)
-    add_reading("social", colors["social"])
-
-    # ── 4. Gouvernance ────────────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s4"], 1, colors["gov"], style=style)
-    add_hr(doc, colors["gov"])
-    add_conclusion(_hl["gov"], colors["gov"])
-    if _notes.get("gov"):
-        add_consultant_note(doc, _notes["gov"], colors, TR)
-    add_score_block(doc, TR["score_gov_label"], scores.governance_score, colors["gov"])
-
-    gov_text = content.get("governance", "Analyse des données de gouvernance.")
-    doc.add_paragraph(gov_text).paragraph_format.space_after = Pt(8)
-
-    gov = request.governance
-    gov_kpis = []
-    if gov.board_members is not None: gov_kpis.append((TR["kpit"]["board"], str(gov.board_members)))
-    if gov.female_board_percent is not None: gov_kpis.append((TR["kpit"]["women_board"], f"{gov.female_board_percent:.1f}%"))
-    if gov.independent_board_percent is not None: gov_kpis.append((TR["kpit"]["independent"], f"{gov.independent_board_percent:.1f}%"))
-    if gov.csr_budget_eur is not None: gov_kpis.append((TR["kpit"]["csr"], f"{gov.csr_budget_eur:,.0f}"))
+def _gov_kpis(gov, k: dict) -> list:
+    kpis = []
+    if gov.board_members is not None: kpis.append((k["board"], str(gov.board_members)))
+    if gov.female_board_percent is not None: kpis.append((k["women_board"], f"{gov.female_board_percent:.1f}%"))
+    if gov.independent_board_percent is not None: kpis.append((k["independent"], f"{gov.independent_board_percent:.1f}%"))
+    if gov.csr_budget_eur is not None: kpis.append((k["csr"], f"{gov.csr_budget_eur:,.0f}"))
     if gov.esg_audit_conducted is not None:
-        gov_kpis.append((TR["kpit"]["audit"], TR["kpit"]["yes"] if gov.esg_audit_conducted else TR["kpit"]["no"]))
+        kpis.append((k["audit"], k["yes"] if gov.esg_audit_conducted else k["no"]))
     if gov.sustainability_committee is not None:
-        gov_kpis.append((TR["kpit"]["committee"], TR["kpit"]["yes"] if gov.sustainability_committee else TR["kpit"]["no"]))
-    add_kpi_table(doc, gov_kpis, colors)
-    add_reading("gov", colors["gov"])
+        kpis.append((k["committee"], k["yes"] if gov.sustainability_committee else k["no"]))
+    return kpis
 
-    doc.add_page_break()
 
-    # ── 5. Analyses de Durabilité (CSRD / ESRS) ───────────────────────────
-    charts = charts or {}
+# Pilier -> (titre de section, libellé du score, attribut du score, texte par
+# défaut si le contenu manque, extracteur des indicateurs)
+_PILLAR_SECTIONS = {
+    "env": ("pdf_s2", "score_env_label", "environmental_score",
+            "Analyse des données environnementales.", _env_kpis),
+    "social": ("pdf_s3", "score_soc_label", "social_score",
+               "Analyse des données sociales.", _social_kpis),
+    "gov": ("pdf_s4", "score_gov_label", "governance_score",
+            "Analyse des données de gouvernance.", _gov_kpis),
+}
+_CONTENT_KEY = {"env": "environmental", "social": "social", "gov": "governance"}
 
-    def _docx_img(key, width_cm):
-        if key in charts:
-            try:
-                pic_p = doc.add_paragraph()
-                pic_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                pic_p.add_run().add_picture(io.BytesIO(charts[key]), width=Cm(width_cm))
-                pic_p.paragraph_format.space_after = Pt(8)
-            except Exception:
-                pass
 
-    add_heading(doc, TR["pdf_s5"], 1, colors["primary"], style=style)
-    add_hr(doc, colors["secondary"])
+def _pillar(r: _Report, pillar: str) -> None:
+    """Section d'un pilier : conclusion, note du consultant, score, texte,
+    tableau d'indicateurs, lecture ; bilan GES pour l'environnement."""
+    import narrative as NR
+    title_key, score_label, score_attr, fallback, kpis_of = _PILLAR_SECTIONS[pillar]
+    color = r.colors[pillar]
+    r.heading(r.TR[title_key], 1, color)
+    add_hr(r.doc, color)
+    r.conclusion(r.headlines[pillar], color)
+    if r.notes.get(pillar):
+        add_consultant_note(r.doc, r.notes[pillar], r.colors, r.TR)
+    add_score_block(r.doc, r.TR[score_label], getattr(r.scores, score_attr), color)
 
-    add_heading(doc, TR["sub_materiality"], 2, colors["secondary"], style=style)
+    r.doc.add_paragraph(r.content.get(_CONTENT_KEY[pillar], fallback)).paragraph_format.space_after = Pt(8)
+
+    data = {"env": r.request.environmental, "social": r.request.social,
+            "gov": r.request.governance}[pillar]
+    add_kpi_table(r.doc, kpis_of(data, r.TR["kpit"]), r.colors)
+    r.reading(pillar, color)
+    if pillar == "env":
+        ghg = NR.ghg_paragraph(r.request)
+        if ghg:
+            r.heading(r.TR["ed_ghg_table"], 2, color)
+            r.text(ghg)
+
+
+def _analyses(r: _Report) -> None:
+    """5. Analyses de durabilité : priorisation, objectifs, taxonomie, climat."""
+    content, colors, TR = r.content, r.colors, r.TR
+    r.heading(TR["pdf_s5"], 1, colors["primary"])
+    add_hr(r.doc, colors["secondary"])
+
+    r.heading(TR["sub_materiality"], 2, colors["secondary"])
     if content.get("materiality"):
-        doc.add_paragraph(content["materiality"]).paragraph_format.space_after = Pt(6)
-    _docx_img("materiality", 12)
+        r.doc.add_paragraph(content["materiality"]).paragraph_format.space_after = Pt(6)
+    r.image("materiality", 12)
 
-    add_heading(doc, TR["sub_targets"], 2, colors["secondary"], style=style)
+    r.heading(TR["sub_targets"], 2, colors["secondary"])
     if content.get("targets"):
-        doc.add_paragraph(content["targets"]).paragraph_format.space_after = Pt(6)
+        r.doc.add_paragraph(content["targets"]).paragraph_format.space_after = Pt(6)
     # (supprimes) graphiques "targets" et "carbon_trajectory" — voir esg_advanced.py
 
     if content.get("taxonomy"):
-        add_heading(doc, TR["sub_taxonomy"], 2, colors["secondary"], style=style)
-        doc.add_paragraph(content["taxonomy"]).paragraph_format.space_after = Pt(6)
-        _docx_img("taxonomy", 14)
+        r.heading(TR["sub_taxonomy"], 2, colors["secondary"])
+        r.doc.add_paragraph(content["taxonomy"]).paragraph_format.space_after = Pt(6)
+        r.image("taxonomy", 14)
 
-    add_heading(doc, TR["sub_climate"], 2, colors["secondary"], style=style)
+    r.heading(TR["sub_climate"], 2, colors["secondary"])
     if content.get("climate_risk"):
-        doc.add_paragraph(content["climate_risk"]).paragraph_format.space_after = Pt(8)
+        r.doc.add_paragraph(content["climate_risk"]).paragraph_format.space_after = Pt(8)
 
-    doc.add_page_break()
+    r.doc.add_page_break()
 
-    # ── Chapitre 01 — Diagnostic ──────────────────────────────────────────
-    add_heading(doc, f'01 — {TR["div1_title"]}', 1, colors["accent"], style=style)
-    add_text(TR["div1_sub"], size=12, italic=True, after=4)
-    add_text(NR.act1_intro(request, scores, _gaps_all, _ro_all["risks"]),
-             shade=colors.get("light", "F0F2F5"), after=14)
 
-    # ── 6. Analyse Stratégique ────────────────────────────────────────────
-    add_heading(doc, TR["pdf_s6"], 1, colors["primary"], style=style)
+def _act1(r: _Report) -> None:
+    """Ouverture du chapitre 01 — Diagnostic."""
+    import narrative as NR
+    TR = r.TR
+    r.heading(f'01 — {TR["div1_title"]}', 1, r.colors["accent"])
+    r.text(TR["div1_sub"], size=12, italic=True, after=4)
+    r.text(NR.act1_intro(r.request, r.scores, r.gaps, r.ro["risks"]), shade=r.light, after=14)
+
+
+def _strategic(r: _Report) -> None:
+    """6. Analyse stratégique : points forts / axes d'amélioration."""
+    TR, colors = r.TR, r.colors
+    r.heading(TR["pdf_s6"], 1, colors["primary"])
+    add_hr(r.doc, colors["accent"])
+    r.conclusion(r.section_heads["strategic"], colors["accent"])
+
+    r.heading(TR["strengths"], 2, colors["env"])
+    add_bullet_list(r.doc, r.scores.strengths, "✅", colors["env"])
+
+    r.heading(TR["weaknesses"], 2, "E74C3C")
+    add_bullet_list(r.doc, r.scores.weaknesses, "⚠️", "E74C3C")
+
+
+def _recommendations(r: _Report) -> None:
+    """Chapitre 02 — Plan d'action : recommandations détaillées."""
+    if not (r.request.include_recommendations and r.scores.recommendations):
+        return
+    import narrative as NR
+    TR, colors, doc = r.TR, r.colors, r.doc
+    r.heading(f'02 — {TR["div2_title"]}', 1, colors["accent"])
+    r.text(TR["div2_sub"], size=12, italic=True, after=4)
+    r.text(NR.act2_intro(r.request, r.recs, r.roadmap), shade=r.light, after=14)
+    r.heading(TR["pdf_s7"], 1, colors["primary"])
     add_hr(doc, colors["accent"])
-    add_conclusion(_shl["strategic"], colors["accent"])
+    r.text(NR.recs_intro(r.request, r.recs))
+    for i, rec in enumerate(r.recs, 1):
+        p = doc.add_paragraph()
+        num = p.add_run(f"{i}.  ")
+        num.bold = True
+        num.font.color.rgb = hex_to_rgb(colors["accent"])
+        tr_ = p.add_run(rec["title"]); tr_.bold = True; tr_.font.size = Pt(10.5)
+        p.paragraph_format.space_after = Pt(1)
+        dp = doc.add_paragraph()
+        dp.paragraph_format.left_indent = Cm(0.7)
+        dp.paragraph_format.space_after = Pt(6)
+        dr = dp.add_run(rec["detail"]); dr.font.size = Pt(9.5)
+        meta = dp.add_run(f'\n{TR["objective_col"]} : {rec["objective"]}  ·  '
+                          f'{TR["owner_col"]} : {rec["owner"]}  ·  {rec["horizon"]}')
+        meta.font.size = Pt(8.5)
+        meta.font.color.rgb = hex_to_rgb("7F8C8D")
 
-    add_heading(doc, TR["strengths"], 2, colors["env"], style=style)
-    add_bullet_list(doc, scores.strengths, "✅", colors["env"])
 
-    add_heading(doc, TR["weaknesses"], 2, "E74C3C", style=style)
-    add_bullet_list(doc, scores.weaknesses, "⚠️", "E74C3C")
+def _positioning(r: _Report) -> None:
+    """Diagnostic stratégique : positionnement interne des piliers + maturité.
+    Aucune référence externe (cf. report_generator.py)."""
+    import narrative as NR
+    from content_generator import benchmark_verdict, maturity_text
+    bv = benchmark_verdict(r.request, r.scores)
+    mt = maturity_text(r.request, r.scores)
+    TR, colors, doc, scores = r.TR, r.colors, r.doc, r.scores
 
-    if request.include_recommendations and scores.recommendations:
-        add_heading(doc, f'02 — {TR["div2_title"]}', 1, colors["accent"], style=style)
-        add_text(TR["div2_sub"], size=12, italic=True, after=4)
-        add_text(NR.act2_intro(request, _recs_all, _rm_all),
-                 shade=colors.get("light", "F0F2F5"), after=14)
-        add_heading(doc, TR["pdf_s7"], 1, colors["primary"], style=style)
-        add_hr(doc, colors["accent"])
-        add_text(NR.recs_intro(request, _recs_all))
-        for i, rec in enumerate(_recs_all, 1):
-            p = doc.add_paragraph()
-            num = p.add_run(f"{i}.  ")
-            num.bold = True
-            num.font.color.rgb = hex_to_rgb(colors["accent"])
-            tr_ = p.add_run(rec["title"]); tr_.bold = True; tr_.font.size = Pt(10.5)
-            p.paragraph_format.space_after = Pt(1)
-            d = doc.add_paragraph()
-            d.paragraph_format.left_indent = Cm(0.7)
-            d.paragraph_format.space_after = Pt(6)
-            dr = d.add_run(rec["detail"]); dr.font.size = Pt(9.5)
-            meta = d.add_run(f'\n{TR["objective_col"]} : {rec["objective"]}  ·  '
-                             f'{TR["owner_col"]} : {rec["owner"]}  ·  {rec["horizon"]}')
-            meta.font.size = Pt(8.5)
-            meta.font.color.rgb = hex_to_rgb("7F8C8D")
-
-    # ── Diagnostic stratégique : positionnement interne + maturité + R&O ──
-    from content_generator import benchmark_verdict, maturity_text, risks_opportunities, roadmap_12m
-    _bv = benchmark_verdict(request, scores)
-    _mt = maturity_text(request, scores)
-    _ro = risks_opportunities(request, scores)
-
-    add_heading(doc, TR["pdf_diag"], 1, colors["primary"], style=style)
+    r.heading(TR["pdf_diag"], 1, colors["primary"])
     add_hr(doc, colors["accent"])
     p = doc.add_paragraph()
-    r_ = p.add_run(_bv["title"]); r_.bold = True; r_.font.size = Pt(12)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
+    r_ = p.add_run(bv["title"]); r_.bold = True; r_.font.size = Pt(12)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
     r_.font.color.rgb = hex_to_rgb(colors["secondary"])
-    add_text(NR.bench_intro(request), after=4)
+    r.text(NR.bench_intro(r.request), after=4)
     cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
     cap.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
 
-    # Positionnement INTERNE (cf. report_generator.py) : aucune référence externe.
-    _pil_lbl = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
+    _positioning_table(r, bv["rows"])  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
+
+    ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
+    ins.add_run(bv["insight"]).font.size = Pt(10)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
+    shade_paragraph(ins, r.light)
+
+    mat_lbl = TR.get("mat_" + mt.get("key", "structured"), "")
+    mp = doc.add_paragraph(); mp.paragraph_format.space_before = Pt(8)
+    mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {mat_lbl} ({mt["stage"]}/5)')
+    mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
+    doc.add_paragraph(mt["next_hint"])
+
+
+def _positioning_table(r: _Report, bench_rows: list) -> None:
+    """Piliers classés : score, écart au meilleur pilier, lecture ; puis le global."""
+    TR, colors, doc, scores = r.TR, r.colors, r.doc, r.scores
+    pil_lbl = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
     rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_delta_col"], TR["bench_reading_col"])]
-    for row in _bv["rows"]:  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
-        d = row["delta"]
-        rows.append((_pil_lbl[row["key"]], f"{row['score']:.0f}",
-                     "—" if d == 0 else f"{d:.0f} pts", row["reading"]))
+    for row in bench_rows:
+        delta = row["delta"]
+        rows.append((pil_lbl[row["key"]], f"{row['score']:.0f}",
+                     "—" if delta == 0 else f"{delta:.0f} pts", row["reading"]))
     rows.append((TR.get("score_global_short", "Global"), f"{scores.total_esg_score:.0f}",
                  "", scores.rating))
     tbl = doc.add_table(rows=len(rows), cols=4)
@@ -574,31 +660,22 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                 run.bold = True
                 run.font.color.rgb = hex_to_rgb("2E7D32" if not val.startswith("-") else "E74C3C")
 
-    ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
-    ins.add_run(_bv["insight"]).font.size = Pt(10)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
-    shade_paragraph(ins, colors.get("light", "F0F2F5"))
 
-    _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")
-    mp = doc.add_paragraph(); mp.paragraph_format.space_before = Pt(8)
-    mr = mp.add_run(f'{TR["pdf_maturity_sub"]} : {_mat_lbl} ({_mt["stage"]}/5)')
-    mr.bold = True; mr.font.color.rgb = hex_to_rgb(colors["secondary"]); mr.font.size = Pt(11)
-    doc.add_paragraph(_mt["next_hint"])
-
-    # ── Couverture des exigences de reporting ─────────────────────────────
-    from content_generator import compliance_assessment
-    _ga = compliance_assessment(request, scores)
-    add_heading(doc, TR["gap_title"], 2, colors["secondary"], style=style)
-    add_text(NR.gaps_intro(request, _ga, ref))
-    # Conversion depuis gap_status (source unique) vers l'hexa sans « # ».
+def _coverage(r: _Report) -> None:
+    """Couverture des exigences de reporting (statuts : gap_status, source unique)."""
+    import narrative as NR
     import gap_status as GS
-    gtbl = doc.add_table(rows=len(_ga) + 1, cols=4)
+    TR, colors, doc = r.TR, r.colors, r.doc
+    r.heading(TR["gap_title"], 2, colors["secondary"])
+    r.text(NR.gaps_intro(r.request, r.gaps, r.ref))
+    gtbl = doc.add_table(rows=len(r.gaps) + 1, cols=4)
     gtbl.style = "Table Grid"
     for ci, h in enumerate((TR["gap_req"], TR["gap_ref"], TR["gap_status"], TR["gap_note"])):
         c = gtbl.rows[0].cells[ci]
         run = c.paragraphs[0].add_run(h); run.bold = True; run.font.size = Pt(9)
         run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         shade_cell(c, colors["primary"])
-    for ri, g in enumerate(_ga, 1):
+    for ri, g in enumerate(r.gaps, 1):
         vals = (g["req"], g["ref"], GS.libelle(TR, g["status"], g["nature"]), g["note"])
         for ci, v in enumerate(vals):
             run = gtbl.rows[ri].cells[ci].paragraphs[0].add_run(v)
@@ -610,86 +687,130 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                 run.font.color.rgb = hex_to_rgb(GS.hex_sans_diese(g["status"], g["nature"]))
     doc.add_paragraph()
 
-    add_heading(doc, TR["risks_head"], 2, "E74C3C", style=style)
-    add_text(NR.risks_intro(request, _ro["risks"]))
-    add_bullet_list(doc, [
+
+def _risks(r: _Report) -> None:
+    """Risques cotés (impact × probabilité, P1-P3) et opportunités."""
+    import narrative as NR
+    TR = r.TR
+    r.heading(TR["risks_head"], 2, "E74C3C")
+    r.text(NR.risks_intro(r.request, r.ro["risks"]))
+    add_bullet_list(r.doc, [
         f'[{i.get("priority", "P2")}] {i["tag"]} — {i["text"]} '
         f'({TR["risk_impact"].lower()} : {i.get("impact", "—").lower()} · '
         f'{TR["risk_lik"].lower()} : {i.get("likelihood", "—").lower()})'
-        for i in _ro["risks"]], "▪", "E74C3C")
-    add_heading(doc, TR["opps_head"], 2, colors["env"], style=style)
-    add_bullet_list(doc, [f'{i["tag"]} — {i["text"]}' for i in _ro["opportunities"]], "▪", colors["env"])
+        for i in r.ro["risks"]], "▪", "E74C3C")
+    r.heading(TR["opps_head"], 2, r.colors["env"])
+    add_bullet_list(r.doc, [f'{i["tag"]} — {i["text"]}' for i in r.ro["opportunities"]], "▪", r.colors["env"])
 
-    _rm = roadmap_12m(request, scores)
-    if any(ph["actions"] for ph in _rm):
-        add_heading(doc, TR["roadmap_title"], 2, colors["accent"], style=style)
-        add_text(NR.roadmap_intro(request, _rm))
-        for ph in _rm:
-            pp = doc.add_paragraph()
-            hr = pp.add_run(f'{ph["label"]} — {ph["sub"]}')
-            hr.bold = True; hr.font.color.rgb = hex_to_rgb(colors["primary"]); hr.font.size = Pt(10.5)
-            for act in ph["actions"][:4]:
-                ap = doc.add_paragraph(style="List Bullet")
-                ar = ap.add_run(act["title"]); ar.font.size = Pt(10)
-                if act["quick_win"]:
-                    qw = ap.add_run(f'  [{TR["quick_win"]}]')
-                    qw.bold = True; qw.font.size = Pt(8)
-                    qw.font.color.rgb = hex_to_rgb(colors["accent"])
 
-    # ── 7. Référentiels ───────────────────────────────────────────────────
-    # (supprimee) Section « Cadres de Référence & Alignement ODD » — voir la
-    # note dans report_generator.py.
+def _roadmap(r: _Report) -> None:
+    """Feuille de route 12 mois, si au moins une action est planifiée."""
+    if not any(ph["actions"] for ph in r.roadmap):
+        return
+    import narrative as NR
+    TR, colors, doc = r.TR, r.colors, r.doc
+    r.heading(TR["roadmap_title"], 2, colors["accent"])
+    r.text(NR.roadmap_intro(r.request, r.roadmap))
+    for ph in r.roadmap:
+        pp = doc.add_paragraph()
+        hr = pp.add_run(f'{ph["label"]} — {ph["sub"]}')
+        hr.bold = True; hr.font.color.rgb = hex_to_rgb(colors["primary"]); hr.font.size = Pt(10.5)
+        for act in ph["actions"][:4]:
+            ap = doc.add_paragraph(style="List Bullet")
+            ar = ap.add_run(act["title"]); ar.font.size = Pt(10)
+            if act["quick_win"]:
+                qw = ap.add_run(f'  [{TR["quick_win"]}]')
+                qw.bold = True; qw.font.size = Pt(8)
+                qw.font.color.rgb = hex_to_rgb(colors["accent"])
 
-    # ── Conclusion ────────────────────────────────────────────────────────
+
+# (supprimee) Section « 7. Cadres de Référence & Alignement ODD » — voir la
+# note dans report_generator.py.
+
+
+def _closing(r: _Report, cover_art: bytes | None) -> None:
+    """Conclusion, note méthodologique (et mention des photos d'illustration)."""
+    TR, colors, doc, request = r.TR, r.colors, r.doc, r.request
     doc.add_page_break()
-    add_heading(doc, TR["pdf_concl"], 1, colors["primary"], style=style)
+    r.heading(TR["pdf_concl"], 1, colors["primary"])
     add_hr(doc, colors["primary"])
-    conclusion = content.get("conclusion",
+    conclusion = r.content.get("conclusion",
         f"{request.company.name} réaffirme son engagement vers un modèle d'affaires durable. "
         "Les axes d'amélioration identifiés feront l'objet de plans d'action concrets."
     )
     doc.add_paragraph(conclusion)
 
-    # ── Note méthodologique ───────────────────────────────────────────────
-    if content.get("methodology"):
-        add_heading(doc, TR["pdf_methodo"], 2, colors["secondary"], style=style)
+    if r.content.get("methodology"):
+        r.heading(TR["pdf_methodo"], 2, colors["secondary"])
         mp = doc.add_paragraph()
-        mr = mp.add_run(content["methodology"])
+        mr = mp.add_run(r.content["methodology"])
         mr.font.size = Pt(8.5)
         mr.font.color.rgb = hex_to_rgb("5A6572")
-        shade_paragraph(mp, colors.get("light", "F0F2F5"))
+        shade_paragraph(mp, r.light)
     # Photo de couverture issue de la banque d'illustration : mention
     if cover_art:
         from pdf_kit import Kit
         if Kit(request).uses_bank(("cover",)):
-            add_text(TR["ed_photo_note"], size=8, italic=True)
+            r.text(TR["ed_photo_note"], size=8, italic=True)
 
-    # ── Glossaire ─────────────────────────────────────────────────────────
+
+def _glossary(r: _Report) -> None:
+    """Glossaire filtré sur les termes que le rapport emploie."""
     from glossary import glossary_entries
-    _gloss = glossary_entries(request, scores)
-    if _gloss:
-        add_heading(doc, TR["pdf_glossary"], 2, colors["secondary"], style=style)
-        gt = doc.add_table(rows=len(_gloss), cols=2)
-        gt.style = "Table Grid"
-        for ri, e in enumerate(_gloss):
-            tr_ = gt.rows[ri].cells[0].paragraphs[0].add_run(e["term"])
-            tr_.bold = True
-            tr_.font.size = Pt(8.5)
-            tr_.font.color.rgb = hex_to_rgb(colors["primary"])
-            dr = gt.rows[ri].cells[1].paragraphs[0].add_run(e["definition"])
-            dr.font.size = Pt(8.5)
+    entries = glossary_entries(r.request, r.scores)
+    if not entries:
+        return
+    r.heading(r.TR["pdf_glossary"], 2, r.colors["secondary"])
+    gt = r.doc.add_table(rows=len(entries), cols=2)
+    gt.style = "Table Grid"
+    for ri, e in enumerate(entries):
+        tr_ = gt.rows[ri].cells[0].paragraphs[0].add_run(e["term"])
+        tr_.bold = True
+        tr_.font.size = Pt(8.5)
+        tr_.font.color.rgb = hex_to_rgb(r.colors["primary"])
+        dr = gt.rows[ri].cells[1].paragraphs[0].add_run(e["definition"])
+        dr.font.size = Pt(8.5)
 
-    doc.add_paragraph()
-    footer_p = doc.add_paragraph(
-        f"© {request.company.reporting_year} {request.company.name} — " + TR["gen_auto"]
+
+def _footer(r: _Report) -> None:
+    r.doc.add_paragraph()
+    footer_p = r.doc.add_paragraph(
+        f"© {r.request.company.reporting_year} {r.request.company.name} — " + r.TR["gen_auto"]
     )
     footer_p.runs[0].font.size = Pt(8)
     footer_p.runs[0].font.color.rgb = hex_to_rgb("7F8C8D")
     footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+
+def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
+                         logo_bytes: bytes | None = None, cover_art: bytes | None = None,
+                         charts: dict | None = None) -> bytes:
+    """Rapport Word éditable, même plan et même texte analytique que le PDF :
+    ouverture, trois piliers, analyses, chapitre 01 (diagnostic), chapitre 02
+    (plan d'action), clôture. Une fonction par section."""
+    r = _report(request, scores, content, charts)
+    _cover(r, logo_bytes, cover_art)
+    _ceo_quote(r)
+    _company(r)
+    _executive(r)
+    for pillar in ("env", "social", "gov"):
+        _pillar(r, pillar)
+    r.doc.add_page_break()
+    _analyses(r)
+    _act1(r)
+    _strategic(r)
+    _recommendations(r)
+    _positioning(r)
+    _coverage(r)
+    _risks(r)
+    _roadmap(r)
+    _closing(r, cover_art)
+    _glossary(r)
+    _footer(r)
+
     buf = io.BytesIO()
     from typo import fix_docx
-    fix_docx(doc, request.language)  # nombres à la française (typo.py)
-    doc.save(buf)
+    fix_docx(r.doc, request.language)  # nombres à la française (typo.py)
+    r.doc.save(buf)
     buf.seek(0)
     return buf.read()
