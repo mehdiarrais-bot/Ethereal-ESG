@@ -1,0 +1,87 @@
+name: Tests
+
+# À chaque push et chaque pull request : une régression ne reste plus des
+# jours sur une branche (avant, seuls les tags v* lançaient la suite).
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 : version minimale annoncée et celle de l'exécutable ;
+        # 3.14 : version de développement.
+        python: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements-lock.txt
+            backend/requirements-dev.txt
+
+      - name: Dépendances
+        run: pip install -r backend/requirements-lock.txt -r backend/requirements-dev.txt
+
+      - name: Tests
+        working-directory: backend
+        run: python -m pytest tests -q -n auto
+
+  typage:
+    name: Typage (Pyright standard)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements-lock.txt
+            backend/requirements-dev.txt
+
+      - name: Dépendances
+        run: pip install -r backend/requirements-lock.txt -r backend/requirements-dev.txt
+
+      - name: Pyright
+        run: python -m pyright
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dépendances
+        working-directory: frontend
+        run: npm ci
+
+      - name: Tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build

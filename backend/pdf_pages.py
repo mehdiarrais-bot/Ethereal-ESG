@@ -85,7 +85,7 @@ def _metric_rows(p, g, x, y, w, items, value_font="display", size=22, row_h=54, 
                                                             leading=13.5 * 0.75))
 
 
-def _metric_list(p, g, x, y, w, items, row_h=40, size=14):
+def _metric_list(p, g, x, y, w, items, row_h: float = 40, size: float = 14):
     """Liste libellé / valeur séparée par des filets (gabarit Portrait)."""
     for i, (val, lab) in enumerate(items):
         yy = y + i * row_h

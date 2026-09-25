@@ -31,7 +31,7 @@ def _norm(text: str, lang: str) -> str:
 def _pdf(data):
     import fitz
     doc = fitz.open(stream=data, filetype="pdf")
-    return " ".join(doc[i].get_text() for i in range(doc.page_count))
+    return " ".join(str(doc[i].get_text()) for i in range(doc.page_count))
 
 
 def _docx(data):
@@ -42,7 +42,8 @@ def _docx(data):
 def _pptx_notes(data):
     from pptx import Presentation
     return " ".join(s.notes_slide.notes_text_frame.text
-                    for s in Presentation(io.BytesIO(data)).slides if s.has_notes_slide)
+                    for s in Presentation(io.BytesIO(data)).slides
+                    if s.has_notes_slide and s.notes_slide.notes_text_frame is not None)
 
 
 @pytest.mark.parametrize("lang", ["fr", "en"])

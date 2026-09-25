@@ -190,7 +190,7 @@ def get_client(client_id: str) -> dict:
         return json.load(f)
 
 
-def save_client(form: dict, scores: dict, client_id: str = None) -> dict:
+def save_client(form: dict, scores: dict, client_id: str | None = None) -> dict:
     """Crée ou met à jour un dossier ; l'historique de scores est mis à
     jour pour l'exercice courant (remplacement) ou complété (nouvel exercice)."""
     _ensure_dir()

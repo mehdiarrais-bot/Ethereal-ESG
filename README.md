@@ -225,11 +225,15 @@ chmod +x start.sh && ./start.sh
 ```
 
 L'application s'ouvre sur **http://localhost:8000**. Les dépendances sont installées à la
-première exécution. Prérequis : Python 3.10+ et Node.js 18+.
+première exécution. Prérequis : Python 3.12+ et Node.js 22+ (versions vérifiées par la CI).
 
 ```bash
-# Tests
-cd backend && pip install -r requirements-dev.txt && python -m pytest tests/ -q
+# Tests (lancés aussi par la CI à chaque push : .github/workflows/tests.yml)
+# depuis la racine du dépôt
+pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+(cd backend && python -m pytest tests/ -q -n auto)   # suite backend, en parallèle
+python -m pyright                                    # typage (mode standard)
+(cd frontend && npm test)                            # logique d'interface
 ```
 
 Les livrables d'exemple de `examples/` sont reproductibles — `python scripts/make_examples.py`.

@@ -1,6 +1,7 @@
 import io
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Emu, Inches, Pt
+from pptx.enum.shapes import MSO_SHAPE
 from pptx.dml.color import RGBColor
 from pptx.slide import Slide
 from pptx.shapes.autoshape import Shape
@@ -54,16 +55,21 @@ def pptx_style(theme: AestheticTheme) -> dict:
 SLIDE_W = Inches(13.33)
 SLIDE_H = Inches(7.5)
 
-RECT = 1
-ROUNDED_RECT = 5
-OVAL = 9
+RECT = MSO_SHAPE.RECTANGLE
+ROUNDED_RECT = MSO_SHAPE.ROUNDED_RECTANGLE
+OVAL = MSO_SHAPE.OVAL
 
 
-def add_shape(slide: Slide, shape_type: int, left: int, top: int,
-              width: int, height: int, fill: RGBColor | None = None,
+def _emu(v: float) -> Emu:
+    """Position en EMU entière ; python-pptx tronquait déjà les décimales."""
+    return Emu(int(v))
+
+
+def add_shape(slide: Slide, shape_type: MSO_SHAPE, left: float, top: float,
+              width: float, height: float, fill: RGBColor | None = None,
               line_color: RGBColor | None = None,
               line_width_pt: float | None = None) -> Shape:
-    shape = slide.shapes.add_shape(shape_type, left, top, width, height)
+    shape = slide.shapes.add_shape(shape_type, _emu(left), _emu(top), _emu(width), _emu(height))
     if fill is not None:
         shape.fill.solid()
         shape.fill.fore_color.rgb = fill
@@ -78,17 +84,17 @@ def add_shape(slide: Slide, shape_type: int, left: int, top: int,
     return shape
 
 
-def add_bg_rect(slide: Slide, left: int, top: int, width: int,
-                height: int, color: RGBColor) -> Shape:
+def add_bg_rect(slide: Slide, left: float, top: float, width: float,
+                height: float, color: RGBColor) -> Shape:
     return add_shape(slide, RECT, left, top, width, height, fill=color)
 
 
-def add_text(slide: Slide, text: str, left: int, top: int, width: int,
-             height: int, font_size: float = 18, bold: bool = False,
+def add_text(slide: Slide, text: str, left: float, top: float, width: float,
+             height: float, font_size: float = 18, bold: bool = False,
              color: RGBColor = RGBColor(0, 0, 0),
              align: PP_ALIGN = PP_ALIGN.LEFT, italic: bool = False,
              word_wrap: bool = True, font: str | None = None) -> Shape:
-    txBox = slide.shapes.add_textbox(left, top, width, height)
+    txBox = slide.shapes.add_textbox(_emu(left), _emu(top), _emu(width), _emu(height))
     tf = txBox.text_frame
     tf.word_wrap = word_wrap
     p = tf.paragraphs[0]
@@ -104,11 +110,13 @@ def add_text(slide: Slide, text: str, left: int, top: int, width: int,
     return txBox
 
 
-def add_image_from_bytes(slide: Slide, img_bytes: bytes, left: int, top: int,
-                         width: int | None = None,
-                         height: int | None = None) -> None:
+def add_image_from_bytes(slide: Slide, img_bytes: bytes, left: float, top: float,
+                         width: float | None = None,
+                         height: float | None = None) -> None:
     img_io = io.BytesIO(img_bytes)
-    slide.shapes.add_picture(img_io, left, top, width, height)
+    slide.shapes.add_picture(img_io, _emu(left), _emu(top),
+                             None if width is None else _emu(width),
+                             None if height is None else _emu(height))
 
 
 def maybe_upper(text: str, style: dict) -> str:
@@ -170,7 +178,7 @@ def content_slide(prs, blank_layout, theme, style, title, color: RGBColor, kicke
     return slide
 
 
-def section_divider(prs, blank_layout, theme, style, part_no: str, title: str, subtitle: str = None):
+def section_divider(prs, blank_layout, theme, style, part_no: str, title: str, subtitle: str | None = None):
     """Carton de transition pleine page (rythme éditorial « rapport annuel »)."""
     ft, fb = style["font_title"], style["font_body"]
     slide = prs.slides.add_slide(blank_layout)
@@ -443,7 +451,7 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
 
 
 def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
-                  chart_images: dict, logo_bytes: bytes = None) -> bytes:
+                  chart_images: dict, logo_bytes: bytes | None = None) -> bytes:
     prs = Presentation()
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
@@ -625,7 +633,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     add_text(slide, t["exec_title"], RX, Inches(0.65), Inches(7.9), Inches(0.9),
              font_size=34, bold=True, color=theme["text_dark"], font=ft)
     add_bg_rect(slide, RX + Inches(0.03), Inches(1.62), Inches(1.6), Inches(0.06), theme["accent"])
-    add_text(slide, _verdict, RX, Inches(1.9), Inches(7.85), Inches(1.5),
+    add_text(slide, _verdict, RX, Inches(1.9), Inches(7.85), Inches(1.5),  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
              font_size=16, color=theme["text_dark"] if not dark else theme["subtitle"], font=fb)
 
     # ── Détail : barres piliers (gauche) + radar (droite) ───────────
@@ -675,7 +683,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     if "benchmark" in chart_images:
         _dk = style["dark_slides"]
         slide = content_slide(prs, blank_layout, theme, style,
-                              _bv["title"], header_color, kicker=t["benchmark_kicker"])
+                              _bv["title"], header_color, kicker=t["benchmark_kicker"])  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
         add_image_from_bytes(slide, chart_images["benchmark"],
                              Inches(0.35), Inches(1.7), width=Inches(7.5))
         # Carte lecture métier (positionnement)
@@ -685,7 +693,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
         add_shape(slide, RECT, cx, Inches(1.75), Inches(0.09), Inches(2.35), fill=theme["accent"])
         add_text(slide, t["key_takeaway"], cx + Inches(0.3), Inches(1.93), cw - Inches(0.5), Inches(0.35),
                  font_size=12, bold=True, color=theme["accent"] if not _dk else theme["text_dark"], font=fb)
-        add_text(slide, _bv["insight"], cx + Inches(0.3), Inches(2.35), cw - Inches(0.55), Inches(1.7),
+        add_text(slide, _bv["insight"], cx + Inches(0.3), Inches(2.35), cw - Inches(0.55), Inches(1.7),  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
                  font_size=14, color=theme["text_dark"], font=fb)
         # Échelle de maturité ESG (5 stades)
         add_text(slide, t["maturity_title"], cx + Inches(0.02), Inches(4.4), cw, Inches(0.35),
@@ -1064,7 +1072,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
              Inches(11.5), Inches(0.9), font_size=30, bold=True, color=tl_color, font=ft)
     add_bg_rect(slide, Inches(0.68), Inches(1.62), Inches(1.8), Inches(0.06), theme["accent"])
     # Synthèse en grand (l'idée qui reste)
-    add_text(slide, _verdict, Inches(0.65), Inches(1.95), Inches(12.0), Inches(1.3),
+    add_text(slide, _verdict, Inches(0.65), Inches(1.95), Inches(12.0), Inches(1.3),  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
              font_size=20, bold=True, color=tl_color, font=ft)
 
     # Engagements prioritaires (les prochaines étapes)

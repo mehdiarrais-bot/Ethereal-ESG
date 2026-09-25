@@ -61,7 +61,7 @@ SECTOR_CARBON_THRESHOLDS = {
 _DEFAULT_CARBON_THRESHOLDS = [(10, 100), (50, 80), (100, 60), (500, 40), (1000, 20)]
 
 
-def carbon_thresholds_for(sector: str) -> Tuple[list, bool]:
+def carbon_thresholds_for(sector: str | None) -> Tuple[list, bool]:
     """Grille d'intensité carbone du secteur ; second élément : grille
     sectorielle trouvée (True) ou grille générique (False)."""
     s = (sector or "").lower()
@@ -71,8 +71,8 @@ def carbon_thresholds_for(sector: str) -> Tuple[list, bool]:
     return _DEFAULT_CARBON_THRESHOLDS, False
 
 
-def calculate_environmental_score(env: EnvironmentalData, revenue: float = None,
-                                  sector: str = None) -> Tuple[float, dict]:
+def calculate_environmental_score(env: EnvironmentalData, revenue: float | None = None,
+                                  sector: str | None = None) -> Tuple[float, dict]:
     scores = {}
     details = {}
 

@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import math
+from typing import Any
 from models import ESGScores, AestheticTheme
 
 def _theme_colors(theme) -> dict:
@@ -37,7 +38,7 @@ def _use_design_font(theme) -> None:
 _REGISTERED_FONTS: set = set()
 
 
-def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict = None) -> dict:
+def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict | None = None) -> dict:
     """`light_bg` est conservé pour les appelants : les six gabarits sont tous
     clairs, le fond du graphique reprend le papier du gabarit."""
     c = _theme_colors(theme)
@@ -49,7 +50,7 @@ def get_colors(theme: AestheticTheme, light_bg: bool = False, brand: dict = None
     return c
 
 
-def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
@@ -89,7 +90,7 @@ def radar_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False
     return buf.read()
 
 
-def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
@@ -141,7 +142,7 @@ def score_bars_chart(scores: ESGScores, theme: AestheticTheme, light_bg: bool = 
     return buf.read()
 
 
-def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def emissions_breakdown_chart(scope1, scope2, scope3, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes | None:
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
     bg = colors["bg"]
@@ -192,7 +193,7 @@ def _pillar_hex(colors: dict[str, str], pillar: str) -> str:
     return colors.get(pillar, colors["secondary"])
 
 
-def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     """Cartographie de priorisation des enjeux — points numérotés + légende
     latérale. Axes : exposition estimée / sensibilité économique estimée.
     Ce n'est pas une matrice de double matérialité au sens de l'ESRS 1 (voir
@@ -246,7 +247,7 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
         if not pil_topics:
             continue
         pname, pcol = pillar_names[pil]
-        lax.add_patch(plt.Rectangle((0.0, y - 0.028), 0.045, 0.045, color=pcol, transform=lax.transAxes, clip_on=False))
+        lax.add_patch(mpatches.Rectangle((0.0, y - 0.028), 0.045, 0.045, color=pcol, transform=lax.transAxes, clip_on=False))
         lax.text(0.07, y, pname.upper(), fontsize=10.5, fontweight="bold",
                  color=colors["text"], va="center", transform=lax.transAxes)
         y -= 0.075
@@ -267,7 +268,7 @@ def materiality_matrix(topics: list, theme: AestheticTheme, light_bg: bool = Fal
 
 
 def score_trend_chart(history: list, theme: AestheticTheme, light_bg: bool = False,
-                      lang: str = 'fr', brand: dict = None) -> bytes:
+                      lang: str = 'fr', brand: dict | None = None) -> bytes:
     """Trajectoire pluriannuelle du score (global + piliers).
 
     `history` : [{year, env, social, gov, total}, ...] trié, ≥ 2 points —
@@ -318,7 +319,7 @@ def score_trend_chart(history: list, theme: AestheticTheme, light_bg: bool = Fal
     return buf.read()
 
 
-def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     """Matrice de priorisation effort/impact des recommandations (2×2 conseil).
 
     Chaque action porte le numéro qu'elle a dans la liste des recommandations,
@@ -338,7 +339,7 @@ def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = Fa
     ax.axhspan(5, 10, xmin=0.0, xmax=0.5, color=colors["accent"], alpha=0.10, zorder=0)
     ax.axhline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
     ax.axvline(5, color=grid, alpha=0.3, linewidth=1, linestyle='--')
-    qstyle = dict(fontsize=8.5, fontweight="bold", ha="left", zorder=1)
+    qstyle: dict[str, Any] = dict(fontsize=8.5, fontweight="bold", ha="left", zorder=1)
     ax.text(0.3, 9.55, LB["quad_qw"], color=colors["accent"], **qstyle)
     ax.text(5.3, 9.55, LB["quad_strat"], color=colors["text"], alpha=0.75, **qstyle)
     ax.text(0.3, 0.45, LB["quad_fill"], color=colors["text"], alpha=0.55, **qstyle)
@@ -391,7 +392,7 @@ def priority_matrix_chart(recs: list, theme: AestheticTheme, light_bg: bool = Fa
 # Voir la note dans esg_advanced.py.
 
 
-def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def taxonomy_chart(vals: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     """Barres d'alignement Taxonomie UE (CA / CapEx / OpEx)."""
     colors = get_colors(theme, light_bg, brand)
     LB = L(lang)
@@ -473,7 +474,7 @@ def gauge_chart(score: float, label: str, theme: AestheticTheme) -> bytes:
     return buf.read()
 
 
-def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict = None) -> bytes:
+def benchmark_chart(comp: dict, theme: AestheticTheme, light_bg: bool = False, lang: str = 'fr', brand: dict | None = None) -> bytes:
     """Barres des trois piliers + score global, série unique.
 
     La série « Secteur » a été retirée : elle s'appuyait sur une table de

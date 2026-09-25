@@ -17,6 +17,8 @@ Non branché dans content_generator.py à ce stade (décision explicite) : la
 banque est vide, l'ancien système reste seul actif.
 """
 
+from typing import Any
+
 from bands import INDICATEURS_PAR_SECTION, SEUILS, CATEGORIES, classer
 
 # Gravité des tranches, de la plus grave à la moins grave : sert à choisir
@@ -110,7 +112,7 @@ def _tranche_categorielle(indicateur: str,
     return "zero" if valeur == 0 else "nonzero"  # compteur_penalite / compteur_binaire
 
 
-def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = None) -> list:
+def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str | None = None) -> list:
     """Pour une section, renvoie les indicateurs de INDICATEURS_PAR_SECTION
     qui ont une valeur ET une tranche numérique (SEUILS avec "bornes"),
     triés du plus grave au moins grave. Les indicateurs catégoriels
@@ -131,7 +133,8 @@ def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = N
         if not entry or ("bornes" not in entry and "bornes_par_secteur" not in entry):
             continue  # narratif brut, pas de tranche
         valeur = _valeur_indicateur(indicateur, donnees)
-        if valeur is None:
+        # Une grille à bornes ne classe que des nombres (bool compris).
+        if not isinstance(valeur, (int, float)):
             continue
         tranche = classer(indicateur, valeur, secteur=secteur)
         if tranche is None:
@@ -142,7 +145,7 @@ def indicateurs_ranges_par_gravite(section: str, donnees: dict, secteur: str = N
 
 
 def composer_section(section: str, donnees: dict[str, float | bool | str | None],
-                     clauses_lang: dict[str, object],
+                     clauses_lang: dict[str, Any],
                      contexte: dict[str, object] | None = None,
                      secteur: str | None = None) -> str:
     """Compose le paragraphe d'une section, dans cet ordre :
@@ -227,7 +230,7 @@ def composer_section(section: str, donnees: dict[str, float | bool | str | None]
 
 
 def composer_paragraphe(section: str, donnees: dict, clauses_lang: dict,
-                        contexte: dict = None, secteur: str = None) -> str:
+                        contexte: dict | None = None, secteur: str | None = None) -> str:
     """Paragraphe complet d'une section : phrase d'ouverture, corps
     (composer_section), phrase de clôture.
 

@@ -51,12 +51,16 @@ def _squelette_section(section: str) -> dict:
 # Sections "ouverture:<section>" et "cloture:<section>" : phrases d'entrée et
 # de sortie de paragraphe, indépendantes des indicateurs (toujours vides ici,
 # pas de clé par indicateur puisqu'elles ne dépendent d'aucun seuil). ──────
-CLAUSES = {}
-for _section in INDICATEURS_PAR_SECTION:
-    CLAUSES[f"ouverture:{_section}"] = []
-    CLAUSES[_section] = _squelette_section(_section)
-    CLAUSES[f"cloture:{_section}"] = []
-del _section
+def _squelette_complet() -> dict:
+    clauses = {}
+    for section in INDICATEURS_PAR_SECTION:
+        clauses[f"ouverture:{section}"] = []
+        clauses[section] = _squelette_section(section)
+        clauses[f"cloture:{section}"] = []
+    return clauses
+
+
+CLAUSES = _squelette_complet()
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -349,7 +349,7 @@ async def import_file(file: UploadFile = File(...)):
     if len(data) > MAX_IMPORT_BYTES:
         raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 2 Mo)")
     try:
-        pairs = import_data.parse_upload(file.filename, data)
+        pairs = import_data.parse_upload(file.filename or "", data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
@@ -651,7 +651,7 @@ def generate_proposal(request: ESGRequest):
 def _frontend_dist() -> str:
     """Chemin du frontend compilé : embarqué dans le .exe, ou frontend/dist en dev."""
     if getattr(sys, "frozen", False):
-        return os.path.join(sys._MEIPASS, "frontend_dist")
+        return os.path.join(getattr(sys, "_MEIPASS"), "frontend_dist")
     return os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
 

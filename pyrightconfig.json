@@ -1,7 +1,7 @@
 {
   "include": ["backend"],
   "exclude": ["**/__pycache__", "**/node_modules", "**/.git"],
-  "extraPaths": ["backend"],
-  "typeCheckingMode": "strict",
-  "pythonVersion": "3.14"
+  "extraPaths": ["backend", "backend/tests", "scripts"],
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12"
 }

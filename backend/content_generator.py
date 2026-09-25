@@ -11,7 +11,7 @@ from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE
 def _seed(name: str) -> int:
     return int(hashlib.md5(name.encode()).hexdigest(), 16) % 10
 
-def _pick(seed: int, offset: int, options: list[str]) -> str:
+def _pick[T](seed: int, offset: int, options: list[T]) -> T:
     return options[(seed + offset) % len(options)]
 
 def _fmt(v: float | None, suffix: str = "", decimals: int = 0) -> str:
@@ -1552,11 +1552,11 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
     qw = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] < 5 and r["impact"] >= 6]
     strat = [(i, r) for i, r in enumerate(recs, 1) if r["effort"] >= 5 and r["impact"] >= 7]
 
-    def _join_nums(nums: list[str], conj: str) -> str:
-        nums = [str(n) for n in nums]
-        if len(nums) == 1:
-            return nums[0]
-        return ", ".join(nums[:-1]) + f" {conj} " + nums[-1]
+    def _join_nums(nums: list[int], conj: str) -> str:
+        txt = [str(n) for n in nums]
+        if len(txt) == 1:
+            return txt[0]
+        return ", ".join(txt[:-1]) + f" {conj} " + txt[-1]
 
     if en:
         if qw:
@@ -1775,9 +1775,9 @@ def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     lang = "en" if getattr(request, "language", "fr") == "en" else "fr"
     P = _PILLAR_INSIGHT[lang]
     return {
-        "env": P["env"][_band(scores.environmental_score)],
-        "social": P["social"][_band(scores.social_score)],
-        "gov": P["gov"][_band(scores.governance_score)],
+        "env": P["env"][_band(scores.environmental_score)],  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
+        "social": P["social"][_band(scores.social_score)],  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
+        "gov": P["gov"][_band(scores.governance_score)],  # pyright: ignore[reportArgumentType]  # abstention non gérée, DETTE § 14
     }
 
 
@@ -1915,9 +1915,10 @@ def hero_stat(request: ESGRequest, scores: ESGScores) -> dict:
     en = getattr(request, "language", "fr") == "en"
     env, tx = request.environmental, request.taxonomy
     # 1) Scope 3 dominant dans l'empreinte carbone
-    scopes = [env.scope1_emissions, env.scope2_emissions, env.scope3_emissions]
-    if all(v is not None for v in scopes) and sum(scopes) > 0 and env.scope3_emissions >= 0.5 * sum(scopes):
-        share = env.scope3_emissions / sum(scopes) * 100
+    s1, s2, s3 = env.scope1_emissions, env.scope2_emissions, env.scope3_emissions
+    total = s1 + s2 + s3 if s1 is not None and s2 is not None and s3 is not None else None
+    if total is not None and s3 is not None and total > 0 and s3 >= 0.5 * total:
+        share = s3 / total * 100
         return {"value": f"{share:.0f}", "unit": "%",
                 "label": "des émissions relèvent du Scope 3" if not en else "of emissions come from Scope 3",
                 "statement": ("La chaîne de valeur, principal terrain d'action climat." if not en

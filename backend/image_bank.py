@@ -25,7 +25,7 @@ def cover_banner(request, width: int = 1600, height: int = 560) -> bytes | None:
         nh = int(iw / ratio)
         top = (ih - nh) // 2
         im = im.crop((0, top, iw, top + nh))
-    im = im.resize((width, height), Image.LANCZOS)
+    im = im.resize((width, height), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=85)
     return buf.getvalue()

@@ -1,5 +1,8 @@
 import io
+from typing import cast
+
 from docx import Document
+from docx.styles.style import ParagraphStyle
 from docx.shared import Pt, Inches, RGBColor, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.style import WD_STYLE_TYPE
@@ -163,8 +166,8 @@ def add_consultant_note(doc, text, colors, TR):
     np_.paragraph_format.space_after = Pt(8)
 
 def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
-                         logo_bytes: bytes = None, cover_art: bytes = None,
-                         charts: dict = None) -> bytes:
+                         logo_bytes: bytes | None = None, cover_art: bytes | None = None,
+                         charts: dict | None = None) -> bytes:
     colors = docx_hex(request.aesthetic_theme)
     if getattr(request, "custom_colors", None):
         from branding import brand_docx_hex
@@ -215,7 +218,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
         p.paragraph_format.space_after = Pt(6)
 
     doc = Document()
-    normal = doc.styles['Normal']
+    normal = cast(ParagraphStyle, doc.styles['Normal'])
     normal.font.name = style["font"]
     normal.font.size = Pt(10.5)
 
@@ -539,7 +542,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     add_heading(doc, TR["pdf_diag"], 1, colors["primary"], style=style)
     add_hr(doc, colors["accent"])
     p = doc.add_paragraph()
-    r_ = p.add_run(_bv["title"]); r_.bold = True; r_.font.size = Pt(12)
+    r_ = p.add_run(_bv["title"]); r_.bold = True; r_.font.size = Pt(12)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
     r_.font.color.rgb = hex_to_rgb(colors["secondary"])
     add_text(NR.bench_intro(request), after=4)
     cap = doc.add_paragraph(TR["pdf_bench_sub"]); cap.runs[0].font.size = Pt(8)
@@ -548,7 +551,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     # Positionnement INTERNE (cf. report_generator.py) : aucune référence externe.
     _pil_lbl = {"env": TR["pillar_env"], "social": TR["pillar_soc"], "gov": TR["pillar_gov"]}
     rows = [(TR["bench_metric_col"], TR["bench_you"], TR["bench_delta_col"], TR["bench_reading_col"])]
-    for row in _bv["rows"]:
+    for row in _bv["rows"]:  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
         d = row["delta"]
         rows.append((_pil_lbl[row["key"]], f"{row['score']:.0f}",
                      "—" if d == 0 else f"{d:.0f} pts", row["reading"]))
@@ -572,7 +575,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
                 run.font.color.rgb = hex_to_rgb("2E7D32" if not val.startswith("-") else "E74C3C")
 
     ins = doc.add_paragraph(); ins.paragraph_format.space_before = Pt(6)
-    ins.add_run(_bv["insight"]).font.size = Pt(10)
+    ins.add_run(_bv["insight"]).font.size = Pt(10)  # pyright: ignore[reportOptionalSubscript]  # abstention non gérée, DETTE § 14
     shade_paragraph(ins, colors.get("light", "F0F2F5"))
 
     _mat_lbl = TR.get("mat_" + _mt.get("key", "structured"), "")

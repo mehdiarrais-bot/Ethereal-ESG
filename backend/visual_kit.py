@@ -27,7 +27,7 @@ def _canvas(size: int) -> Image.Image:
 
 
 def _finish(img: Image.Image, size: int) -> Image.Image:
-    return img.resize((size, size), Image.LANCZOS)
+    return img.resize((size, size), Image.Resampling.LANCZOS)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -64,7 +64,7 @@ def draw_icon(name: str, size: int, color: str | tuple[int, ...],
         r = S * 0.62
         ImageDraw.Draw(d1).ellipse([S / 2 - r + off, S / 2 - r, S / 2 + r + off, S / 2 + r], fill=255)
         ImageDraw.Draw(d2).ellipse([S / 2 - r - off, S / 2 - r, S / 2 + r - off, S / 2 + r], fill=255)
-        mask = ImageChops.darker(d1, d2).rotate(45, resample=Image.BICUBIC, center=(S / 2, S / 2))
+        mask = ImageChops.darker(d1, d2).rotate(45, resample=Image.Resampling.BICUBIC, center=(S / 2, S / 2))
         leafimg = Image.new("RGBA", (S, S), (0, 0, 0, 0))
         leafimg.paste(Image.new("RGBA", (S, S), c), (0, 0), mask)
         # nervure centrale
@@ -318,7 +318,7 @@ def pillar_hero(pillar: str, palette: dict, width: int = 900, height: int = 1400
     disc = disc.filter(ImageFilter.GaussianBlur(int(W * 0.05)))
     img = Image.alpha_composite(img.convert("RGBA"), disc)
     img = Image.alpha_composite(img, scrim).convert("RGB")
-    img = img.resize((width, height), Image.LANCZOS)
+    img = img.resize((width, height), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     buf.seek(0)

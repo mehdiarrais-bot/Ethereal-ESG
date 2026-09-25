@@ -288,7 +288,7 @@ def test_composer_section_ne_leve_jamais_sur_contexte_incomplet():
     test_clauses = copy.deepcopy(CLAUSES)
     test_clauses["environmental"]["renewable_energy_percent"]["critique"] = [
         "{n} atteint {value}% en {an}, un score de {score}/100."]
-    donnees = {"renewable_energy_percent": 5}
+    donnees: dict[str, float | bool | str | None] = {"renewable_energy_percent": 5}
     resultat = composer_section("environmental", donnees, test_clauses, contexte={"n": "Acme"})
     assert resultat == "Acme atteint 5% en {an}, un score de {score}/100."
 

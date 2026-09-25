@@ -43,7 +43,7 @@ def _pdf(request):
 
 
 def _text(doc) -> str:
-    return re.sub(r"\s+", " ", " ".join(doc[i].get_text() for i in range(doc.page_count)))
+    return re.sub(r"\s+", " ", " ".join(str(doc[i].get_text()) for i in range(doc.page_count)))
 
 
 # ── Source unique ─────────────────────────────────────────────────────────
@@ -163,14 +163,14 @@ def test_sommaire_renvoie_aux_bonnes_pages():
     from i18n import L
     doc = _pdf(make_request())
     TR = L("fr")
-    toc = doc[1].get_text()
+    toc = str(doc[1].get_text())
     assert TR["toc_title"] in toc
     for label in (TR["pdf_s1"], TR["pdf_s6"], TR["pdf_concl"]):
         m = re.search(re.escape(label) + r"\s+(\d{2})", toc)
         assert m, f"pas de numéro de page pour {label!r}"
         page = int(m.group(1))
         titre = label.split(". ", 1)[1]
-        assert titre in doc[page - 1].get_text(), f"{label!r} annoncé page {page}"
+        assert titre in str(doc[page - 1].get_text()), f"{label!r} annoncé page {page}"
 
 
 def test_pages_composees_presentes():
@@ -238,28 +238,29 @@ def _layout(request):
     return compose_report(request, s, generate_esg_content(request, s), {})
 
 
-def _requetes_variees():
-    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
-    from make_examples import DEMO
-    for base in (DEMO, make_request()):
-        for lang in ("fr", "en"):
-            for theme in AestheticTheme:
-                yield base.model_copy(update={"aesthetic_theme": theme, "language": lang})
+def _jeu_de_donnees(nom: str):
+    if nom == "demo":
+        sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
+        from make_examples import DEMO
+        return DEMO
+    return make_request()
 
 
-def test_aucune_sequence_ne_finit_sur_une_page_presque_vide():
+# Un cas par combinaison (24) : chaque rendu est indépendant, ce qui permet
+# de les répartir entre processus (pytest -n auto) — le test séquentiel
+# prenait 47 s, le quart de la suite.
+@pytest.mark.parametrize("theme", list(AestheticTheme), ids=lambda t: t.value)
+@pytest.mark.parametrize("lang", ["fr", "en"])
+@pytest.mark.parametrize("jeu", ["demo", "tests"])
+def test_aucune_sequence_ne_finit_sur_une_page_presque_vide(jeu, lang, theme):
     """« Un bloc trop gros qui déborde sur une page pour 2-4 lignes » : la
     dernière page de chaque séquence de pages courantes (avant une page
     composée) doit être remplie au moins à SPARSE_FILL. 24 cas : deux jeux
     de données, deux langues, six gabarits."""
     from report_generator import _sparse_runs, SPARSE_FILL
-    echecs = []
-    for req in _requetes_variees():
-        _, layout = _layout(req)
-        if _sparse_runs(layout):
-            echecs.append((req.aesthetic_theme.value, req.language,
-                           [(p, f) for p, _r, f in layout["pages"] if f < SPARSE_FILL]))
-    assert not echecs, echecs
+    req = _jeu_de_donnees(jeu).model_copy(update={"aesthetic_theme": theme, "language": lang})
+    _, layout = _layout(req)
+    assert not _sparse_runs(layout), [(p, f) for p, _r, f in layout["pages"] if f < SPARSE_FILL]
 
 
 def test_la_detection_de_debord_casse_sur_l_ancien_etat():
@@ -331,7 +332,7 @@ def test_texte_cite_la_grille_du_score():
     tranche = classer("renewable_energy_percent", 42)
     assert any(f"42 %, un niveau {tranche}" in t for t in NR.indicator_readings(req, "env"))
     assert _status(req, "renewable_energy_percent", 42) == {"solide": "good", "exemplaire": "good",
-                                                             "satisfaisant": "warn"}.get(tranche, "bad")
+                                                             "satisfaisant": "warn"}.get(tranche or "", "bad")
 
 
 def test_indicateurs_manquants_listes_et_jamais_commentes():
@@ -351,7 +352,7 @@ def test_le_rapport_porte_du_texte_sur_chaque_page_courante():
     from make_examples import DEMO
     pdf, layout = _layout(DEMO)
     doc = fitz.open(stream=pdf, filetype="pdf")
-    mots = lambda i: len(re.findall(r"\w+", doc[i].get_text()))
+    mots = lambda i: len(re.findall(r"\w+", str(doc[i].get_text())))
     assert sum(mots(i) for i in range(doc.page_count)) > 3500
     for page in layout["content_pages"]:
         assert mots(page - 1) >= 120, f"page {page} : {mots(page - 1)} mots"

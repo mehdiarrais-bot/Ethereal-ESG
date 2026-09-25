@@ -9,6 +9,7 @@ import io
 import os
 import re
 import sys
+from typing import cast
 
 import pytest
 
@@ -46,7 +47,7 @@ def test_anglais_intact():
 def _pdf_text(data):
     import fitz
     doc = fitz.open(stream=data, filetype="pdf")
-    return " ".join(doc[i].get_text() for i in range(doc.page_count))
+    return " ".join(str(doc[i].get_text()) for i in range(doc.page_count))
 
 
 def _docx_text(data):
@@ -61,11 +62,12 @@ def _docx_text(data):
 
 def _pptx_text(data):
     from pptx import Presentation
+    from pptx.shapes.autoshape import Shape
     out = []
     for slide in Presentation(io.BytesIO(data)).slides:
         for sh in slide.shapes:
             if sh.has_text_frame:
-                out.append(sh.text_frame.text)
+                out.append(cast(Shape, sh).text_frame.text)
     return " ".join(out)
 
 

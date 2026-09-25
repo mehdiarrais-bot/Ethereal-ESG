@@ -54,16 +54,16 @@ class ReportType(str, Enum):
 
 # ── Sub-models ────────────────────────────────────────────────────────────────
 class EnvironmentalData(BaseModel):
-    co2_emissions_tonnes: Optional[float] = Field(None, ge=0, le=1e9)
-    energy_consumption_mwh: Optional[float] = Field(None, ge=0, le=1e9)
-    renewable_energy_percent: Optional[float] = Field(None, ge=0, le=100)
-    water_consumption_m3: Optional[float] = Field(None, ge=0, le=1e10)
-    waste_generated_tonnes: Optional[float] = Field(None, ge=0, le=1e8)
-    waste_recycled_percent: Optional[float] = Field(None, ge=0, le=100)
-    biodiversity_initiatives: Optional[int] = Field(None, ge=0, le=9999)
-    scope1_emissions: Optional[float] = Field(None, ge=0, le=1e9)
-    scope2_emissions: Optional[float] = Field(None, ge=0, le=1e9)
-    scope3_emissions: Optional[float] = Field(None, ge=0, le=1e9)
+    co2_emissions_tonnes: Optional[float] = Field(default=None, ge=0, le=1e9)
+    energy_consumption_mwh: Optional[float] = Field(default=None, ge=0, le=1e9)
+    renewable_energy_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    water_consumption_m3: Optional[float] = Field(default=None, ge=0, le=1e10)
+    waste_generated_tonnes: Optional[float] = Field(default=None, ge=0, le=1e8)
+    waste_recycled_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    biodiversity_initiatives: Optional[int] = Field(default=None, ge=0, le=9999)
+    scope1_emissions: Optional[float] = Field(default=None, ge=0, le=1e9)
+    scope2_emissions: Optional[float] = Field(default=None, ge=0, le=1e9)
+    scope3_emissions: Optional[float] = Field(default=None, ge=0, le=1e9)
 
     @model_validator(mode='after')
     def clamp_and_clean(self):
@@ -77,16 +77,16 @@ class EnvironmentalData(BaseModel):
 
 
 class SocialData(BaseModel):
-    total_employees: Optional[int] = Field(None, ge=0, le=10_000_000)
-    female_employees_percent: Optional[float] = Field(None, ge=0, le=100)
-    employee_turnover_percent: Optional[float] = Field(None, ge=0, le=100)
-    training_hours_per_employee: Optional[float] = Field(None, ge=0, le=10_000)
-    work_accidents: Optional[int] = Field(None, ge=0, le=1_000_000)
-    accident_frequency_rate: Optional[float] = Field(None, ge=0, le=10_000)
-    community_investment_eur: Optional[float] = Field(None, ge=0, le=1e12)
-    local_suppliers_percent: Optional[float] = Field(None, ge=0, le=100)
-    customer_satisfaction_score: Optional[float] = Field(None, ge=0, le=10)
-    disabled_employees_percent: Optional[float] = Field(None, ge=0, le=100)
+    total_employees: Optional[int] = Field(default=None, ge=0, le=10_000_000)
+    female_employees_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    employee_turnover_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    training_hours_per_employee: Optional[float] = Field(default=None, ge=0, le=10_000)
+    work_accidents: Optional[int] = Field(default=None, ge=0, le=1_000_000)
+    accident_frequency_rate: Optional[float] = Field(default=None, ge=0, le=10_000)
+    community_investment_eur: Optional[float] = Field(default=None, ge=0, le=1e12)
+    local_suppliers_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    customer_satisfaction_score: Optional[float] = Field(default=None, ge=0, le=10)
+    disabled_employees_percent: Optional[float] = Field(default=None, ge=0, le=100)
 
     @model_validator(mode='after')
     def clamp_and_clean(self):
@@ -100,9 +100,9 @@ class SocialData(BaseModel):
 
 class TaxonomyData(BaseModel):
     """Alignement Taxonomie UE (part du CA / CapEx / OpEx alignés, en %)."""
-    turnover_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
-    capex_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
-    opex_aligned_percent: Optional[float] = Field(None, ge=0, le=100)
+    turnover_aligned_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    capex_aligned_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    opex_aligned_percent: Optional[float] = Field(default=None, ge=0, le=100)
 
     @model_validator(mode='after')
     def clean(self):
@@ -114,13 +114,13 @@ class TaxonomyData(BaseModel):
 
 
 class GovernanceData(BaseModel):
-    board_members: Optional[int] = Field(None, ge=0, le=999)
-    female_board_percent: Optional[float] = Field(None, ge=0, le=100)
-    independent_board_percent: Optional[float] = Field(None, ge=0, le=100)
-    ethics_violations: Optional[int] = Field(None, ge=0, le=100_000)
-    corruption_cases: Optional[int] = Field(None, ge=0, le=100_000)
-    data_breaches: Optional[int] = Field(None, ge=0, le=100_000)
-    csr_budget_eur: Optional[float] = Field(None, ge=0, le=1e12)
+    board_members: Optional[int] = Field(default=None, ge=0, le=999)
+    female_board_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    independent_board_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    ethics_violations: Optional[int] = Field(default=None, ge=0, le=100_000)
+    corruption_cases: Optional[int] = Field(default=None, ge=0, le=100_000)
+    data_breaches: Optional[int] = Field(default=None, ge=0, le=100_000)
+    csr_budget_eur: Optional[float] = Field(default=None, ge=0, le=1e12)
     esg_audit_conducted: Optional[bool] = None
     sustainability_committee: Optional[bool] = None
     # Statut de la société : le code AFEP-MEDEF ne vise que les sociétés
@@ -187,18 +187,18 @@ class CompanyInfo(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     sector: str = Field(..., min_length=1, max_length=100)
     country: str = Field(..., min_length=1, max_length=100)
-    revenue_eur: Optional[float] = Field(None, ge=0, le=1e13)
-    reporting_year: int = Field(2024, ge=2000, le=2035)
-    target_year: int = Field(2030, ge=2025, le=2050)
-    logo_description: Optional[str] = Field(None, max_length=200)
-    presenter_name: Optional[str] = Field(None, max_length=100)
-    presenter_title: Optional[str] = Field(None, max_length=100)
-    logo_base64: Optional[str] = Field(None, max_length=2_100_000)
+    revenue_eur: Optional[float] = Field(default=None, ge=0, le=1e13)
+    reporting_year: int = Field(default=2024, ge=2000, le=2035)
+    target_year: int = Field(default=2030, ge=2025, le=2050)
+    logo_description: Optional[str] = Field(default=None, max_length=200)
+    presenter_name: Optional[str] = Field(default=None, max_length=100)
+    presenter_title: Optional[str] = Field(default=None, max_length=100)
+    logo_base64: Optional[str] = Field(default=None, max_length=2_100_000)
     # Initiatives/projets internes (séparés par ; ou ,), tissés dans les textes
     # pour ancrer le rapport dans la réalité de l'entreprise.
-    key_initiatives: Optional[str] = Field(None, max_length=600)
+    key_initiatives: Optional[str] = Field(default=None, max_length=600)
     # Mot du dirigeant : citation libre, mise en scène en ouverture des livrables.
-    ceo_quote: Optional[str] = Field(None, max_length=500)
+    ceo_quote: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator('name', 'sector', 'country', mode='before')
     @classmethod
@@ -250,10 +250,10 @@ class ESGRequest(BaseModel):
     presentation_type: PresentationType = PresentationType.EXECUTIVE_SUMMARY
     aesthetic_theme: AestheticTheme = AestheticTheme.AURORA
     report_type: ReportType = ReportType.FULL_REPORT
-    language: str = Field("fr", pattern=r'^(fr|en)$')
+    language: str = Field(default="fr", pattern=r'^(fr|en)$')
     # Référentiel visé : CSRD complet ou VSME (norme volontaire PME, EFRAG).
     # Ajuste l'analyse des écarts (exigences optionnelles vs requises).
-    reporting_framework: str = Field("csrd", pattern=r'^(csrd|vsme)$')
+    reporting_framework: str = Field(default="csrd", pattern=r'^(csrd|vsme)$')
     include_recommendations: bool = True
     include_cover_image: bool = True
     # Photos fournies par l'entreprise, par emplacement (cf. report_designs.

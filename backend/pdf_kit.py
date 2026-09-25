@@ -40,7 +40,7 @@ SERIF_FAMILIES = {"Newsreader", "InstrumentSerif", "LibreCaslonText"}
 def assets_dir() -> str:
     """Dossier des polices et photos, en développement comme dans l'exécutable."""
     if getattr(sys, "frozen", False):
-        return os.path.join(sys._MEIPASS, "assets")
+        return os.path.join(getattr(sys, "_MEIPASS"), "assets")
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 
@@ -209,7 +209,7 @@ class Px:
     def color(self, c):
         return self.k.c[c] if isinstance(c, str) else c
 
-    def rect(self, x, y, w, h, fill, radius=0, stroke=None, lw=0.75, alpha=None):
+    def rect(self, x, y, w, h, fill, radius: float = 0, stroke=None, lw=0.75, alpha=None):
         cv = self.cv
         cv.saveState()
         if alpha is not None:
@@ -439,10 +439,10 @@ class FullPage(Flowable):
         super().__init__()
         self.kit, self.drawer, self.args = kit, drawer, args
 
-    def wrap(self, aw, ah):
+    def wrap(self, aW, aH):
         # Hauteur FIXE d'une page : sur une page déjà entamée, la page
         # composée ne tient pas et passe d'elle-même à la page suivante.
-        return aw, PAGE_H - 2
+        return aW, PAGE_H - 2
 
     def draw(self):
         cv = self.canv
@@ -464,7 +464,7 @@ class Anchor(Flowable):
         super().__init__()
         self.key, self.registry = key, registry
 
-    def wrap(self, aw, ah):
+    def wrap(self, aW, aH):
         return 0, 0
 
     def draw(self):

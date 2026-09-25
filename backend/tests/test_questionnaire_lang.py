@@ -49,7 +49,9 @@ def test_every_field_has_an_english_label():
 def test_english_csv_labels_resolve_to_their_own_field():
     """Chaque en-tête du CSV anglais doit être réimporté vers le bon champ."""
     en = _html("en")
-    schema = re.search(r"const SCHEMA = (\[.*?\]);\n", en).group(1)
+    m = re.search(r"const SCHEMA = (\[.*?\]);\n", en)
+    assert m
+    schema = m.group(1)
     import json
     for sec in json.loads(schema):
         for f in sec["fields"]:

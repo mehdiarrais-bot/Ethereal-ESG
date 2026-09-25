@@ -116,7 +116,7 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
 # ══════════════════════════════════════════════════════════════════════════
 
 
-def taxonomy_summary(request: ESGRequest) -> dict[str, object] | None:
+def taxonomy_summary(request: ESGRequest) -> dict[str, float | None] | None:
     """Synthèse Taxonomie UE si au moins un KPI est renseigné, sinon None."""
     t = request.taxonomy
     if t is None:

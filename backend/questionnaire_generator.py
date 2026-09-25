@@ -140,8 +140,8 @@ def _fields_by_section(lang: str = "fr"):
     return [(s, out[s]) for s in order]
 
 
-def generate_questionnaire_html(company_name: str = "", year: int = None,
-                                consultant: str = "", custom_colors: dict = None,
+def generate_questionnaire_html(company_name: str = "", year: int | None = None,
+                                consultant: str = "", custom_colors: dict | None = None,
                                 lang: str = "fr") -> str:
     """Fichier HTML autonome, hors ligne, prêt à être envoyé au client."""
     if lang not in UI:

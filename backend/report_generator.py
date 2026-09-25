@@ -13,6 +13,7 @@ deux passes, la première relevant la page de chaque section.
 """
 import io
 import re
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -220,8 +221,9 @@ class GuardedTable(Table):
         if len(parts) < 2:
             return parts
         head = self.repeatRows if isinstance(self.repeatRows, int) else len(self.repeatRows)
-        first = len(parts[0]._cellvalues) - head
-        rest = len(parts[1]._cellvalues) - head
+        # split() d'une Table ne rend que des Table : _cellvalues existe.
+        first = len(getattr(parts[0], "_cellvalues")) - head
+        rest = len(getattr(parts[1], "_cellvalues")) - head
         if first < self.MIN_ROWS or rest < self.MIN_ROWS:
             return []
         return parts
@@ -375,7 +377,7 @@ class _RunMarker(Flowable):
         super().__init__()
         self.run, self.state = run, state
 
-    def wrap(self, aw, ah):
+    def wrap(self, aW, aH):
         return 0, 0
 
     def draw(self):
@@ -420,7 +422,7 @@ def _toc_parts(TR):
 
 
 def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
-                        chart_images: dict, logo_bytes: bytes = None) -> bytes:
+                        chart_images: dict, logo_bytes: bytes | None = None) -> bytes:
     return compose_report(request, scores, content, chart_images, logo_bytes)[0]
 
 
@@ -483,7 +485,7 @@ def _new_layout(opts):
             "inline_focus": opts["inline_focus"]}
 
 
-def _fit_densities(args, opts, anchors, layout):
+def _fit_densities(args: tuple[Any, Any, Any, Any, Any], opts, anchors, layout):
     """Essaie les densités de _DENSITY_STEPS sur les séquences en débord ;
     garde, pour chaque séquence, la première qui résorbe son débord."""
     for step in _DENSITY_STEPS:
@@ -664,7 +666,7 @@ def _company(story, request, k, S, TR, g):
         story.append(_sp(k, 8))
         story.append(Image(io.BytesIO(crop_jpeg(photo, round(16 / 7, 3))), width=CW, height=CW * 7 / 16))
     if g["initiatives"]:
-        block = [Paragraph(esc(TR["ed_initiatives"]), S["h2"])]
+        block: list[Flowable] = [Paragraph(esc(TR["ed_initiatives"]), S["h2"])]
         block += [Paragraph(f'<font color="{hexc(k.c["accent"])}">•</font>&nbsp; {esc(it)}', S["bullet"])
                   for it in g["initiatives"]]
         story.append(KeepTogether(block))
@@ -733,7 +735,8 @@ def _status(request, indicator, value):
     (Avant le 2026-09-24, le PDF portait ses propres seuils, divergents.)"""
     if value is None:
         return None
-    return _BAND_STATUS.get(classer(indicator, value, request.company.sector))
+    tranche = classer(indicator, value, request.company.sector)
+    return _BAND_STATUS.get(tranche) if tranche is not None else None
 
 
 def _pillar_intro(story, title, key, score_label, score, insight, note, text, k, S, TR, anchors,
@@ -791,7 +794,7 @@ def _environment(story, request, scores, content, chart_images, k, S, TR, lang, 
     known = [(n, v) for n, v in scopes if v is not None]
     if known:
         story.append(_sp(k, 6))
-        ghg_head = [Paragraph(esc(TR["ed_ghg_table"]), S["h2"]),
+        ghg_head: list[Flowable] = [Paragraph(esc(TR["ed_ghg_table"]), S["h2"]),
                     Paragraph(esc(NR.ghg_paragraph(request)), S["body"])]
         tot = sum(v for _, v in known)
         right = k.ps("r", 8.6, color="ink", alignment=2)
@@ -907,7 +910,7 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
 
     story.append(_sp(k, 12))
     section_head(story, TR["pdf_diag"], "accent", k, S, anchors, "diag", keep_cm=10)
-    bench_head = [Paragraph(esc(bv["title"]), S["h2"]),
+    bench_head: list[Flowable] = [Paragraph(esc(bv["title"]), S["h2"]),
                   Paragraph(esc(NR.bench_intro(request)), S["body"]),
                   Paragraph(TR["pdf_bench_sub"], k.ps("bs", 8.4, font="body_i", color="muted",
                                                       spaceAfter=6))]
@@ -943,7 +946,7 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
     story.append(Paragraph(esc(mt["next_hint"]), S["body"]))
 
     # Couverture des exigences (libellés et couleurs : source unique gap_status)
-    gap_head = [Paragraph(TR["gap_title"], S["h2"]),
+    gap_head: list[Flowable] = [Paragraph(TR["gap_title"], S["h2"]),
                 Paragraph(esc(NR.gaps_intro(request, gaps, ref)), S["body"])]
     rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in ("gap_req", "gap_ref", "gap_status", "gap_note")]]
     for gp in gaps:
@@ -955,7 +958,7 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
     story.append(KeepTogether(gap_head + [data_table(rows, [CW * 0.32, CW * 0.19, CW * 0.17, CW * 0.32], k)]))
     story.append(_sp(k, 10))
 
-    risk_head = [Paragraph(TR["risks_head"], S["h2"]),
+    risk_head: list[Flowable] = [Paragraph(TR["risks_head"], S["h2"]),
                  Paragraph(esc(NR.risks_intro(request, ro["risks"])), S["body"])]
     c2 = k.ps("rc", 8.4, color="ink", alignment=TA_CENTER)
     rows = [[Paragraph(esc(TR[x]).upper(), S["th"]) for x in ("risk_desc", "risk_impact", "risk_lik", "risk_prio")]]

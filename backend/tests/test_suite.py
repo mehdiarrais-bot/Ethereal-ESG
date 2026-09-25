@@ -10,6 +10,7 @@ import io
 import sys
 import os
 import zipfile
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,13 +18,13 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,
-                    GovernanceData, TaxonomyData)
+                    GovernanceData, TaxonomyData, ESGScores)
 from esg_calculator import calculate_esg_scores
 from content_generator import generate_esg_content
 
 
 def make_request(lang="fr", theme="aurora", **overrides):
-    base = dict(
+    base: dict[str, Any] = dict(
         company=CompanyInfo(name="Acme Industries", sector="Industrie manufacturière",
                             country="France", revenue_eur=48_000_000,
                             reporting_year=2025, target_year=2030,
@@ -32,7 +33,7 @@ def make_request(lang="fr", theme="aurora", **overrides):
                                         scope2_emissions=2100, scope3_emissions=4900,
                                         renewable_energy_percent=42, waste_recycled_percent=63),
         social=SocialData(female_employees_percent=34, training_hours_per_employee=22,
-                          accident_frequency_rate=6.2, employee_count=320),
+                          accident_frequency_rate=6.2, total_employees=320),
         governance=GovernanceData(esg_audit_conducted=False, sustainability_committee=True,
                                   data_breaches=1, independent_board_percent=45),
         taxonomy=TaxonomyData(turnover_aligned_percent=38, capex_aligned_percent=52),
@@ -114,7 +115,7 @@ def test_yoy_and_trend_sections():
     assert "2024" in c["executive_summary"]  # phrase d'évolution N-1
     pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
     doc = fitz.open(stream=pdf, filetype="pdf")
-    full = "".join(doc[i].get_text() for i in range(doc.page_count))
+    full = "".join(str(doc[i].get_text()) for i in range(doc.page_count))
     assert "trajectoire ESG mesurée" in full  # section trajectoire présente
 
 
@@ -160,7 +161,7 @@ def test_consultant_notes_rendered_and_absent():
     c = generate_esg_content(r, s)
     pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
     doc = fitz.open(stream=pdf, filetype="pdf")
-    full = "".join(doc[i].get_text() for i in range(doc.page_count))
+    full = "".join(str(doc[i].get_text()) for i in range(doc.page_count))
     assert full.count("ANALYSE DU CONSULTANT") == 2
     assert "site de Lyon" in full
     # sans notes : aucun encart
@@ -168,7 +169,7 @@ def test_consultant_notes_rendered_and_absent():
     c2 = generate_esg_content(r2, s)
     pdf2 = generate_pdf_report(r2, s, c2, build_advanced_charts(r2, s, light_bg=True))
     doc2 = fitz.open(stream=pdf2, filetype="pdf")
-    assert not any("ANALYSE DU CONSULTANT" in doc2[i].get_text() for i in range(doc2.page_count))
+    assert not any("ANALYSE DU CONSULTANT" in str(doc2[i].get_text()) for i in range(doc2.page_count))
 
 
 def _completed_actions_pdf_text(actions):
@@ -186,7 +187,7 @@ def _completed_actions_pdf_text(actions):
     c = generate_esg_content(r, s)
     pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
     doc = fitz.open(stream=pdf, filetype="pdf")
-    raw = "".join(doc[i].get_text() for i in range(doc.page_count))
+    raw = "".join(str(doc[i].get_text()) for i in range(doc.page_count))
     return re.sub(r"\s+", " ", raw)
 
 
@@ -389,7 +390,9 @@ def test_branding_deterministic_and_distinct():
     assert validate_colors(a) is not None
     assert validate_colors({"primary": "oops", "accent": "#zzz"}) is None
     # primaire trop claire assombrie (elle porte du texte blanc)
-    p, _ = validate_colors({"primary": "#FFFFFF", "accent": "#3366CC"})
+    clair = validate_colors({"primary": "#FFFFFF", "accent": "#3366CC"})
+    assert clair is not None
+    p, _ = clair
     from branding import _luminance
     assert _luminance(p) <= 0.45
 
@@ -503,12 +506,12 @@ def _textes_des_livrables(r):
     for nom, data in (("pdf", generate_pdf_report(r, s, c, ch_l)),
                       ("onepager", generate_onepager_pdf(r, s))):
         doc = fitz.open(stream=data, filetype="pdf")
-        textes[nom] = re.sub(r"\s+", " ", "".join(doc[i].get_text() for i in range(doc.page_count)))
+        textes[nom] = re.sub(r"\s+", " ", "".join(str(doc[i].get_text()) for i in range(doc.page_count)))
     # La lettre de mission etait exclue des tests de gel uniquement pour
     # contourner le faux positif « marche PME/ETI » (DETTE 4bis). Le marqueur
     # ayant ete reecrit en passe 2, l'exclusion n'a plus d'objet.
     for nom, data in (("pptx", generate_pptx(r, s, c, build_advanced_charts(r, s, light_bg=False))),
-                      ("docx", generate_word_report(r, s, c, ch_l)),
+                      ("docx", generate_word_report(r, s, c, charts=ch_l)),
                       ("lettre", generate_proposal_docx(r, s))):
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             textes[nom] = " ".join(
@@ -815,7 +818,9 @@ def test_elision_du_titre_de_la_section_positionnement():
     r = make_request()
     r.company.name = "EcoGroup"
     s = calculate_esg_scores(r)
-    titre = benchmark_verdict(r, s)["title"]
+    bv = benchmark_verdict(r, s)
+    assert bv is not None
+    titre = bv["title"]
     assert "d'EcoGroup" in titre and "de EcoGroup" not in titre
 
 
@@ -920,6 +925,7 @@ def test_positionnement_interne_est_vrai_et_coherent():
     r = make_request()
     s = calculate_esg_scores(r)
     bv = benchmark_verdict(r, s)
+    assert bv is not None
     pil = {"env": s.environmental_score, "social": s.social_score, "gov": s.governance_score}
     assert bv["lead"] == max(pil, key=lambda k: pil[k])
     assert bv["lag"] == min(pil, key=lambda k: pil[k])
@@ -1049,7 +1055,7 @@ def test_glossary_rendered_in_pdf():
     c = generate_esg_content(r, s)
     pdf = generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True))
     doc = fitz.open(stream=pdf, filetype="pdf")
-    full = "".join(doc[i].get_text() for i in range(doc.page_count))
+    full = "".join(str(doc[i].get_text()) for i in range(doc.page_count))
     assert "Glossaire" in full
     assert "Double matérialité" in full
 
@@ -1146,7 +1152,7 @@ def test_sommaire_numerotation_et_pagination(lang):
     c = generate_esg_content(r, s)
     doc = fitz.open(stream=generate_pdf_report(r, s, c, build_advanced_charts(r, s, light_bg=True)),
                     filetype="pdf")
-    entier = re.sub(r"\s+", " ", " ".join(doc[i].get_text() for i in range(doc.page_count)))
+    entier = re.sub(r"\s+", " ", " ".join(str(doc[i].get_text()) for i in range(doc.page_count)))
 
     for libelle in _toc_labels(L(lang)):
         attendu = re.sub(r"\s+", " ", libelle).strip()
@@ -1334,11 +1340,11 @@ def test_provenance_avec_la_donnee_la_cible_declaree_est_citee(lang):
     prouve que le garde-fou discrimine au lieu d'interdire.
     """
     r = make_request(lang)
-    r.environmental.carbon_reduction_target_percent = 42      # etape B
-    r.environmental.baseline_year = 2019                      # etape B
-    r.company.claimed_frameworks = ["SBTi"]                   # etape B
-    r.company.iso_certifications = ["ISO 14001"]              # etape B
-    r.company.selected_sdgs = [7, 13]                         # etape B
+    r.environmental.carbon_reduction_target_percent = 42      # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
+    r.environmental.baseline_year = 2019                      # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
+    r.company.claimed_frameworks = ["SBTi"]                   # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
+    r.company.iso_certifications = ["ISO 14001"]              # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
+    r.company.selected_sdgs = [7, 13]                         # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
 
     pdf = _textes_des_livrables(r)["pdf"]
     attendus = ["42", "SBTi", "ISO 14001", "2019"]
@@ -1358,7 +1364,7 @@ def test_provenance_avec_la_donnee_lobjectif_de_parite_est_cite(lang):
     parite » lui demande de produire."""
     r = make_request(lang)
     r.governance.female_board_percent = 33
-    r.governance.gender_parity_target_percent = 40            # etape B
+    r.governance.gender_parity_target_percent = 40            # etape B  # pyright: ignore[reportAttributeAccessIssue]  # champ futur, test en skip
 
     pdf = _textes_des_livrables(r)["pdf"]
     attendu = "cible 40 %" if lang == "fr" else "40% target"
@@ -1554,7 +1560,7 @@ def test_le_gardefou_de_source_unique_discrimine():
 # chantier « exactitude du scoring » : chaque correction de bareme ulterieure
 # (bareme accidents, grille carbone, corruption_cases, seuils) se chiffrera
 # sur ces memes trois dossiers.
-_SOC_PME = dict(name="PME Temoin", sector="Industrie manufacturière",
+_SOC_PME: dict[str, Any] = dict(name="PME Temoin", sector="Industrie manufacturière",
                 country="France", revenue_eur=48_000_000, reporting_year=2025)
 
 
@@ -1673,10 +1679,10 @@ from types import SimpleNamespace
 
 def _scores_partiels(env=None, social=None, gov=None, total=None, rating=None):
     """Double de ESGScores : seuls les attributs lus par les derives."""
-    return SimpleNamespace(environmental_score=env, social_score=social,
+    return cast(ESGScores, SimpleNamespace(environmental_score=env, social_score=social,
                            governance_score=gov, total_esg_score=total,
                            rating=rating, strengths=[], weaknesses=[],
-                           recommendations=[], completude={})
+                           recommendations=[], completude={}))
 
 
 def test_band_sabstient_sur_un_score_absent():

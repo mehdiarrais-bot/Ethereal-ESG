@@ -7,7 +7,10 @@ mission dérivées de la feuille de route réelle, livrables, prérequis.
 Aucune donnée inventée — les honoraires restent à compléter.
 """
 import io
+from typing import cast
+
 from docx import Document
+from docx.styles.style import ParagraphStyle
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
@@ -44,7 +47,7 @@ def generate_proposal_docx(request: ESGRequest, scores: ESGScores) -> bytes:
     phases = roadmap_12m(request, scores)
 
     doc = Document()
-    doc.styles['Normal'].font.size = Pt(10.5)
+    cast(ParagraphStyle, doc.styles['Normal']).font.size = Pt(10.5)
     for s in doc.sections:
         s.top_margin = Cm(2.2); s.bottom_margin = Cm(2.2)
         s.left_margin = Cm(2.5); s.right_margin = Cm(2.5)

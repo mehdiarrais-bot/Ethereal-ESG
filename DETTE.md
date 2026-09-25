@@ -850,6 +850,28 @@ l'ancien code).
   jamais affirmer l'obligation, l'outil ne connaissant ni le périmètre de
   groupe ni la cotation.
 
+## 14. Abstention non gérée par le Word et le PowerPoint — LATENT
+
+Relevé par Pyright (mode standard) le 2026-09-25.
+
+- **Constat** : trois dérivés s'abstiennent (rendent `None`) quand le
+  classement des piliers n'est pas établi — `benchmark_verdict`,
+  `score_verdict` et `_band` (lu par `pillar_insights`) ; leurs docstrings
+  disent « les appelants doivent tester None (adaptation prévue aux lots 1
+  et 2) ». Le PDF le fait ; **le Word et le PowerPoint non** :
+  `docx_generator.py` lit `_bv["title"]`, `_bv["rows"]`, `_bv["insight"]`,
+  `ppt_generator.py` lit `_bv[...]` et passe `_verdict` à `add_text`,
+  `pillar_insights` indexe `P[...][None]`.
+- **Pourquoi latent** : aujourd'hui un pilier sans indicateur vaut encore
+  50/100 (§ 11), donc aucun score n'est `None` et l'abstention ne se
+  déclenche jamais. Vérifié : dossier vide et dossier « environnement
+  seul » génèrent Word et PDF sans erreur.
+- **Quand il cassera** : dès que le chantier « exactitude du scoring »
+  rendra `None` pour un pilier vide — la génération Word/PowerPoint
+  plantera (TypeError / KeyError).
+- **Marquage** : chaque ligne porte `# pyright: ignore[...]  # abstention
+  non gérée, DETTE § 14` ; les retirer fait partie de la correction.
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une

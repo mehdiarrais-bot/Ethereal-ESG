@@ -73,7 +73,7 @@ def auto_brand(name: str) -> dict:
             "accent": _to_hex(tuple(c * 255 for c in a))}
 
 
-def brand_pptx_theme(theme: dict, custom: dict) -> dict:
+def brand_pptx_theme(theme: dict, custom: dict | None) -> dict:
     """Variante du thème PPTX aux couleurs du client (RGBColor pptx)."""
     from pptx.dml.color import RGBColor
     v = validate_colors(custom)
@@ -92,7 +92,7 @@ def brand_pptx_theme(theme: dict, custom: dict) -> dict:
     return t
 
 
-def brand_pdf_palette(pal: dict, custom: dict) -> dict:
+def brand_pdf_palette(pal: dict, custom: dict | None) -> dict:
     """Variante de la palette PDF aux couleurs du client (reportlab)."""
     from reportlab.lib import colors as rl
     v = validate_colors(custom)
@@ -108,7 +108,7 @@ def brand_pdf_palette(pal: dict, custom: dict) -> dict:
     return out
 
 
-def brand_docx_hex(colors: dict, custom: dict) -> dict:
+def brand_docx_hex(colors: dict, custom: dict | None) -> dict:
     """Variante des couleurs Word (hex sans '#') aux couleurs du client."""
     v = validate_colors(custom)
     if not v:
@@ -123,7 +123,7 @@ def brand_docx_hex(colors: dict, custom: dict) -> dict:
     return out
 
 
-def brand_chart_colors(colors: dict, custom: dict) -> dict:
+def brand_chart_colors(colors: dict, custom: dict | None) -> dict:
     """Variante des couleurs de graphiques : accent + primaire du client,
     piliers inchangés (sémantiques)."""
     v = validate_colors(custom)
