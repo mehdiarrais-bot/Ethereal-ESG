@@ -121,7 +121,8 @@ def _slides_text(data) -> list[str]:
     from pptx import Presentation
     out = []
     for sl in Presentation(io.BytesIO(data)).slides:
-        out.append(" ".join(sh.text_frame.text for sh in sl.shapes if sh.has_text_frame))
+        out.append(" ".join(getattr(sh, "text_frame").text for sh in sl.shapes
+                            if sh.has_text_frame))
     return out
 
 
