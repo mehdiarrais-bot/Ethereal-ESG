@@ -200,9 +200,9 @@ scripts/make_examples.py    Régénère les livrables d'exemple
 
 ### Version exécutable Windows (sans Python ni Node)
 
-Un seul fichier, `EtherealESG.exe` : télécharger l'artefact *EtherealESG-windows* depuis
-l'onglet **Actions** du dépôt (workflow *Build Windows exe*), puis double-cliquer sur
-l'exe. L'application s'ouvre dans sa propre fenêtre (moteur WebView2 de Windows 10/11),
+Un seul fichier, `EtherealESG.exe` : le télécharger depuis la page
+[**Releases**](https://github.com/mehdiarrais-bot/Ethereal-ESG/releases/latest) du dépôt
+(publiée à chaque version, sans compte GitHub), puis double-cliquer sur l'exe. L'application s'ouvre dans sa propre fenêtre (moteur WebView2 de Windows 10/11),
 sans console ni navigateur ; fermer la fenêtre arrête l'application. Les livrables
 s'enregistrent via la boîte « Enregistrer sous ». Le premier démarrage prend quelques
 secondes (l'exe se décompresse). Journal : `%APPDATA%\EtherealESG\ethereal.log`.
