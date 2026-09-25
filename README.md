@@ -17,7 +17,7 @@ Aucune API externe, aucun compte, aucune donnée qui sort de la machine.
 
 ![Interface de configuration des livrables](docs/img/02-livrables.png)
 
-*L'interface : six gabarits éditoriaux, photos de l'entreprise, déclinaison aux couleurs du client, score calculé en direct.*
+*L'interface : six gabarits éditoriaux, photos de l'entreprise, score calculé en direct.*
 
 ---
 
@@ -64,7 +64,7 @@ Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 <td width="50%"><img src="docs/img/05-rapport-diagnostic.png" alt="Page diagnostic du rapport PDF"></td>
 </tr>
 <tr>
-<td align="center"><em>Synthèse une page : score, trajectoire, risques, top-3 actions</em></td>
+<td align="center"><em>Synthèse une page : score, évolution sur un an, risques, top-3 actions</em></td>
 <td align="center"><em>Diagnostic : trajectoire pluriannuelle, couverture des exigences de reporting</em></td>
 </tr>
 <tr>
@@ -73,15 +73,15 @@ Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 </tr>
 <tr>
 <td align="center"><em>Synthèse exécutive : digest décisionnel et analyse du consultant</em></td>
-<td align="center"><em>Plan d'action : matrice effort/impact, objectif, responsable, échéance</em></td>
+<td align="center"><em>Plan d'action : objectif, responsable et échéance par action, feuille de route sur 12 mois</em></td>
 </tr>
 </table>
 
 ### Une identité visuelle par client
 
-Une palette cohérente est dérivée automatiquement du nom du client (ou saisie à la main).
-Trois clients, trois rendus — sans intervention manuelle, et sans toucher aux couleurs
-sémantiques des piliers E/S/G.
+En option, le gabarit se décline aux couleurs du client : une palette est dérivée de son nom
+(ou saisie à la main) et reprise dans les aplats, les chiffres clés et les graphiques.
+Trois clients, trois rendus — sans toucher aux couleurs sémantiques des piliers E/S/G.
 
 ![Trois clients, trois identités visuelles](docs/img/08-branding.png)
 
