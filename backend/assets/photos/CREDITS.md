@@ -16,3 +16,21 @@ Redimensionnées à 1500 px de large maximum (JPEG q76).
 | pine-rows.jpg | [File:Lodgepole pine forest in the fog (53117735527).jpg](https://commons.wikimedia.org/wiki/File:Lodgepole_pine_forest_in_the_fog_(53117735527).jpg) | YellowstoneNPS | Public domain |
 | wheat-field.jpg | [File:Wheat field (1).jpg](https://commons.wikimedia.org/wiki/File:Wheat_field_(1).jpg) | Leon Brooks | Public domain |
 | hills-mist.jpg | [File:East Tennessee Crossing - Rolling Hills of the Crossing - NARA - 7718102.jpg](https://commons.wikimedia.org/wiki/File:East_Tennessee_Crossing_-_Rolling_Hills_of_the_Crossing_-_NARA_-_7718102.jpg) | Unknown authorUnknown author or not provided | Public domain |
+
+## Couvertures par secteur (ajoutées le 2026-09-26)
+
+Utilisées en couverture quand l'entreprise ne fournit pas sa propre photo et que son
+secteur relève d'une famille reconnue (`analysis.family`) ; sinon, la photo du gabarit.
+Téléchargées depuis Wikimedia Commons (vignettes de 1 920 px), réduites à 1 500 px (JPEG q76).
+
+| Fichier | Secteur | Source | Auteur | Licence |
+|---|---|---|---|---|
+| sector-industrie.jpg | Industrie | [File:Heavy industry (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Heavy_industry_(Unsplash).jpg) | Ant Rozetsky rozetsky | CC0 |
+| sector-transport.jpg | Transport et logistique | [File:Large cargo port (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Large_cargo_port_(Unsplash).jpg) | chuttersnap chuttersnap | CC0 |
+| sector-construction.jpg | BTP et construction | [File:View Above Construction Site (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:View_Above_Construction_Site_(Unsplash).jpg) | chuttersnap chuttersnap | CC0 |
+| sector-agro.jpg | Agroalimentaire | [File:Harvesting the Wheat Crop (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Harvesting_the_Wheat_Crop_(Unsplash).jpg) | meriç tuna tuna59 | CC0 |
+| sector-energie.jpg | Énergie | [File:Wind Turbines (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Wind_Turbines_(Unsplash).jpg) | Jason Blackeye jeisblack | CC0 |
+| sector-commerce.jpg | Commerce et distribution | [File:Farmer's Market Produce (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Farmer%27s_Market_Produce_(Unsplash).jpg) | Julian Hanslmaier j_h | CC0 |
+| sector-services.jpg | Services | [File:White office building (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:White_office_building_(Unsplash).jpg) | Michael Moloney mjmolo | CC0 |
+| sector-numerique.jpg | Numérique | [File:Code on computer monitor (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Code_on_computer_monitor_(Unsplash).jpg) | Markus Spiske markusspiske | CC0 |
+| sector-tourisme.jpg | Tourisme et hôtellerie | [File:Hotel resort in sunlight (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Hotel_resort_in_sunlight_(Unsplash).jpg) | Gabriel Ghnassia gabrielghnassia | CC0 |

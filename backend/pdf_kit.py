@@ -154,9 +154,17 @@ class Kit:
 
     # -- photos ---------------------------------------------------------
     def photo(self, slot: str) -> bytes | None:
-        """Photo client de l'emplacement, sinon photo de la banque."""
+        """Photo client de l'emplacement, sinon photo de la banque : pour la
+        couverture, celle du secteur du client (sector-<famille>.jpg) si sa
+        famille est reconnue, sinon celle du gabarit."""
         if slot in self._client_photos:
             return self._client_photos[slot]
+        if slot == "cover" and "cover" in self.d["photos"]:
+            from analysis import family
+            fam = family(self.request.company.sector)
+            sector = bank_photo(f"sector-{fam}") if fam != "general" else None
+            if sector:
+                return sector
         name = self.d["photos"].get(slot)
         return bank_photo(name) if name else None
 
