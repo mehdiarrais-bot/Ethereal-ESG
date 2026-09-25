@@ -9,6 +9,7 @@ d'elles et doit échouer si la protection est retirée.
 import io
 import json
 import os
+import re
 import sys
 import zipfile
 
@@ -65,12 +66,34 @@ def test_rebinding_dns_refuse(client):
     assert client.get("/api/clients", headers={"Host": "attaquant.example:8000"}).status_code == 403
 
 
-@pytest.mark.parametrize("origin", [None, "http://localhost:8000", "http://127.0.0.1:51234",
-                                    "http://localhost:5173"])
-def test_interface_locale_acceptee(client, origin):
+@pytest.mark.parametrize("host,origin", [
+    ("localhost:8000", None),                        # outil en ligne de commande
+    ("localhost:8000", "http://localhost:8000"),     # python main.py
+    ("127.0.0.1:51234", "http://127.0.0.1:51234"),   # exécutable, port libre
+    ("localhost:5173", "http://localhost:5173"),     # Vite : le proxy garde le Host
+    ("localhost:3000", "http://localhost:3000"),     # Docker : nginx transmet $http_host
+])
+def test_interface_locale_acceptee(client, host, origin):
     """L'interface servie en local (exe, Vite, Docker) n'est jamais bloquée."""
-    headers = {"Origin": origin} if origin else {}
+    headers = {"Host": host, "Sec-Fetch-Site": "same-origin"}
+    if origin:
+        headers["Origin"] = origin
     assert client.post("/api/clients", json={"form": FORM}, headers=headers).status_code == 200
+
+
+@pytest.mark.parametrize("headers", [
+    {"Origin": "http://localhost:5173"},             # autre port de la même machine
+    {"Origin": "http://127.0.0.1:8000"},             # autre nom de la même machine
+    {"Sec-Fetch-Site": "same-site"},                 # navigateur sans Origin, autre port
+])
+def test_autre_page_locale_refusee(client, headers):
+    """Audit du 2026-09-25 : une page servie sur localhost par un autre
+    programme (serveur de développement, outil local) écrivait dans l'API,
+    le contrôle d'origine ignorant le port."""
+    headers = dict(headers, Host="localhost:8000")
+    assert client.post("/api/clients", json={"form": FORM}, headers=headers).status_code == 403
+    assert client.delete(f"/api/clients/{CID}", headers=headers).status_code == 403
+    assert client.get("/api/clients").json() == []
 
 
 def test_hotes_autorises_par_defaut():
@@ -87,6 +110,38 @@ def test_ecoute_locale_par_defaut():
                encoding="utf-8").read()
     assert 'host="0.0.0.0"' not in src
     assert 'os.environ.get("ESG_HOST", "127.0.0.1")' in src
+
+
+def _repo_file(*parts) -> str:
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    with open(os.path.join(root, *parts), encoding="utf-8") as f:
+        return f.read()
+
+
+def test_docker_ne_publie_que_sur_la_machine():
+    """Audit du 2026-09-25 : « 8000:8000 » publiait l'API sur toutes les
+    interfaces ; un poste du réseau local lisait et effaçait les dossiers en
+    envoyant « Host: localhost ». Tout port publié doit viser 127.0.0.1."""
+    ports = re.findall(r'^\s*-\s*"([^"]+)"\s*$', _repo_file("docker-compose.yml"), re.M)
+    publies = [p for p in ports if p.count(":") >= 1 and p.split(":")[-1].isdigit()]
+    assert publies and all(p.startswith("127.0.0.1:") for p in publies), publies
+    assert "--reload" not in _repo_file("backend", "Dockerfile")
+
+
+def test_nginx_transmet_le_port():
+    """Sans le port dans Host, le contrôle d'origine refuserait l'interface Docker."""
+    conf = _repo_file("frontend", "nginx.conf")
+    assert "proxy_set_header Host $http_host;" in conf
+    assert "proxy_set_header Host $host;" not in conf
+
+
+def test_proxy_vite_garde_le_host():
+    """La forme courte « '/api': 'http://…' » active changeOrigin dans Vite :
+    le Host devenait localhost:8000 et toute écriture en développement était
+    refusée (constaté sur serveurs réels le 2026-09-25)."""
+    conf = _repo_file("frontend", "vite.config.js")
+    proxies = re.findall(r"'(/[a-z]+)':\s*(\{[^}]*\}|'[^']*')", conf)
+    assert proxies and all("changeOrigin: false" in cible for _, cible in proxies), proxies
 
 
 # ── Import d'archive ──────────────────────────────────────────────────────

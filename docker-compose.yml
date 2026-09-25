@@ -5,8 +5,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # Ports ouverts sur la seule machine hôte : l'API n'a pas d'authentification,
+    # la publier sur toutes les interfaces l'ouvrirait au réseau local.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
     environment:
@@ -20,7 +22,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     depends_on:
       - backend
     restart: unless-stopped

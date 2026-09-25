@@ -2,6 +2,7 @@ import os
 import io
 import re
 import sys
+from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
@@ -48,11 +49,18 @@ MAX_ARCHIVE_BYTES = 200_000_000
 #     /api/clients-import écrasait un dossier ;
 #   - rebinding DNS : un domaine tiers résolu vers 127.0.0.1 lisait l'API.
 # Parade : nom d'hôte sur liste blanche, et refus de toute requête d'écriture
-# annoncée par le navigateur comme venant d'une autre origine.
+# annoncée par le navigateur comme venant d'une autre origine. L'origine est
+# comparée à l'hôte contacté PORT COMPRIS : une autre page servie sur
+# localhost (serveur de développement, outil local) est une autre origine
+# (audit du 2026-09-25). Derrière un proxy (Vite, nginx), le proxy doit donc
+# transmettre l'en-tête Host tel que le navigateur l'a envoyé.
 _DEFAULT_HOSTS = "localhost,127.0.0.1,[::1]"
 ALLOWED_HOSTS = {h.strip().lower() for h in
                  os.environ.get("ESG_ALLOWED_HOSTS", _DEFAULT_HOSTS).split(",") if h.strip()}
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+# « none » : requête lancée hors de toute page (barre d'adresse, favori).
+# « same-site » est refusé : localhost:5173 et localhost:8000 sont le même site.
+_TRUSTED_FETCH_SITES = {"same-origin", "none"}
 
 
 def _hostname(value: str) -> str:
@@ -65,16 +73,17 @@ def _hostname(value: str) -> str:
 
 def request_refusal(method: str, headers) -> str | None:
     """Motif de refus d'une requête, ou None si elle est acceptable."""
-    if _hostname(headers.get("host", "")) not in ALLOWED_HOSTS:
+    host = headers.get("host", "").strip().lower()
+    if _hostname(host) not in ALLOWED_HOSTS:
         return "Hôte non autorisé"
     if method in _SAFE_METHODS:
         return None
     origin = headers.get("origin")
-    if origin is not None:
-        from urllib.parse import urlsplit
-        if origin == "null" or _hostname(urlsplit(origin).netloc) not in ALLOWED_HOSTS:
-            return "Origine non autorisée"
-    if headers.get("sec-fetch-site") == "cross-site":
+    # « null » (iframe sandboxée, fichier local) n'a pas de netloc : refusé.
+    if origin is not None and urlsplit(origin).netloc.lower() != host:
+        return "Origine non autorisée"
+    fetch_site = headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in _TRUSTED_FETCH_SITES:
         return "Requête intersite refusée"
     return None
 
