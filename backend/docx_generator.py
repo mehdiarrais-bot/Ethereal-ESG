@@ -452,8 +452,11 @@ def _company(r: _Report) -> None:
     import narrative as NR
     r.heading(r.TR["ed_company"], 1, r.colors["primary"])
     add_hr(r.doc, r.colors["secondary"])
+    import illustrations as IL
     for para in NR.company_paragraphs(r.request, r.ref):
         r.text(para)
+    for key in IL.spot("company"):
+        r.illustration(key)
     inits = NR.initiatives(r.request)
     if inits:
         r.heading(r.TR["ed_initiatives"], 2, r.colors["secondary"])
@@ -479,7 +482,7 @@ def _overview(r: _Report) -> None:
     if o["issues"]:
         r.heading(o["issues_title"], 3, primary)
         r.text(o["issues_intro"])
-        for key in IL.placements_overview():
+        for key in IL.spot("overview"):
             r.illustration(key)
         pillar_hex = {"env": r.colors.get("env", primary), "social": r.colors.get("social", primary),
                       "gov": r.colors.get("gov", primary)}
@@ -496,6 +499,7 @@ def _overview(r: _Report) -> None:
 
 def _closing_synthesis(r: _Report) -> None:
     import synthesis as SY
+    import illustrations as IL
     c = SY.closing(r.request, r.scores)
     color = r.colors["secondary"]
     if c["retain"]:
@@ -503,10 +507,14 @@ def _closing_synthesis(r: _Report) -> None:
         _bullets(r, c["retain"])
     if c["horizon"]:
         r.heading(c["horizon_title"], 2, color)
+        for key in IL.spot("horizon"):
+            r.illustration(key)
         for p in c["horizon"]:
             r.text(p)
     r.heading(c["first_title"], 2, color)
     r.text(c["first_intro"])
+    for key in IL.spot("first_days"):
+        r.illustration(key)
     _bullets(r, c["first"], numbered=True)
 
 
@@ -791,6 +799,9 @@ def _roadmap(r: _Report) -> None:
     TR, colors, doc = r.TR, r.colors, r.doc
     r.heading(TR["roadmap_title"], 2, colors["accent"])
     r.text(NR.roadmap_intro(r.request, r.roadmap))
+    import illustrations as IL
+    for key in IL.spot("roadmap"):
+        r.illustration(key)
     for ph in r.roadmap:
         pp = doc.add_paragraph()
         hr = pp.add_run(f'{ph["label"]} — {ph["sub"]}')

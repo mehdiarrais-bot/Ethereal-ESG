@@ -29,19 +29,26 @@ _ORDER = ["critique", "fragile", "satisfaisant", "solide", "exemplaire"]
 
 # (pilier, clé de section) -> figures ; la première section présente l'emporte
 ANCHORS = {
-    "env": [("_start", ["ill_ruler_env"]), (("energy", "waste"), ["ill_waffle_env"])],
+    "env": [("_start", ["ill_ruler_env"]), (("ghg", "intensity"), ["ill_scopes"]),
+            (("energy", "waste"), ["ill_waffle_env"])],
     "social": [("_start", ["ill_ruler_social"]), (("safety",), ["ill_tf"]),
-               (("talent", "mix"), ["ill_people"])],
-    "gov": [("_start", ["ill_ruler_gov"]), (("board",), ["ill_board"])],
+               (("talent", "mix"), ["ill_people"]), (("talent",), ["ill_quadrant"]),
+               (("mix",), ["ill_mixboard"]), (("stake",), ["ill_stake"])],
+    "gov": [("_start", ["ill_ruler_gov"]), (("steering",), ["ill_checklist"]),
+            (("board",), ["ill_board"])],
+}
+# Emplacements hors analyse des piliers (report_generator, docx_generator)
+SPOTS = {
+    "overview": ["ill_issue_map", "ill_chain"],
+    "company": ["ill_ratios", "ill_completeness"],
+    "roadmap": ["ill_roadmap"],
+    "horizon": ["ill_timeline"],
+    "first_days": ["ill_first"],
 }
 
 
-def placements_overview() -> list[str]:
-    """Figures du diagnostic d'ensemble (après l'introduction des enjeux)."""
-    return list(OVERVIEW)
-
-
-OVERVIEW: list[str] = []      # complété au lot 4 (hiérarchie des enjeux)
+def spot(name: str) -> list[str]:
+    return list(SPOTS[name])
 
 
 def placements(pillar: str, section_keys: list[str]) -> dict[str, list[str]]:
@@ -302,10 +309,10 @@ def _colors(request):
     c = get_colors(request.aesthetic_theme, True, getattr(request, "custom_colors", None))
     soft = colors_of(request.aesthetic_theme)
     return {**c, "env_soft": soft["env_soft"], "social_soft": soft["social_soft"],
-            "gov_soft": soft["gov_soft"]}
+            "gov_soft": soft["gov_soft"], "panel": soft["panel"]}
 
 
-def build(request) -> dict[str, bytes]:
+def build(request, scores=None) -> dict[str, bytes]:
     """Toutes les illustrations disponibles pour ce dossier. Une figure qui
     échoue est omise : la génération du livrable ne s'interrompt jamais."""
     colors = _colors(request)
@@ -318,6 +325,24 @@ def build(request) -> dict[str, bytes]:
         "ill_tf": lambda: tf_compare(request, colors),
         "ill_board": lambda: board(request, colors),
     }
+    import illustrations_more as M
+    if scores is None:
+        from esg_calculator import calculate_esg_scores
+        scores = calculate_esg_scores(request)
+    makers.update({
+        "ill_issue_map": lambda: M.issue_map(request, scores, colors),
+        "ill_chain": lambda: M.chain(request, scores, colors),
+        "ill_ratios": lambda: M.ratios(request, colors),
+        "ill_completeness": lambda: M.completeness(request, colors),
+        "ill_scopes": lambda: M.scope_coverage(request, colors),
+        "ill_checklist": lambda: M.gov_checklist(request, colors),
+        "ill_stake": lambda: M.stakeholders(request, colors),
+        "ill_roadmap": lambda: M.roadmap(request, scores, colors),
+        "ill_mixboard": lambda: M.mix_board(request, colors),
+        "ill_quadrant": lambda: M.quadrant(request, colors),
+        "ill_timeline": lambda: M.timeline(request, scores, colors),
+        "ill_first": lambda: M.first_days(request, scores, colors),
+    })
     out = {}
     for key, make in makers.items():
         try:
@@ -334,5 +359,14 @@ def caption(request, key: str) -> str:
     L = ILLU[_lang(request)]
     if key.startswith("ill_ruler_"):
         return L["cap_ruler"][key.rsplit("_", 1)[1]]
-    return L[{"ill_waffle_env": "cap_waffle", "ill_people": "cap_people", "ill_tf": "cap_tf",
-              "ill_board": "cap_board"}[key]]
+    return L[_CAPTIONS[key]]
+
+
+_CAPTIONS = {
+    "ill_waffle_env": "cap_waffle", "ill_people": "cap_people", "ill_tf": "cap_tf",
+    "ill_board": "cap_board", "ill_issue_map": "cap_issue_map", "ill_chain": "cap_chain",
+    "ill_ratios": "cap_ratios", "ill_completeness": "cap_completeness",
+    "ill_scopes": "cap_scopes", "ill_checklist": "cap_checklist", "ill_stake": "cap_stake",
+    "ill_roadmap": "cap_roadmap", "ill_mixboard": "cap_mixboard",
+    "ill_quadrant": "cap_quadrant", "ill_timeline": "cap_timeline", "ill_first": "cap_first",
+}

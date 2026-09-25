@@ -431,7 +431,7 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
     try:
         # Illustrations des piliers, dessinées depuis les données (illustrations.py)
         from illustrations import build as build_illustrations
-        out.update(build_illustrations(request))
+        out.update(build_illustrations(request, scores))
     except Exception as e:
         print(f"Illustrations error: {e}")
     return _images(out)

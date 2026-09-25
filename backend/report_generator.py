@@ -556,7 +556,7 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     story.full(PG.toc_page, g, _toc_parts(TR), pages_in)
     story.content()
     S = build_styles(k)
-    _company(story, request, k, S, TR, g)
+    _company(story, request, k, S, TR, g, chart_images)
     story.full(PG.glance_page, g)
     story.content()
     S = build_styles(k)
@@ -603,10 +603,10 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     if request.include_recommendations:
         _recommendations(story, request, scores, chart_images, k, S, TR, anchors,
                          recs, priority_reading)
-    _roadmap(story, request, scores, k, S, TR, anchors, rm)
+    _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images)
     if request.report_type.value == "white_paper":
         _white_paper(story, request, scores, k, S, TR, anchors)
-    _closing(story, request, scores, content, k, S, TR, anchors)
+    _closing(story, request, scores, content, k, S, TR, anchors, chart_images)
     story.full(PG.back_cover, g)
 
     doc.build(story)
@@ -644,7 +644,7 @@ def _focus_inline(story, k, S, g):
     story.append(KeepTogether(t))
 
 
-def _company(story, request, k, S, TR, g):
+def _company(story, request, k, S, TR, g, chart_images):
     """L'entreprise en bref : présentation, périmètre et complétude, chiffres
     saisis, photo fournie par l'entreprise, initiatives, mot de la direction."""
     c = request.company
@@ -667,8 +667,13 @@ def _company(story, request, k, S, TR, g):
         story.append(_sp(k, 6))
         story.append(t)
         story.append(_sp(k, 14))
+    import illustrations as IL
+    for key in IL.spot("company")[:1]:          # ratios, sous les chiffres saisis
+        _illustration(story, request, chart_images, key, S)
     for para in paras[1:]:
         story.append(Paragraph(esc(para), S["body"]))
+    for key in IL.spot("company")[1:]:          # complétude, après sa lecture
+        _illustration(story, request, chart_images, key, S)
     photo = k.photo("company") if k.has_client_photo("company") else None
     if photo:
         from pdf_kit import crop_jpeg
@@ -710,10 +715,12 @@ def _overview(story, request, scores, chart_images, k, S):
     story.append(Paragraph(esc(o["profile_title"]), S["h3"]))
     story.extend(Paragraph(esc(p), S["body"]) for p in o["profile"])
     if o["issues"]:
-        story.append(Paragraph(esc(o["issues_title"]), S["h3"]))
-        story.append(Paragraph(esc(o["issues_intro"]), S["body"]))
-        for key in IL.placements_overview():
-            _illustration(story, request, chart_images, key, S)
+        head = [Paragraph(esc(o["issues_title"]), S["h3"]),
+                Paragraph(esc(o["issues_intro"]), S["body"])]
+        for key in IL.spot("overview"):
+            _illustration(story, request, chart_images, key, S, head)
+            head = []
+        story.extend(head)
         for n, issue in enumerate(o["issues"], 1):
             story.append(Paragraph(f'<font color="{hexc(k.c[issue.pillar])}">{n}. '
                                    f'{esc(issue.title)}</font>', S["h3"]))
@@ -725,18 +732,23 @@ def _overview(story, request, scores, chart_images, k, S):
     story.append(_sp(k, 12))
 
 
-def _closing_synthesis(story, request, scores, k, S):
+def _closing_synthesis(story, request, scores, k, S, chart_images):
     """Ce que nous retenons, si rien ne change, les 90 premiers jours."""
     import synthesis as SY
+    import illustrations as IL
     c = SY.closing(request, scores)
     if c["retain"]:
         story.append(Paragraph(esc(c["retain_title"]), S["h2"]))
         _bullets(story, c["retain"], k, S)
     if c["horizon"]:
         story.append(Paragraph(esc(c["horizon_title"]), S["h2"]))
+        for key in IL.spot("horizon"):
+            _illustration(story, request, chart_images, key, S)
         story.extend(Paragraph(esc(p), S["body"]) for p in c["horizon"])
     story.append(Paragraph(esc(c["first_title"]), S["h2"]))
     story.append(Paragraph(esc(c["first_intro"]), S["body"]))
+    for key in IL.spot("first_days"):
+        _illustration(story, request, chart_images, key, S)
     _bullets(story, c["first"], k, S, numbered=True)
 
 
@@ -821,23 +833,31 @@ def _pillar_reading(story, request, scores, pillar, kpis, k, S, TR, lang, recs=(
         story.append(Paragraph(esc(NR.levers_sentence(request, recs, pillar)), S["body"]))
 
 
-def _illustration(story, request, chart_images, key, S):
-    """Illustration pleine largeur (proportions du PNG) et sa légende, insécables."""
+def _illustration_flow(request, chart_images, key, S) -> list[Flowable]:
+    """Illustration pleine largeur (proportions du PNG) et sa légende."""
     from reportlab.lib.utils import ImageReader
     import illustrations as IL
     data = chart_images.get(key)
     if not data:
-        return
+        return []
     try:
         iw, ih = ImageReader(io.BytesIO(data)).getSize()
         w = min(CW, iw / IL.DPI * 72)
         im = Image(io.BytesIO(data), width=w, height=w * ih / iw)
         im.hAlign = "CENTER"
-        story.append(KeepTogether([Spacer(1, 4), im,
-                                   Paragraph(esc(IL.caption(request, key)), S["caption"]),
-                                   Spacer(1, 6)]))
+        return [Spacer(1, 4), im, Paragraph(esc(IL.caption(request, key)), S["caption"]),
+                Spacer(1, 6)]
     except Exception as e:
         print(f"Illustration '{key}' error: {e}")
+        return []
+
+
+def _illustration(story, request, chart_images, key, S, head=()):
+    """Illustration insécable ; `head` (titres) reste sur la même page qu'elle
+    — jamais un titre seul en bas de page."""
+    flow = _illustration_flow(request, chart_images, key, S)
+    if flow or head:
+        story.append(KeepTogether(list(head) + flow))
 
 
 def _pillar_analysis(story, request, scores, pillar, chart_images, k, S):
@@ -848,9 +868,11 @@ def _pillar_analysis(story, request, scores, pillar, chart_images, k, S):
     if not sections:
         return
     where = IL.placements(pillar, [sec.key for sec in sections])
-    story.append(Paragraph(esc(AN.analysis_title(request, pillar)), S["h2"]))
+    head = [Paragraph(esc(AN.analysis_title(request, pillar)), S["h2"])]
     for key in where.get("_start", []):
-        _illustration(story, request, chart_images, key, S)
+        _illustration(story, request, chart_images, key, S, head)
+        head = []
+    story.extend(head)
     for sec in sections:
         story.append(Paragraph(f'<font color="{hexc(k.c[pillar])}">{esc(sec.title)}</font>',
                                S["h3"]))
@@ -1127,12 +1149,15 @@ def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, re
     story.append(_sp(k, 6))
 
 
-def _roadmap(story, request, scores, k, S, TR, anchors, rm):
+def _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images):
     if not any(ph["actions"] for ph in rm):
         return
     story.append(_sp(k, 14))
     section_head(story, TR["roadmap_title"], "accent", k, S, anchors, "roadmap", keep_cm=10)
     story.append(Paragraph(esc(NR.roadmap_intro(request, rm)), S["body"]))
+    import illustrations as IL
+    for key in IL.spot("roadmap"):
+        _illustration(story, request, chart_images, key, S)
     pcol = {"env": k.c["env"], "social": k.c["social"], "gov": k.c["gov"]}
     heads, bodies = [], []
     for ph in rm:
@@ -1181,7 +1206,7 @@ def _white_paper(story, request, scores, k, S, TR, anchors):
         story.append(Paragraph(f"<b>{esc(label)} :</b> {esc(obj)}", S["bullet"]))
 
 
-def _closing(story, request, scores, content, k, S, TR, anchors):
+def _closing(story, request, scores, content, k, S, TR, anchors, chart_images):
     from glossary import glossary_entries
     story.append(_sp(k, 14))
     title = TR["pdf_concl_wp"] if request.report_type.value == "white_paper" else TR["pdf_concl"]
@@ -1190,7 +1215,7 @@ def _closing(story, request, scores, content, k, S, TR, anchors):
                                            f"{request.company.name} — score ESG "
                                            f"{score_label(scores.total_esg_score, 1)}/100 (note {scores.rating or NON_NOTE}).")),
                            S["body"]))
-    _closing_synthesis(story, request, scores, k, S)
+    _closing_synthesis(story, request, scores, k, S, chart_images)
     if content.get("methodology"):
         story.append(_sp(k, 10))
         story.append(Paragraph(TR["pdf_methodo"], S["h2"]))

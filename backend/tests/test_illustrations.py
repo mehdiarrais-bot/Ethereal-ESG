@@ -20,11 +20,51 @@ import illustrations as IL                                            # noqa: E4
 PNG = b"\x89PNG"
 
 
-def test_sept_figures_pour_un_dossier_complet():
+LOT1 = {"ill_ruler_env", "ill_ruler_social", "ill_ruler_gov", "ill_waffle_env", "ill_people",
+        "ill_tf", "ill_board"}
+LOT4 = {"ill_issue_map", "ill_chain", "ill_ratios", "ill_completeness", "ill_scopes",
+        "ill_checklist", "ill_stake", "ill_roadmap", "ill_mixboard", "ill_quadrant",
+        "ill_timeline", "ill_first"}
+
+
+def test_dix_neuf_figures_au_catalogue():
+    assert len(LOT1 | LOT4) == 19
+    assert set(IL._CAPTIONS) | {"ill_ruler_env", "ill_ruler_social", "ill_ruler_gov"} == LOT1 | LOT4
+
+
+def test_figures_d_un_dossier_complet():
+    """Le transporteur n'a déclaré aucun indicateur d'ancrage : seule
+    ill_stake manque."""
     imgs = IL.build(_trois()["transport"])
-    assert set(imgs) == {"ill_ruler_env", "ill_ruler_social", "ill_ruler_gov", "ill_waffle_env",
-                         "ill_people", "ill_tf", "ill_board"}
+    assert set(imgs) == (LOT1 | LOT4) - {"ill_stake"}
     assert all(v.startswith(PNG) for v in imgs.values())
+
+
+def test_ancrage_territorial_avec_ses_donnees():
+    r = make_request(social=SocialData(total_employees=80, local_suppliers_percent=62,
+                                       customer_satisfaction_score=8.1))
+    assert "ill_stake" in IL.build(r)
+
+
+def test_bilan_complet_pas_de_figure_de_couverture():
+    """Tous les scopes mesurés : le camembert existant suffit ; un scope
+    manquant n'est jamais dessiné avec une taille inventée."""
+    assert "ill_scopes" not in IL.build(make_request())   # Scopes 1, 2 et 3 renseignés
+
+
+def test_quadrant_lit_les_seuils_de_la_grille():
+    import illustrations_more as M
+    from bands import SEUILS
+    h = dict((n, b) for b, n in SEUILS["training_hours_per_employee"]["bornes"])["satisfaisant"]
+    t = dict((n, b) for b, n in SEUILS["employee_turnover_percent"]["bornes"])["satisfaisant"]
+    assert (h, t) == (20, 15)
+    assert M._SOCIAL_BANDS["training_hours_per_employee"] is SEUILS["training_hours_per_employee"]["bornes"]
+
+
+def test_emplacements_hors_piliers():
+    assert IL.spot("overview") == ["ill_issue_map", "ill_chain"]
+    assert set(IL.spot("company") + IL.spot("roadmap") + IL.spot("horizon")
+               + IL.spot("first_days")) <= LOT4
 
 
 def test_aucune_figure_sans_sa_donnee():
@@ -59,8 +99,9 @@ def test_le_marqueur_tombe_dans_la_tranche_du_score(key, value, sector):
 
 def test_ancrage_des_figures():
     assert IL.placements("social", ["safety", "talent", "mix"]) == {
-        "_start": ["ill_ruler_social"], "safety": ["ill_tf"], "talent": ["ill_people"]}
-    assert IL.placements("social", ["mix"])["mix"] == ["ill_people"]
+        "_start": ["ill_ruler_social"], "safety": ["ill_tf"],
+        "talent": ["ill_people", "ill_quadrant"], "mix": ["ill_mixboard"]}
+    assert IL.placements("social", ["mix"])["mix"] == ["ill_people", "ill_mixboard"]
     assert IL.placements("env", ["ghg", "waste"])["waste"] == ["ill_waffle_env"]
 
 
@@ -74,5 +115,6 @@ def test_legendes_dans_le_word(lang):
     s = calculate_esg_scores(r)
     texte = _norm(_docx(generate_word_report(r, s, generate_esg_content(r, s),
                                              charts=IL.build(r))), lang)
-    for key in ("ill_tf", "ill_board", "ill_people"):
+    for key in ("ill_tf", "ill_board", "ill_people", "ill_issue_map", "ill_ratios",
+                "ill_first", "ill_quadrant"):
         assert _norm(IL.caption(r, key), lang) in texte, key
