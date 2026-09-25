@@ -112,8 +112,10 @@ affiché comme tel.
 - **Glossaire** en annexe, filtré sur ce que le rapport contient réellement — le lecteur
   non spécialiste n'a pas besoin d'un dictionnaire.
 
-Le scoring différencie les **grilles d'intensité carbone par famille sectorielle** : une même
-intensité vaut 40/100 dans les services, 60 dans l'industrie, 70 dans l'énergie. La notation
+Le scoring juge l'intensité carbone sur une **grille interne différenciée par famille de
+secteurs** (non adossée à une référence publiée, et présentée comme telle dans le rapport) :
+150 t CO₂e par M€ de chiffre d'affaires valent 40/100 dans les services, 60 dans l'industrie,
+80 dans l'énergie. La notation
 lettrée est explicitement présentée comme *indicative* et documentée dans une note
 méthodologique qui déclare aussi les limites et les points de données manquants.
 
