@@ -1,0 +1,4 @@
+# Dependances de l'executable Windows seulement (en plus de
+# backend/requirements-lock.txt) : fabrication et fenetre native.
+pyinstaller==6.22.3
+pywebview==6.2.1

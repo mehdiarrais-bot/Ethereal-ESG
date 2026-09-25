@@ -1,7 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 # Build : depuis la racine du depot, apres `npm run build` dans frontend/ :
+#   pip install -r packaging/requirements-desktop.txt
 #   pyinstaller packaging/ethereal_esg.spec --noconfirm
-# Sortie : dist/EtherealESG/EtherealESG.exe (mode onedir, a distribuer zippe).
+# Sortie : dist/EtherealESG.exe — UN SEUL fichier, sans console : un
+# double-clic ouvre l'application dans sa propre fenetre (pywebview, moteur
+# WebView2 de Windows). Voir backend/desktop_entry.py.
 import os
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
@@ -33,14 +36,15 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# Mode « onefile » : binaires et donnees dans l'exe lui-meme (pas de COLLECT).
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
     name="EtherealESG",
-    console=True,
-    upx=False,  # UPX augmente les faux positifs antivirus
+    console=False,   # pas de fenetre noire : journal dans %APPDATA%\EtherealESG
+    upx=False,       # UPX augmente les faux positifs antivirus
     icon=os.path.join(ROOT, "frontend", "dist", "favicon.ico"),
 )
-coll = COLLECT(exe, a.binaries, a.datas, name="EtherealESG", upx=False)

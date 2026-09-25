@@ -200,10 +200,13 @@ scripts/make_examples.py    Régénère les livrables d'exemple
 
 ### Version exécutable Windows (sans Python ni Node)
 
-Télécharger `EtherealESG-windows.zip` depuis l'onglet **Actions** du dépôt (workflow
-*Build Windows exe*), le décompresser, puis double-cliquer sur `EtherealESG\EtherealESG.exe`.
-L'application s'ouvre dans le navigateur ; la fenêtre console doit rester ouverte pendant
-l'utilisation. Les dossiers clients sont stockés dans `%APPDATA%\EtherealESG\clients`,
+Un seul fichier, `EtherealESG.exe` : télécharger l'artefact *EtherealESG-windows* depuis
+l'onglet **Actions** du dépôt (workflow *Build Windows exe*), puis double-cliquer sur
+l'exe. L'application s'ouvre dans sa propre fenêtre (moteur WebView2 de Windows 10/11),
+sans console ni navigateur ; fermer la fenêtre arrête l'application. Les livrables
+s'enregistrent via la boîte « Enregistrer sous ». Le premier démarrage prend quelques
+secondes (l'exe se décompresse). Journal : `%APPDATA%\EtherealESG\ethereal.log`.
+Les dossiers clients sont stockés dans `%APPDATA%\EtherealESG\clients`,
 donc conservés lors d'une mise à jour de l'exécutable.
 
 Reprise des dossiers créés avec `start.bat` : ils se trouvent dans `backend\data\clients`
@@ -215,8 +218,9 @@ L'exécutable n'est pas signé : Windows SmartScreen affiche un avertissement au
 lancement (« Informations complémentaires » puis « Exécuter quand même »).
 
 Construction locale : `cd frontend && npm run build`, puis depuis la racine
+`pip install -r packaging/requirements-desktop.txt`,
 `pyinstaller packaging/ethereal_esg.spec --noconfirm` et
-`python packaging/smoke_test.py dist/EtherealESG/EtherealESG.exe`.
+`python packaging/smoke_test.py dist/EtherealESG.exe`.
 
 ### Depuis les sources
 

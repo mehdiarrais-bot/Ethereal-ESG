@@ -1,7 +1,7 @@
 """
 Test de fumee de l'executable construit.
 
-Usage : python packaging/smoke_test.py dist/EtherealESG/EtherealESG[.exe]
+Usage : python packaging/smoke_test.py dist/EtherealESG.exe
 
 Verifie, sur le binaire reel (pas sur le code source) :
   - le serveur demarre et l'interface est servie (pas une 404 JSON) ;
@@ -14,6 +14,7 @@ Toute anomalie fait echouer le script (code retour 1).
 """
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -21,7 +22,16 @@ import time
 import urllib.error
 import urllib.request
 
-BASE = "http://127.0.0.1:8000"
+def _free_port():
+    """Port libre choisi par le système : le test ne doit jamais parler à une
+    autre instance (application déjà ouverte sur 8000, par exemple)."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+PORT = _free_port()
+BASE = f"http://127.0.0.1:{PORT}"
 
 PAYLOAD = {
     "company": {"name": "Acme Industries", "sector": "Industrie manufacturière",
@@ -32,7 +42,7 @@ PAYLOAD = {
                       "scope2_emissions": 2100, "scope3_emissions": 4900,
                       "renewable_energy_percent": 42, "waste_recycled_percent": 63},
     "social": {"female_employees_percent": 34, "training_hours_per_employee": 22,
-               "accident_frequency_rate": 6.2, "employee_count": 320},
+               "accident_frequency_rate": 6.2, "total_employees": 320},
     "governance": {"esg_audit_conducted": False, "sustainability_committee": True,
                    "data_breaches": 1, "independent_board_percent": 45},
     "taxonomy": {"turnover_aligned_percent": 38, "capex_aligned_percent": 52},
@@ -58,10 +68,26 @@ def request(method, path, body=None):
         return r.status, r.headers.get("content-type", ""), r.read()
 
 
+def _stop(proc):
+    """L'exe « onefile » lance un second processus (le lanceur décompresse,
+    puis démarre Python) : il faut arrêter l'arbre entier, sinon le serveur
+    survit et garde le port."""
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                       capture_output=True, check=False)
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
 def main(exe):
     failures = []
     data_dir = tempfile.mkdtemp(prefix="esg_smoke_")
-    env = dict(os.environ, ESG_DATA_DIR=data_dir, ESG_NO_BROWSER="1")
+    env = dict(os.environ, ESG_DATA_DIR=data_dir, ESG_NO_WINDOW="1",  # serveur seul
+               ESG_PORT=str(PORT))
     proc = subprocess.Popen([exe], env=env, stdin=subprocess.DEVNULL)
     try:
         for _ in range(120):
@@ -106,11 +132,7 @@ def main(exe):
         else:
             print(f"  OK  persistance client dans {data_dir}")
     finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        _stop(proc)
 
     if failures:
         print("\n[ECHEC]\n  - " + "\n  - ".join(failures))
