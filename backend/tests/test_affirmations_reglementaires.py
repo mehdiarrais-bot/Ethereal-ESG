@@ -123,3 +123,23 @@ def test_note_methodologique_cite_le_champ_verifie_de_la_csrd(lang):
     for repere in ("2025-391", "2026/470", "19 March 2027" if lang == "en" else "19 mars 2027"):
         assert repere in note, repere
     assert ("ne se prononce pas" if lang == "fr" else "does not assess") in note
+
+
+# ── 5. Mixité de l'effectif : repères internes déclarés (option D1) ───────
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_reperes_de_mixite_declares_internes(lang):
+    from esg_calculator import MIXITE_EFFECTIF_REPERE
+    req = make_request(lang=lang)
+    note = generate_esg_content(req, calculate_esg_scores(req))["methodology"]
+    assert ("repères internes" if lang == "fr" else "internal benchmarks") in note
+    assert f"{MIXITE_EFFECTIF_REPERE} %" in note or f"{MIXITE_EFFECTIF_REPERE}%" in note
+    assert ("aucun quota légal" if lang == "fr" else "no legal quota") in note
+
+
+def test_seuil_de_mixite_source_unique():
+    """Le 40 % de mixité de l'effectif n'est écrit qu'une fois (esg_calculator)."""
+    import re as _re
+    for fichier in ("esg_calculator.py", "content_generator.py"):
+        with open(os.path.join(ROOT, "backend", fichier), encoding="utf-8") as f:
+            src = f.read()
+        assert not _re.search(r"female_employees_percent\s*(<|>=)\s*40\b", src), fichier

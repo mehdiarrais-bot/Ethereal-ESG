@@ -626,6 +626,13 @@ Historique :
   Il ne s'affiche plus, mais il continue de piloter le jugement porté sur
   le client, en reprenant un chiffre emprunté aux quotas légaux. À
   reconsidérer dans le chantier « exactitude du scoring ».
+- **Décidé le 2026-09-25 (option D1)** : repères assumés comme **internes**
+  au diagnostic. Seuil de 40 % et grille de notation 15/25/35/45 % nommés
+  en source unique (`esg_calculator.MIXITE_EFFECTIF_REPERE`,
+  `GRILLE_MIXITE_EFFECTIF`) et déclarés dans la note méthodologique FR/EN,
+  avec la mention « aucun quota légal ne porte sur la mixité de l'effectif
+  total ». Le constat (« Déséquilibre de genre… ») reste sans cible
+  chiffrée. Verrouillé par `tests/test_affirmations_reglementaires.py`.
 
 ## 4bis. Résidus du chantier « comparaison sectorielle » — points laissés ouverts
 

@@ -18,6 +18,13 @@ TF_GRID = [(4, 100), (8, 80), (16, 60), (25, 40), (float("inf"), 20)]
 TF_STRENGTH_MAX = 4                 # point fort : tranche « exemplaire »
 TF_WEAKNESS_MIN = TF_NATIONAL_2024  # axe de progrès : au-dessus de la moyenne nationale
 
+# Mixité de l'effectif : REPÈRES INTERNES du diagnostic (option D1, décidée
+# le 2026-09-25). Aucun quota légal ne porte sur la mixité de l'effectif
+# total (vérifié le 2026-09-02, DETTE § 4) ; ces repères sont déclarés comme
+# internes dans la note méthodologique (content_generator), qui les lit ici.
+MIXITE_EFFECTIF_REPERE = 40            # % de femmes : point fort au-dessus, axe en dessous
+GRILLE_MIXITE_EFFECTIF: list[tuple[float, float]] = [(45, 100), (35, 80), (25, 60), (15, 40), (0, 20)]
+
 # Pénalité par cas de corruption déclaré (décision du 2026-09-24) : plus
 # sévère que les manquements éthiques (20) et les incidents cyber (30).
 CORRUPTION_PENALTY = 50
@@ -129,9 +136,7 @@ def calculate_social_score(social: SocialData) -> Tuple[float | None, dict]:
     gender_parity = None
     if social.female_employees_percent is not None:
         gender_parity = social.female_employees_percent
-        scores["gender"] = score_metric(social.female_employees_percent, [
-            (45, 100), (35, 80), (25, 60), (15, 40), (0, 20)
-        ])
+        scores["gender"] = score_metric(social.female_employees_percent, GRILLE_MIXITE_EFFECTIF)
         details["female_percent"] = social.female_employees_percent
 
     # Low turnover (lower = better)
@@ -274,7 +279,7 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
         strengths.append(f"Fort taux d'énergie renouvelable ({env.renewable_energy_percent:.0f}%)")
     if env.waste_recycled_percent and env.waste_recycled_percent >= 65:
         strengths.append(f"Taux de recyclage élevé ({env.waste_recycled_percent:.0f}%)")
-    if social.female_employees_percent and social.female_employees_percent >= 40:
+    if social.female_employees_percent and social.female_employees_percent >= MIXITE_EFFECTIF_REPERE:
         strengths.append(f"Bonne parité homme-femme dans les effectifs ({social.female_employees_percent:.0f}%)")
     if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
         strengths.append(f"Investissement significatif dans la formation ({social.training_hours_per_employee:.0f} h/an)")
@@ -309,7 +314,7 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
         weaknesses.append("Scope 3 non mesuré — angle mort important dans le bilan carbone")
     if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
         weaknesses.append(f"Taux de recyclage faible ({env.waste_recycled_percent:.0f}%)")
-    if social.female_employees_percent is not None and social.female_employees_percent < 40:
+    if social.female_employees_percent is not None and social.female_employees_percent < MIXITE_EFFECTIF_REPERE:
         # Pas de « objectif 40% » : aucun quota legal ne porte sur la
         # mixite de l'effectif total (verifie le 2026-09-02). Pointer le
         # desequilibre reste un jugement de consultant defendable ; lui
@@ -343,7 +348,7 @@ def generate_recommendations(env: EnvironmentalData, social: SocialData, gov: Go
         recs.append("Augmenter la part d'énergie renouvelable à 50% d'ici 2027")
     if env.scope3_emissions is None:
         recs.append("Mettre en place la mesure et le reporting des émissions Scope 3")
-    if social.female_employees_percent is None or social.female_employees_percent < 40:
+    if social.female_employees_percent is None or social.female_employees_percent < MIXITE_EFFECTIF_REPERE:
         recs.append("Définir des objectifs chiffrés de parité femme-homme")
     if social.training_hours_per_employee is None or social.training_hours_per_employee < 20:
         recs.append("Porter les heures de formation à 20h/employé/an minimum")
@@ -364,7 +369,7 @@ def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
         r.append(f"High share of renewable energy ({env.renewable_energy_percent:.0f}%)")
     if env.waste_recycled_percent and env.waste_recycled_percent >= 65:
         r.append(f"High recycling rate ({env.waste_recycled_percent:.0f}%)")
-    if social.female_employees_percent and social.female_employees_percent >= 40:
+    if social.female_employees_percent and social.female_employees_percent >= MIXITE_EFFECTIF_REPERE:
         r.append(f"Good gender balance in the workforce ({social.female_employees_percent:.0f}%)")
     if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
         r.append(f"Significant investment in training ({social.training_hours_per_employee:.0f} h/year)")
@@ -393,7 +398,7 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
         r.append("Scope 3 not measured — a major blind spot in the carbon footprint")
     if env.waste_recycled_percent is not None and env.waste_recycled_percent < 50:
         r.append(f"Low recycling rate ({env.waste_recycled_percent:.0f}%)")
-    if social.female_employees_percent is not None and social.female_employees_percent < 40:
+    if social.female_employees_percent is not None and social.female_employees_percent < MIXITE_EFFECTIF_REPERE:
         # Voir la note du bloc FR equivalent.
         r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women)")
     if social.accident_frequency_rate is not None and social.accident_frequency_rate > TF_WEAKNESS_MIN:
@@ -421,7 +426,7 @@ def generate_recommendations_en(env, social, gov):
         r.append("Increase the share of renewable energy to 50% by 2027")
     if env.scope3_emissions is None:
         r.append("Implement measurement and reporting of Scope 3 emissions")
-    if social.female_employees_percent is None or social.female_employees_percent < 40:
+    if social.female_employees_percent is None or social.female_employees_percent < MIXITE_EFFECTIF_REPERE:
         r.append("Set quantified gender-balance targets")
     if social.training_hours_per_employee is None or social.training_hours_per_employee < 20:
         r.append("Raise training to at least 20 h/employee/year")

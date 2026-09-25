@@ -5,7 +5,7 @@ lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
 from models import ESGRequest, ESGScores
-from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE
+from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE, GRILLE_MIXITE_EFFECTIF
 
 
 def _seed(name: str) -> int:
@@ -666,6 +666,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
     # ── 5. Note méthodologique (périmètre, référentiels, limites) ────────
     year = request.company.reporting_year
     champ = CSRD_CHAMP["en" if en else "fr"]
+    seuils = "/".join(str(b) for b, _ in reversed(GRILLE_MIXITE_EFFECTIF[:-1]))
     gap_txt = ""
     if gaps:
         listed = " ; ".join(gaps[:3]) if not en else "; ".join(gaps[:3])
@@ -683,7 +684,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"indicator on an INTERNAL scoring grid, specific to this tool: its thresholds were "
             f"defined in-house and are not derived from any published external reference. Carbon "
             f"intensity is rated on a grid differentiated by sector family (services, industry, "
-            f"transport, energy…), which is likewise internal. The accident frequency rate grid is "
+            f"transport, energy…), which is likewise internal. Workforce gender balance is read "
+            f"against internal benchmarks of this diagnostic ({MIXITE_EFFECTIF_REPERE}% women separates a "
+            f"strength from an area for improvement; scoring steps at {seuils}%): no legal quota "
+            f"applies to the gender balance of the total workforce. The accident frequency rate grid is "
             f"anchored on the national rate published by the French Health Insurance (16.0 in 2024, "
             f"all sectors; {TF_SOURCE}). The overall score "
             f"is the weighted average of the rated pillars (weights 40/35/25, rescaled when a pillar "
@@ -715,7 +719,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"GRILLE DE NOTATION INTERNE, propre à l'outil : ses seuils ont été définis en interne "
             f"et ne sont adossés à aucun référentiel externe publié. L'intensité carbone est "
             f"notée sur une grille différenciée par famille sectorielle (services, industrie, "
-            f"transport, énergie…), elle aussi interne. La grille du taux de fréquence des accidents "
+            f"transport, énergie…), elle aussi interne. La mixité de l'effectif est lue au regard de "
+            f"repères internes au diagnostic ({MIXITE_EFFECTIF_REPERE} % de femmes sépare un point fort d'un "
+            f"axe d'amélioration ; paliers de notation à {seuils} %) : aucun quota légal ne porte sur la "
+            f"mixité de l'effectif total. La grille du taux de fréquence des accidents "
             f"est ancrée sur le taux national publié par l'Assurance Maladie (16,0 en 2024, tous "
             f"secteurs ; {TF_SOURCE}). Le score global est la moyenne "
             f"pondérée des piliers notés (pondérations 40/35/25, renormalisées quand un pilier n'est pas "
@@ -1579,7 +1586,7 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
     keys = []
     if env.renewable_energy_percent is None or env.renewable_energy_percent < 50: keys.append("renewable")
     if env.scope3_emissions is None: keys.append("scope3")
-    if soc.female_employees_percent is None or soc.female_employees_percent < 40: keys.append("parity")
+    if soc.female_employees_percent is None or soc.female_employees_percent < MIXITE_EFFECTIF_REPERE: keys.append("parity")
     if soc.training_hours_per_employee is None or soc.training_hours_per_employee < 20: keys.append("training")
     if not gov.esg_audit_conducted: keys.append("audit")
     if not gov.sustainability_committee: keys.append("committee")
@@ -2266,7 +2273,7 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
                        "Fossil-energy dependence: exposure to rising prices", "Transition", "M", "H"))
     # Aucun quota légal ne porte sur la mixité de l'effectif (DETTE § 4) :
     # risque d'attractivité, jamais réglementaire.
-    if soc.female_employees_percent is not None and soc.female_employees_percent < 40:
+    if soc.female_employees_percent is not None and soc.female_employees_percent < MIXITE_EFFECTIF_REPERE:
         risks.append(T("Mixité de l'effectif déséquilibrée : risque d'attractivité employeur", "Social",
                        "Unbalanced workforce gender mix: employer attractiveness risk", "Social", "M", "H"))
     if gov.data_breaches is not None and gov.data_breaches > 0:
