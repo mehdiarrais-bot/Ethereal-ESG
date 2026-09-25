@@ -823,7 +823,7 @@ l'ancien code).
   CSRD ». Vérifié sur EUR-Lex : l'assurance limitée demeure pour les
   entreprises soumises (directive (UE) 2026/470, considérant 4).
 
-## 13. La CSRD présumée applicable au client — OUVERT
+## 13. La CSRD présumée applicable au client — **traité le 2026-09-25 (option B1)**
 
 - **Constat** : la **directive (UE) 2026/470** (« Omnibus », JO du
   26.2.2026, transposition au plus tard le 19 mars 2027) limite le
@@ -849,6 +849,24 @@ l'ancien code).
   champ à partir de l'effectif et du chiffre d'affaires saisis — sans
   jamais affirmer l'obligation, l'outil ne connaissant ni le périmètre de
   groupe ni la cotation.
+- **Vérifié le 2026-09-25 sur Légifrance** : art. 33, II, 2° de
+  l'ordonnance n° 2023-1142 (version en vigueur depuis le 3 mai 2025,
+  modifiée par la loi n° 2025-391, art. 7) : grandes entreprises et
+  sociétés consolidantes d'un grand groupe, exercices ouverts à compter du
+  1er janvier 2027. La transposition de la directive 2026/470 est en cours
+  (projet de loi DDADUE 2026, non encore adopté à cette date).
+- **Décision (option B1)** : la CSRD / ESRS est un **référentiel de
+  lecture**, jamais une obligation présumée. Risque « Scope 3 non mesuré »
+  requalifié *Fiabilité* (était « non-conformité CSRD/ESRS E1 à venir »,
+  *Réglementaire*, P1) ; « Exigences CSRD croissantes », « avance sur la
+  conformité CSRD », « conditionnent la conformité CSRD », « exigé par
+  l'ESRS E1 de la CSRD » et « requis par la CSRD » (glossaire) réécrits ;
+  la note méthodologique cite le champ vérifié (`CSRD_CHAMP`) et dit que
+  le rapport ne se prononce pas sur l'assujettissement. Verrouillé par
+  `tests/test_affirmations_reglementaires.py` (texte rendu des cinq
+  livrables, FR/EN).
+- **À revoir** à l'adoption de la loi de transposition française : dater
+  et citer le nouveau texte dans `CSRD_CHAMP`.
 
 ## 14. Abstention non gérée par le Word et le PowerPoint — LATENT
 

@@ -439,6 +439,29 @@ def _esrs_gaps(request: ESGRequest, en: bool) -> list:
     return [g[1] if en else g[0] for g in gaps]
 
 
+# Champ d'application de la CSRD, cité dans la note méthodologique. Vérifié
+# le 2026-09-25 : loi n° 2025-391 du 30 avril 2025, art. 7 (Légifrance :
+# report de la vague 2 aux exercices ouverts à compter de 2027) ; directive
+# (UE) 2026/470, considérant 7 et art. 5 (EUR-Lex : > 450 M€ de CA net ET
+# > 1 000 salariés, transposition au plus tard le 19 mars 2027). L'outil
+# ne connaît ni le bilan, ni le statut d'entité d'intérêt public, ni le
+# périmètre du groupe : il ne se prononce jamais sur l'assujettissement.
+CSRD_CHAMP = {
+    "fr": ("Le référentiel CSRD / ESRS sert ici de cadre de lecture ; le rapport ne se prononce "
+           "pas sur l'assujettissement de l'entreprise à la CSRD. Pour mémoire, la loi n° 2025-391 "
+           "du 30 avril 2025 a reporté aux exercices ouverts à compter de 2027 l'obligation des "
+           "grandes entreprises qui n'y étaient pas soumises dès 2024, et la directive (UE) 2026/470, "
+           "à transposer au plus tard le 19 mars 2027, la réserve aux entreprises de plus de "
+           "1 000 salariés réalisant plus de 450 M€ de chiffre d'affaires net."),
+    "en": ("The CSRD / ESRS framework is used here as a reading grid; the report does not assess "
+           "whether the company is subject to the CSRD. For reference, French law no. 2025-391 of "
+           "30 April 2025 postponed to financial years starting from 2027 the obligation for large "
+           "undertakings not already covered from 2024, and Directive (EU) 2026/470, to be "
+           "transposed by 19 March 2027 at the latest, restricts it to undertakings with more than "
+           "1,000 employees and a net turnover above EUR 450 million."),
+}
+
+
 def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dict:
     """Élève les textes au niveau d'un rapport de durabilité CSRD :
     matérialité citant les enjeux réels cotés, risques climat sectorisés par
@@ -636,6 +659,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
 
     # ── 5. Note méthodologique (périmètre, référentiels, limites) ────────
     year = request.company.reporting_year
+    champ = CSRD_CHAMP["en" if en else "fr"]
     gap_txt = ""
     if gaps:
         listed = " ; ".join(gaps[:3]) if not en else "; ".join(gaps[:3])
@@ -645,6 +669,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         content["methodology"] = (
             f"Reporting scope and methodology. Target framework: "
             f"{'VSME (EFRAG voluntary SME standard)' if getattr(request, 'reporting_framework', 'csrd') == 'vsme' else 'CSRD / ESRS'}. "
+            f"{champ} "
             f"The indicators cover the {year} financial year on an "
             f"operational-control basis. Greenhouse-gas emissions are computed according to the GHG "
             f"Protocol (Scopes 1, 2 and 3); social indicators follow ESRS S1 definitions; governance "
@@ -671,6 +696,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         content["methodology"] = (
             f"Périmètre et méthodologie du reporting. Référentiel visé : "
             f"{'VSME (norme volontaire PME, EFRAG)' if getattr(request, 'reporting_framework', 'csrd') == 'vsme' else 'CSRD / ESRS'}. "
+            f"{champ} "
             f"Les indicateurs couvrent l'exercice {year} selon "
             f"l'approche du contrôle opérationnel. Les émissions de gaz à effet de serre sont calculées "
             f"selon le GHG Protocol (Scopes 1, 2 et 3) ; les indicateurs sociaux suivent les définitions "
@@ -1455,8 +1481,8 @@ _REC_META = {
         "Réduit les émissions Scope 2 et l'exposition aux prix de l'énergie ; premier levier d'une trajectoire de réduction.",
         "Cuts Scope 2 emissions and energy-price exposure; a primary lever for any reduction pathway."),
     "scope3": ("env", "Court terme", "Short term",
-        "Comble le principal angle mort du bilan carbone ; exigé par l'ESRS E1 de la CSRD pour les émissions de la chaîne de valeur.",
-        "Closes the main carbon blind spot; required under CSRD's ESRS E1 for value-chain emissions."),
+        "Comble le principal angle mort du bilan carbone ; attendu par la norme ESRS E1 pour les émissions de la chaîne de valeur.",
+        "Closes the main carbon blind spot; expected under the ESRS E1 standard for value-chain emissions."),
     # Aucune justification reglementaire ici : la loi Rixain vise les cadres
     # dirigeants et les instances dirigeantes, PAS la mixite de l'effectif,
     # et l'Index de l'egalite professionnelle ne fonde aucune cible de
@@ -1659,7 +1685,7 @@ _PILLAR_INSIGHT = {
         "env": {
             "high": "Performance environnementale de premier plan : la maîtrise du carbone et de l'énergie constitue un actif différenciant.",
             "good": "Performance environnementale solide ; l'intensité carbone reste le principal levier de création de valeur durable.",
-            "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la conformité CSRD.",
+            "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la qualité du reporting climat.",
             "low": "Performance environnementale en retrait : la transition bas-carbone doit devenir une priorité stratégique à court terme.",
         },
         "social": {
@@ -1679,7 +1705,7 @@ _PILLAR_INSIGHT = {
         "env": {
             "high": "Leading environmental performance: carbon and energy control is a differentiating asset.",
             "good": "Solid environmental performance; carbon intensity remains the main lever for sustainable value creation.",
-            "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive CSRD compliance.",
+            "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive the quality of climate reporting.",
             "low": "Lagging environmental performance: the low-carbon transition must become a near-term strategic priority.",
         },
         "social": {
@@ -2130,8 +2156,10 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
 
     risks = []
     if env.scope3_emissions is None:
-        risks.append(T("Scope 3 non mesuré : non-conformité CSRD/ESRS E1 à venir", "Réglementaire",
-                       "Scope 3 not measured: upcoming CSRD/ESRS E1 non-compliance", "Regulatory", "H", "H"))
+        # Lacune de fiabilité, pas de conformité : la CSRD ne s'impose pas à la
+        # plupart des clients (CSRD_CHAMP).
+        risks.append(T("Scope 3 non mesuré : empreinte carbone incomplète au regard de l'ESRS E1", "Fiabilité",
+                       "Scope 3 not measured: carbon footprint incomplete against ESRS E1", "Reliability", "H", "H"))
     if not gov.esg_audit_conducted:
         risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
                        "Unaudited reporting: limited credibility with investors", "Assurance", "H", "H"))
@@ -2157,8 +2185,8 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
         risks.append(T("Manquements éthiques enregistrés : risque juridique", "Éthique",
                        "Recorded ethics breaches: legal risk", "Ethics", "M", "M"))
     if len(risks) < 3:
-        risks.append(T("Exigences CSRD croissantes : effort de reporting à anticiper", "Réglementaire",
-                       "Rising CSRD requirements: reporting effort to anticipate", "Regulatory", "M", "H"))
+        risks.append(T("Demandes d'informations ESG des clients et financeurs : effort de reporting à anticiper", "Marché",
+                       "ESG data requests from customers and lenders: reporting effort to anticipate", "Market", "M", "H"))
     risks.sort(key=lambda r: r.get("priority", "P3"))
 
     opps = []
@@ -2181,11 +2209,11 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     # sectorielle inventée. Le fallback générique en fin de fonction garantit
     # qu'au moins trois opportunités restent listées.
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
-        opps.append(T("Bilan carbone complet : avance sur la conformité CSRD", "Conformité",
-                      "Full carbon footprint: ahead on CSRD compliance", "Compliance"))
+        opps.append(T("Bilan carbone complet : socle prêt pour un reporting ESRS E1", "Reporting",
+                      "Full carbon footprint: a ready base for ESRS E1 reporting", "Reporting"))
     if len(opps) < 3:
-        opps.append(T("Structuration ESG précoce : anticipation des exigences réglementaires", "Marché",
-                      "Early ESG structuring: anticipating regulatory requirements", "Market"))
+        opps.append(T("Structuration ESG précoce : réponse facilitée aux demandes des clients et financeurs", "Marché",
+                      "Early ESG structuring: easier answers to customer and lender requests", "Market"))
 
     return {"risks": risks[:4], "opportunities": opps[:4]}
 

@@ -89,11 +89,11 @@ _TERMS = [
      "governance, strategy, risk management and metrics."),
 
     ("assurance", "Assurance limitée",
-     "Niveau de vérification par un tiers indépendant requis par la CSRD : le vérificateur "
+     "Niveau de vérification par un tiers indépendant exigé des entreprises soumises à la CSRD : le vérificateur "
      "conclut qu'il n'a pas relevé d'anomalie significative, sans l'audit approfondi que "
      "suppose une assurance raisonnable.",
      "Limited assurance",
-     "The level of independent third-party verification required by the CSRD: the verifier "
+     "The level of independent third-party verification required of undertakings subject to the CSRD: the verifier "
      "concludes that nothing material came to their attention, without the deeper testing "
      "of reasonable assurance."),
 

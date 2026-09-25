@@ -77,3 +77,47 @@ def test_saisie_femmes_au_conseil_cite_cope_zimmermann():
         src = f.read()
     assert "Rixain" not in src
     assert "L225-18-1" in src
+
+
+# ── 4. La CSRD présentée comme une obligation du client (DETTE § 13) ──────
+# Depuis la directive (UE) 2026/470 (> 450 M€ de CA ET > 1 000 salariés) et
+# le report de la loi n° 2025-391 (grandes entreprises : exercices ouverts à
+# compter de 2027), la clientèle PME/ETI n'est, sauf exception, pas soumise :
+# le livrable prédisait pourtant une « non-conformité CSRD à venir » (P1).
+CSRD_PRESUMEE_APPLICABLE = [
+    "non-conformité CSRD", "conformité CSRD", "Exigences CSRD croissantes",
+    "exigé par l'ESRS E1 de la CSRD", "requis par la CSRD",
+    "CSRD non-compliance", "CSRD compliance", "Rising CSRD requirements",
+    "required under CSRD", "required by the CSRD",
+]
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_aucun_livrable_ne_presume_la_csrd_applicable(lang):
+    from test_suite import _textes_des_livrables
+    from models import EnvironmentalData
+    # Scope 3 absent : le cas qui déclenchait le risque « non-conformité ».
+    env = EnvironmentalData(co2_emissions_tonnes=3300, scope1_emissions=1200, scope2_emissions=2100)
+    textes = _textes_des_livrables(make_request(lang=lang, environmental=env))
+    for nom, texte in textes.items():
+        for formule in CSRD_PRESUMEE_APPLICABLE:
+            assert formule not in texte, (nom, formule)
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_scope3_manquant_est_une_lacune_de_fiabilite(lang):
+    from models import EnvironmentalData
+    env = EnvironmentalData(co2_emissions_tonnes=3300, scope1_emissions=1200, scope2_emissions=2100)
+    req = make_request(lang=lang, environmental=env)
+    risques = risks_opportunities(req, calculate_esg_scores(req))["risks"]
+    scope3 = [r for r in risques if "Scope 3" in r["text"]]
+    assert scope3 and all(r["tag"] in ("Fiabilité", "Reliability") for r in scope3), scope3
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_note_methodologique_cite_le_champ_verifie_de_la_csrd(lang):
+    req = make_request(lang=lang)
+    note = generate_esg_content(req, calculate_esg_scores(req))["methodology"]
+    for repere in ("2025-391", "2026/470", "19 March 2027" if lang == "en" else "19 mars 2027"):
+        assert repere in note, repere
+    assert ("ne se prononce pas" if lang == "fr" else "does not assess") in note
