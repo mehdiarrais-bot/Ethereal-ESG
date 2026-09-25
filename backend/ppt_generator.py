@@ -941,6 +941,109 @@ def _slide_pillar(d: _Deck, pillar: str) -> None:
     add_notes(d.prs.slides[-1], paras + ([extra] if extra else []) + deep)
 
 
+def _fit_image(slide: Slide, data: bytes, left, top, max_w, max_h) -> float:
+    """Image centrée dans la boîte (proportions conservées) ; renvoie sa hauteur."""
+    from PIL import Image as PILImage
+    w, h = PILImage.open(io.BytesIO(data)).size
+    scale = min(max_w / w, max_h / h)
+    iw, ih = w * scale, h * scale
+    add_image_from_bytes(slide, data, left + (max_w - iw) / 2, top, width=iw, height=ih)
+    return ih
+
+
+def _card(d: _Deck, slide: Slide, x, y, w, h, color: RGBColor, title: str, text: str,
+          title_size=13.0, text_size=11.0) -> None:
+    """Carte titre + texte, filet vertical à la couleur du pilier."""
+    add_shape(slide, RECT, x, y, w, h, fill=d.theme["card_bg"])
+    add_shape(slide, RECT, x, y, Inches(0.07), h, fill=color)
+    add_text(slide, title, x + Inches(0.2), y + Inches(0.08), w - Inches(0.3), Inches(0.4),
+             font_size=title_size, bold=True, color=color, font=d.fb)
+    add_text(slide, text, x + Inches(0.2), y + Inches(0.48), w - Inches(0.3), h - Inches(0.55),
+             font_size=text_size, color=d.theme["text_dark"], font=d.fb)
+
+
+def _slide_issues(d: _Deck) -> None:
+    """Diagnostic d'ensemble : les trois enjeux structurants (synthesis.py)."""
+    import synthesis as SY
+    o = SY.overview(d.request, d.scores)
+    if not o["issues"]:
+        return
+    slide = d.content_slide(o["issues_title"], kicker=o["title"])
+    n = len(o["issues"])
+    gap, x0, w_all = Inches(0.25), Inches(0.5), Inches(12.33)
+    w = (w_all - gap * (n - 1)) / n
+    for i, issue in enumerate(o["issues"]):
+        x = x0 + i * (w + gap)
+        color = d.theme[issue.pillar]
+        add_shape(slide, OVAL, x, Inches(1.55), Inches(0.62), Inches(0.62), fill=color)
+        add_text(slide, str(i + 1), x, Inches(1.6), Inches(0.62), Inches(0.5), font_size=20,
+                 bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER, font=d.ft)
+        add_text(slide, issue.title, x + Inches(0.75), Inches(1.5), w - Inches(0.75), Inches(0.9),
+                 font_size=14, bold=True, color=d.theme["text_dark"], font=d.fb)
+        _card(d, slide, x, Inches(2.55), w, Inches(2.2), color, o["cause_label"],
+              SY.lead(issue.cause, 220))
+        _card(d, slide, x, Inches(4.9), w, Inches(2.1), color, o["csq_label"], SY.lead(issue.csq, 140))
+    add_notes(slide, o["profile"] + [f"{i.title}. {i.cause} {i.csq}" for i in o["issues"]]
+              + o["links"])
+
+
+def _slide_pillar_analysis(d: _Deck, pillar: str) -> None:
+    """Analyse approfondie d'un pilier : illustrations à gauche, les constats
+    clés à droite (première phrase de lecture de chaque section)."""
+    import analysis as AN
+    import illustrations as IL
+    import synthesis as SY
+    sections = AN.pillar_analysis(d.request, d.scores, pillar)
+    if not sections:
+        return
+    label_key = _PILLARS[pillar][0]
+    slide = d.content_slide(AN.analysis_title(d.request, pillar), kicker=d.t[label_key])
+    where = IL.placements(pillar, [s.key for s in sections])
+    figs = [k for keys in where.values() for k in keys if k in d.charts][:2]
+    left_w = Inches(6.0) if figs else 0
+    y = Inches(1.55)
+    for k in figs:
+        y += _fit_image(slide, d.charts[k], Inches(0.4), y, left_w, Inches(2.6)) + Inches(0.15)
+    color = d.theme[pillar]
+    x = Inches(0.4) + left_w + (Inches(0.3) if figs else 0)
+    w = Inches(12.93) - x
+    shown = sections[:4]
+    h = (Inches(5.55) - Inches(0.12) * (len(shown) - 1)) / len(shown)
+    for i, sec in enumerate(shown):
+        body = sec.paragraphs[1] if len(sec.paragraphs) > 1 else sec.paragraphs[0]
+        _card(d, slide, x, Inches(1.5) + i * (h + Inches(0.12)), w, h, color, sec.title,
+              SY.lead(body, 120), title_size=12.5, text_size=10.5)
+    add_notes(slide, [f"{s.title} — " + " ".join(s.paragraphs) for s in sections])
+
+
+def _slide_first_days(d: _Deck) -> None:
+    """Si rien ne change / les 90 premiers jours (synthesis.closing)."""
+    import synthesis as SY
+    c = SY.closing(d.request, d.scores)
+    slide = d.content_slide(c["first_title"], kicker=c["horizon_title"] if c["horizon"] else None)
+    theme = d.theme
+    add_text(slide, c["first_intro"], Inches(0.5), Inches(1.5), Inches(7.3), Inches(0.6),
+             font_size=13, color=theme["muted"], font=d.fb)
+    for i, action in enumerate(c["first"]):
+        y = Inches(2.2) + i * Inches(1.6)
+        add_shape(slide, OVAL, Inches(0.5), y, Inches(0.6), Inches(0.6), fill=theme["accent"])
+        add_text(slide, str(i + 1), Inches(0.5), y + Inches(0.05), Inches(0.6), Inches(0.5),
+                 font_size=20, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+                 align=PP_ALIGN.CENTER, font=d.ft)
+        add_text(slide, action, Inches(1.3), y - Inches(0.02), Inches(6.5), Inches(1.5),
+                 font_size=13, color=theme["text_dark"], font=d.fb)
+    if c["horizon"]:
+        cx, cw = Inches(8.25), Inches(4.65)
+        add_shape(slide, RECT, cx, Inches(1.5), cw, Inches(5.5), fill=theme["card_bg"])
+        add_shape(slide, RECT, cx, Inches(1.5), Inches(0.08), Inches(5.5), fill=theme["accent"])
+        add_text(slide, c["horizon_title"], cx + Inches(0.3), Inches(1.65), cw - Inches(0.45),
+                 Inches(0.45), font_size=14, bold=True, color=theme["accent"], font=d.fb)
+        add_text(slide, "\n\n".join(SY.lead(p, 60) for p in c["horizon"][1:]),
+                 cx + Inches(0.3), Inches(2.2), cw - Inches(0.45), Inches(4.7),
+                 font_size=11.5, color=theme["text_dark"], font=d.fb)
+    add_notes(slide, c["retain"] + c["horizon"] + [c["first_intro"]] + c["first"])
+
+
 def _slide_materiality(d: _Deck) -> None:
     """Priorisation des enjeux (graphique + lecture métier)."""
     if "materiality" not in d.charts:
@@ -1241,6 +1344,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     _slide_contents(d)
     _slide_dashboard(d)
     _slide_consultant_note(d)
+    _slide_issues(d)
     d.divider("01", t["div1_title"], t["div1_sub"])
     _slide_positioning(d)
     _slide_trend(d)
@@ -1248,6 +1352,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     _slide_hero_stat(d)
     for pillar in ("env", "social", "gov"):
         _slide_pillar(d, pillar)
+        _slide_pillar_analysis(d, pillar)
     _slide_materiality(d)
     _slide_taxonomy(d)
     _slide_strategic(d)
@@ -1256,6 +1361,7 @@ def generate_pptx(request: ESGRequest, scores: ESGScores, content: dict,
     _slide_priority_matrix(d)
     _slide_recommendations(d)
     _slide_roadmap(d)
+    _slide_first_days(d)
     _slide_conclusion(d)
     _folio(d)
 

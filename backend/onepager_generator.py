@@ -149,6 +149,33 @@ def _onepager(request: ESGRequest, scores: ESGScores) -> bytes:
         txt(M + 0.75 * cm, ry - 0.42 * cm,
             f'{r["objective"]}  ·  {r["owner"]}  ·  {r["horizon"]}', f, 8, pal["muted"])
 
+    # ── Diagnostic d'ensemble (synthesis.py) : profil, deux premiers enjeux ──
+    # Bloc borné par le pied de page : une ligne qui ne tiendrait pas n'est
+    # pas dessinée (jamais de chevauchement).
+    import synthesis as SY
+    o = SY.overview(request, scores)
+    floor = 1.75 * cm
+    yy = ay - 0.55 * cm - len(recs) * 1.0 * cm - 0.45 * cm
+    txt(M, yy, o["title"].upper(), fb, 9, pal["secondary"])
+    yy -= 0.5 * cm
+
+    def block(text, font, size, color):
+        nonlocal yy
+        lines = simpleSplit(pdf_txt(text), font, size, W - 2 * M)
+        room = int((yy - floor) // (size * 1.3)) + 1
+        for ln in lines[:max(0, room)]:
+            c.setFont(font, size); c.setFillColor(color)
+            c.drawString(M, yy, ln)
+            yy -= size * 1.3
+        yy -= 3
+
+    block(o["profile"][0], f, 8.5, pal["text"])
+    for issue in o["issues"][:2]:
+        if yy - 2 * 8.5 * 1.3 < floor:
+            break
+        block(issue.title, fb, 8.5, pal[issue.pillar])
+        block(SY.lead(issue.csq, 110), f, 8, pal["text"])
+
     # ── Pied de page ──────────────────────────────────────────────────────
     c.setStrokeColor(pal["accent"]); c.setLineWidth(1)
     c.line(M, 1.35 * cm, W - M, 1.35 * cm)

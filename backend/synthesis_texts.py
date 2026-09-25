@@ -501,6 +501,8 @@ LINKS = {
 T = {
     "fr": {
         "overview": "Diagnostic d'ensemble",
+        "cause_label": "Pourquoi",
+        "csq_label": "Ce que cela entraîne",
         "profile_title": "Le profil qui se dégage",
         "issues_title": "Les enjeux structurants",
         "links_title": "Les liens entre piliers",
@@ -537,6 +539,8 @@ T = {
     },
     "en": {
         "overview": "Overall diagnosis",
+        "cause_label": "Why",
+        "csq_label": "What it leads to",
         "profile_title": "The emerging profile",
         "issues_title": "The structural issues",
         "links_title": "Links between pillars",

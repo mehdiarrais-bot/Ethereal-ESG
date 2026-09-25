@@ -112,3 +112,42 @@ def test_dans_le_pdf_et_le_word(lang):
     for a in attendus:
         assert _norm(a, lang) in pdf, a
         assert _norm(a, lang) in docx, a
+
+
+# ── Lot 3 : présentation et synthèse une page ─────────────────────────────
+
+def _slides_text(data) -> list[str]:
+    import io
+    from pptx import Presentation
+    out = []
+    for sl in Presentation(io.BytesIO(data)).slides:
+        out.append(" ".join(sh.text_frame.text for sh in sl.shapes if sh.has_text_frame))
+    return out
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_presentation_enjeux_analyses_et_90_jours(lang):
+    from content_generator import generate_esg_content
+    from ppt_generator import generate_pptx
+    import analysis as AN
+    import illustrations as IL
+    r = _trois(lang)["transport"]
+    s = calculate_esg_scores(r)
+    slides = _slides_text(generate_pptx(r, s, generate_esg_content(r, s), IL.build(r)))
+    joined = " ".join(slides)
+    assert STX.T[lang]["issues_title"] in joined
+    assert STX.T[lang]["first_title"] in joined
+    assert SY.issues(r, s)[0].title in joined
+    for pillar in ("env", "social", "gov"):
+        assert AN.analysis_title(r, pillar) in joined, pillar
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_synthese_une_page_porte_le_diagnostic(lang):
+    from test_parite import _pdf, _norm
+    from onepager_generator import generate_onepager_pdf
+    r = _trois(lang)["transport"]
+    s = calculate_esg_scores(r)
+    texte = _norm(_pdf(generate_onepager_pdf(r, s)), lang)
+    assert _norm(STX.T[lang]["overview"].upper(), lang) in texte
+    assert _norm(SY.issues(r, s)[0].title, lang) in texte

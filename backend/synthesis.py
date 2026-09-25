@@ -236,7 +236,7 @@ def _lower_first(s: str) -> str:
     return s[:1].lower() + s[1:] if s[1:2].islower() or s[1:2] == " " else s
 
 
-def _lead(text: str, min_len: int = 80) -> str:
+def lead(text: str, min_len: int = 80) -> str:
     """Premières phrases d'un paragraphe, jusqu'à au moins `min_len` caractères."""
     out = ""
     for sentence in text.split(". "):
@@ -301,6 +301,7 @@ def overview(request, scores) -> dict:
     return _elided(request, {"title": t["overview"], "profile_title": t["profile_title"],
                              "profile": profile,
             "issues_title": t["issues_title"], "issues_intro": t["issues_intro"],
+            "cause_label": t["cause_label"], "csq_label": t["csq_label"],
             "issues": found[:TOP], "links_title": t["links_title"],
             "links": links(request, scores, found, sts)})
 
@@ -318,7 +319,7 @@ def closing(request, scores) -> dict:
                                                   text=sts[0].text))
     if found:
         retain.append(t["retain_issue"].format(title=_lower_first(found[0].title),
-                                               csq=_lead(found[0].csq)))
+                                               csq=lead(found[0].csq)))
     if lk:
         retain.append(t["retain_link"].format(text=lk[0]))
     ty = max(request.company.target_year, request.company.reporting_year + 1)
