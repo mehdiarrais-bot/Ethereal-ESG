@@ -428,6 +428,12 @@ def build_advanced_charts(request: ESGRequest, scores, light_bg: bool) -> dict:
             out["trend"] = score_trend_chart(pts, theme, light_bg=light_bg, lang=lang, brand=brand)
     except Exception as e:
         print(f"Trend chart error: {e}")
+    try:
+        # Illustrations des piliers, dessinées depuis les données (illustrations.py)
+        from illustrations import build as build_illustrations
+        out.update(build_illustrations(request))
+    except Exception as e:
+        print(f"Illustrations error: {e}")
     return _images(out)
 
 

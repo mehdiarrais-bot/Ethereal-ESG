@@ -935,7 +935,10 @@ def _slide_pillar(d: _Deck, pillar: str) -> None:
     if d.request.include_recommendations:
         paras.append(NR.levers_sentence(d.request, d.recs, pillar))
     extra = NR.ghg_paragraph(d.request) if pillar == "env" else None
-    add_notes(d.prs.slides[-1], paras + ([extra] if extra else []))
+    import analysis as AN
+    deep = [f"{sec.title} — " + " ".join(sec.paragraphs)
+            for sec in AN.pillar_analysis(d.request, d.scores, pillar)]
+    add_notes(d.prs.slides[-1], paras + ([extra] if extra else []) + deep)
 
 
 def _slide_materiality(d: _Deck) -> None:

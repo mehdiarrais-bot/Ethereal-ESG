@@ -227,6 +227,33 @@ class _Report:
             self.text(para)
         if self.request.include_recommendations:
             self.text(NR.levers_sentence(self.request, self.recs, pillar))
+        self.analysis(pillar, color_hex)
+
+    def analysis(self, pillar: str, color_hex: str) -> None:
+        """Analyse approfondie (analysis.py), partagée avec le PDF."""
+        import analysis as AN
+        sections = AN.pillar_analysis(self.request, self.scores, pillar)
+        if not sections:
+            return
+        import illustrations as IL
+        where = IL.placements(pillar, [sec.key for sec in sections])
+        self.heading(AN.analysis_title(self.request, pillar), 2, color_hex)
+        for key in where.get("_start", []):
+            self.illustration(key)
+        for sec in sections:
+            head = add_heading(self.doc, sec.title, 3, color_hex, size=11, style=self.style)
+            head.paragraph_format.keep_with_next = True
+            for para in sec.paragraphs:
+                self.text(para)
+            for key in where.get(sec.key, []):
+                self.illustration(key)
+
+    def illustration(self, key: str) -> None:
+        """Illustration de l'analyse et sa légende (illustrations.py)."""
+        import illustrations as IL
+        if key in self.charts:
+            self.image(key, 15.5)
+            self.text(IL.caption(self.request, key), size=8.5, italic=True, after=10)
 
     def image(self, key: str, width_cm: float) -> None:
         if key in self.charts:

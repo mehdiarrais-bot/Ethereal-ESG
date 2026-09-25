@@ -28,6 +28,7 @@ from i18n import L
 from pdf_kit import (Kit, Px, FullPage, Anchor, PX, PAGE_W, PAGE_H, clean, esc, hexc,
                      draw_header, draw_footer, paint_paper)
 import pdf_pages as PG
+import analysis as AN
 import narrative as NR
 from bands import classer
 
@@ -74,6 +75,9 @@ def build_styles(k: Kit) -> dict:
         "bullet": k.ps("bullet", 9.6, color="ink", leading=14, leftIndent=12, spaceAfter=3,
                        allowWidows=0, allowOrphans=0),
         "caption": k.ps("caption", 8, font="body_i", color="muted", alignment=TA_CENTER),
+        # Intertitre de l'analyse approfondie (analysis.py), lié au paragraphe suivant
+        "h3": k.ps("h3", 10.2, font="body_b", color="ink", leading=14, spaceBefore=7,
+                   spaceAfter=3, keepWithNext=1),
         "small": k.ps("small", 8.3, color="ink", leading=11.5),
         "small_b": k.ps("small_b", 8.3, font="body_b", color="ink", leading=11.5),
         "th": k.ps("th", 7.4, font="body_b", color="muted", leading=10, charSpace=0.5),
@@ -576,8 +580,10 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
         story.full(PG.focus_page, g)
         story.content()
         S = build_styles(k)
-    _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs)
-    _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs)
+    _social(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+            recs)
+    _governance(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+                recs)
     _analyses(story, content, chart_images, k, S, TR, anchors)
 
     story.full(PG.divider_page, g, "01", TR["div1_title"], TR["div1_sub"],
@@ -767,6 +773,44 @@ def _pillar_reading(story, request, scores, pillar, kpis, k, S, TR, lang, recs=(
         story.append(Paragraph(esc(NR.levers_sentence(request, recs, pillar)), S["body"]))
 
 
+def _illustration(story, request, chart_images, key, S):
+    """Illustration pleine largeur (proportions du PNG) et sa légende, insécables."""
+    from reportlab.lib.utils import ImageReader
+    import illustrations as IL
+    data = chart_images.get(key)
+    if not data:
+        return
+    try:
+        iw, ih = ImageReader(io.BytesIO(data)).getSize()
+        w = min(CW, iw / IL.DPI * 72)
+        im = Image(io.BytesIO(data), width=w, height=w * ih / iw)
+        im.hAlign = "CENTER"
+        story.append(KeepTogether([Spacer(1, 4), im,
+                                   Paragraph(esc(IL.caption(request, key)), S["caption"]),
+                                   Spacer(1, 6)]))
+    except Exception as e:
+        print(f"Illustration '{key}' error: {e}")
+
+
+def _pillar_analysis(story, request, scores, pillar, chart_images, k, S):
+    """Analyse approfondie (constat, cause, conséquence, levier) en fin de
+    pilier, illustrée aux endroits fixés par illustrations.ANCHORS."""
+    import illustrations as IL
+    sections = AN.pillar_analysis(request, scores, pillar)
+    if not sections:
+        return
+    where = IL.placements(pillar, [sec.key for sec in sections])
+    story.append(Paragraph(esc(AN.analysis_title(request, pillar)), S["h2"]))
+    for key in where.get("_start", []):
+        _illustration(story, request, chart_images, key, S)
+    for sec in sections:
+        story.append(Paragraph(f'<font color="{hexc(k.c[pillar])}">{esc(sec.title)}</font>',
+                               S["h3"]))
+        story.extend(Paragraph(esc(p), S["body"]) for p in sec.paragraphs)
+        for key in where.get(sec.key, []):
+            _illustration(story, request, chart_images, key, S)
+
+
 def _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
                  recs):
     _pillar_intro(story, TR["pdf_s2"], "env", TR["score_env_label"], scores.environmental_score,
@@ -826,10 +870,12 @@ def _environment(story, request, scores, content, chart_images, k, S, TR, lang, 
                 story.append(KeepTogether(ghg_head + [tbl]))
         else:
             story.append(KeepTogether(ghg_head + [tbl]))
+    _pillar_analysis(story, request, scores, "env", chart_images, k, S)
     story.append(_sp(k, 12))
 
 
-def _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs):
+def _social(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+            recs):
     _pillar_intro(story, TR["pdf_s3"], "social", TR["score_soc_label"], scores.social_score,
                   pi["social"], notes.get("social"),
                   content.get("social", "La performance sociale englobe les ressources humaines, "
@@ -855,10 +901,12 @@ def _social(story, request, scores, content, k, S, TR, lang, anchors, notes, pi,
         kpis.append((TR["kpit"]["satisfaction"], _num(soc.customer_satisfaction_score, lang, 1),
                      _status(request, "customer_satisfaction_score", soc.customer_satisfaction_score)))
     _pillar_reading(story, request, scores, "social", kpis, k, S, TR, lang, recs)
+    _pillar_analysis(story, request, scores, "social", chart_images, k, S)
     story.append(_sp(k, 12))
 
 
-def _governance(story, request, scores, content, k, S, TR, lang, anchors, notes, pi, recs):
+def _governance(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes,
+                pi, recs):
     _pillar_intro(story, TR["pdf_s4"], "gov", TR["score_gov_label"], scores.governance_score,
                   pi["gov"], notes.get("gov"),
                   content.get("governance", "La gouvernance évalue la direction, l'indépendance du "
@@ -881,6 +929,7 @@ def _governance(story, request, scores, content, k, S, TR, lang, anchors, notes,
         kpis.append((yn[key], yn["yes"] if flag else (yn["no"] if flag is not None else yn["na"]),
                      "good" if flag else ("bad" if flag is not None else None)))
     _pillar_reading(story, request, scores, "gov", kpis, k, S, TR, lang, recs)
+    _pillar_analysis(story, request, scores, "gov", chart_images, k, S)
     story.append(_sp(k, 12))
 
 
