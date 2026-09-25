@@ -802,6 +802,54 @@ Constat d'origine :
   versant cette analyse au dépôt, soit en remplaçant ces renvois par le
   numéro de section correspondant.
 
+## 12. Trois affirmations réglementaires fausses — **traitées le 2026-09-25**
+
+Relevées en refaisant les captures du README ; verrouillées par
+`tests/test_affirmations_reglementaires.py` (5 cas, tous en échec sur
+l'ancien code).
+
+- **Mixité de l'effectif classée « Réglementaire »** : le registre des
+  risques (`risks_opportunities`), repris dans la synthèse une page, disait
+  « Parité sous la cible : risque réglementaire et d'attractivité ». Aucun
+  quota légal ne porte sur l'effectif (§ 4). Devenu « Mixité de l'effectif
+  déséquilibrée : risque d'attractivité employeur », catégorie *Social*.
+- **« Objectif Loi Rixain : 40 % en 2024 »** sous « Part des femmes au CA »
+  (`StepGovernance.jsx`) : la correction du 2026-09-03 (§ 3) n'avait
+  touché que les livrables. L'aide cite désormais l'art. L225-18-1 du Code
+  de commerce avec le champ vérifié au § 3bis.
+- **Vérification par un tiers « requise par la CSRD »** pour tout client
+  (lacune de reporting, action « audit », synthèse exécutive « sécuriser la
+  conformité CSRD ») : devenue « exigée des entreprises soumises à la
+  CSRD ». Vérifié sur EUR-Lex : l'assurance limitée demeure pour les
+  entreprises soumises (directive (UE) 2026/470, considérant 4).
+
+## 13. La CSRD présumée applicable au client — OUVERT
+
+- **Constat** : la **directive (UE) 2026/470** (« Omnibus », JO du
+  26.2.2026, transposition au plus tard le 19 mars 2027) limite le
+  reporting de durabilité obligatoire aux entreprises dont le chiffre
+  d'affaires net excède **450 M€ et** qui emploient **plus de 1 000
+  salariés** en moyenne sur l'exercice (considérant 7, vérifié sur le
+  texte FR d'EUR-Lex le 2026-09-25). La clientèle PME/ETI de l'outil est
+  donc, sauf exception, **hors champ**.
+- **Or le livrable présume l'inverse** à plusieurs endroits de
+  `content_generator.py` : risque P1 « Scope 3 non mesuré : non-conformité
+  CSRD/ESRS E1 à venir », action Scope 3 « exigé par l'ESRS E1 de la
+  CSRD », « conditionnent la conformité CSRD », risque « Exigences CSRD
+  croissantes », opportunité « avance sur la conformité CSRD », et le
+  tableau « Couverture des exigences de reporting » présenté comme un
+  écart à des exigences.
+- **Non vérifié** : l'état de la transposition française (le Code de
+  commerce applique-t-il encore les anciens seuils pour les exercices
+  2025-2026 ?), et le sort de la « deuxième vague » reportée par la
+  directive « stop-the-clock ». À vérifier sur Légifrance avant toute
+  formulation datée.
+- **À arbitrer** : présenter la CSRD/ESRS comme **référentiel volontaire**
+  pour les clients hors champ (le mode VSME existe déjà), ou déterminer le
+  champ à partir de l'effectif et du chiffre d'affaires saisis — sans
+  jamais affirmer l'obligation, l'outil ne connaissant ni le périmètre de
+  groupe ni la cotation.
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une

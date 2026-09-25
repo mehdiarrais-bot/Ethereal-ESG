@@ -14,7 +14,7 @@ export default function StepGovernance({ form, updateSection }) {
           <FormField label="Nombre de membres du CA">
             <NumberInput value={gov.board_members} onChange={set('board_members')} placeholder="Ex: 12" min={0} step={1} />
           </FormField>
-          <FormField label="Part des femmes au CA (%)" hint="Objectif Loi Rixain : 40% en 2024">
+          <FormField label="Part des femmes au CA (%)" hint="Seuil légal de 40 % (art. L225-18-1 du Code de commerce) pour les sociétés d'au moins 250 salariés permanents et 50 M€ de CA ou de bilan, trois exercices consécutifs">
             <NumberInput value={gov.female_board_percent} onChange={set('female_board_percent')} placeholder="Ex: 38" min={0} max={100} />
           </FormField>
           <FormField label="Part des administrateurs indépendants (%)" hint="Recommandation AFEP-MEDEF : >50%">

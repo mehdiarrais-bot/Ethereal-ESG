@@ -429,8 +429,13 @@ def _esrs_gaps(request: ESGRequest, en: bool) -> list:
         gaps.append(("la composition détaillée de l'organe d'administration (ESRS 2 GOV-1)",
                      "the detailed composition of the administrative body (ESRS 2 GOV-1)"))
     if not gov.esg_audit_conducted:
-        gaps.append(("la vérification par un tiers indépendant, requise par la CSRD (assurance limitée)",
-                     "independent third-party assurance, required by the CSRD (limited assurance)"))
+        # Exigée des seules entreprises soumises à la CSRD ; depuis la
+        # directive (UE) 2026/470, le champ est > 450 M€ de CA net ET
+        # > 1 000 salariés : la plupart des clients n'y sont pas soumis.
+        gaps.append(("la vérification par un tiers indépendant (assurance limitée, exigée des entreprises "
+                     "soumises à la CSRD)",
+                     "independent third-party assurance (limited assurance, required of undertakings "
+                     "subject to the CSRD)"))
     return [g[1] if en else g[0] for g in gaps]
 
 
@@ -540,7 +545,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f" Overall, ESG maturity is assessed as "
             f"{stage_en.get(mat.get('key', 'structured'), 'structured')} ({mat['stage']}/5). "
             + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
-               f"secure CSRD readiness and strengthen investor confidence." if gaps else
+               f"strengthen the credibility of the reporting and investor confidence." if gaps else
                f"Reporting coverage is complete on the structural CSRD datapoints, an asset for "
                f"assurance and investor dialogue.")
         )
@@ -549,8 +554,8 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f" Au global, la maturité ESG est évaluée comme "
             f"{stage_fr.get(mat.get('key', 'structured'), 'structurée')} ({mat['stage']}/5). "
             + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
-               f"{gaps[0]} — constitue le levier le plus rapide pour sécuriser la conformité CSRD "
-               f"et renforcer la confiance des investisseurs." if gaps else
+               f"{gaps[0]} — constitue le levier le plus rapide pour renforcer la crédibilité du "
+               f"reporting et la confiance des investisseurs." if gaps else
                f"La couverture du reporting est complète sur les points de données structurants de la "
                f"CSRD, un atout pour la vérification et le dialogue investisseurs.")
         )
@@ -1468,8 +1473,8 @@ _REC_META = {
         "Développe les compétences et la fidélisation ; réduit le turnover et sécurise la transformation.",
         "Builds skills and retention; lowers turnover and de-risks transformation."),
     "audit": ("gov", "Annuel", "Annual",
-        "Apporte l'assurance d'un tiers désormais requise par la CSRD ; renforce la confiance des investisseurs.",
-        "Provides third-party assurance now required by CSRD; strengthens investor confidence."),
+        "Apporte l'assurance d'un tiers indépendant, exigée des entreprises soumises à la CSRD ; renforce la confiance des investisseurs.",
+        "Provides independent third-party assurance, required of undertakings subject to the CSRD; strengthens investor confidence."),
     "committee": ("gov", "Court terme", "Short term",
         "Ancre la supervision ESG au plus haut niveau de gouvernance et fiabilise le pilotage des objectifs.",
         "Embeds ESG oversight at the highest governance level and secures target steering."),
@@ -2136,9 +2141,11 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
         risks.append(T("Dépendance énergie fossile : exposition à la hausse des prix", "Transition",
                        "Fossil-energy dependence: exposure to rising prices", "Transition", "M", "H"))
+    # Aucun quota légal ne porte sur la mixité de l'effectif (DETTE § 4) :
+    # risque d'attractivité, jamais réglementaire.
     if soc.female_employees_percent is not None and soc.female_employees_percent < 40:
-        risks.append(T("Parité sous la cible : risque réglementaire et d'attractivité", "Réglementaire",
-                       "Gender balance below target: regulatory & attractiveness risk", "Regulatory", "M", "H"))
+        risks.append(T("Mixité de l'effectif déséquilibrée : risque d'attractivité employeur", "Social",
+                       "Unbalanced workforce gender mix: employer attractiveness risk", "Social", "M", "H"))
     if gov.data_breaches is not None and gov.data_breaches > 0:
         risks.append(T("Incident cyber déclaré : risque réputationnel et RGPD", "Réputation",
                        "Reported cyber incident: reputational & GDPR risk", "Reputation", "H", "M"))
