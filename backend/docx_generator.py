@@ -460,6 +460,56 @@ def _company(r: _Report) -> None:
         add_bullet_list(r.doc, inits, "•", r.colors["accent"])
 
 
+def _bullets(r: _Report, items, numbered=False) -> None:
+    for it in items:
+        p = r.doc.add_paragraph(style="List Number" if numbered else "List Bullet")
+        p.add_run(it).font.size = Pt(10.5)
+
+
+def _overview(r: _Report) -> None:
+    """Diagnostic d'ensemble (synthesis.py), comme le PDF."""
+    import synthesis as SY
+    import illustrations as IL
+    o = SY.overview(r.request, r.scores)
+    primary = r.colors["primary"]
+    r.heading(o["title"], 2, primary)
+    r.heading(o["profile_title"], 3, primary)
+    for p in o["profile"]:
+        r.text(p)
+    if o["issues"]:
+        r.heading(o["issues_title"], 3, primary)
+        r.text(o["issues_intro"])
+        for key in IL.placements_overview():
+            r.illustration(key)
+        pillar_hex = {"env": r.colors.get("env", primary), "social": r.colors.get("social", primary),
+                      "gov": r.colors.get("gov", primary)}
+        for n, issue in enumerate(o["issues"], 1):
+            head = add_heading(r.doc, f"{n}. {issue.title}", 3, pillar_hex[issue.pillar], size=11,
+                               style=r.style)
+            head.paragraph_format.keep_with_next = True
+            r.text(issue.cause)
+            r.text(issue.csq)
+    if o["links"]:
+        r.heading(o["links_title"], 3, primary)
+        _bullets(r, o["links"])
+
+
+def _closing_synthesis(r: _Report) -> None:
+    import synthesis as SY
+    c = SY.closing(r.request, r.scores)
+    color = r.colors["secondary"]
+    if c["retain"]:
+        r.heading(c["retain_title"], 2, color)
+        _bullets(r, c["retain"])
+    if c["horizon"]:
+        r.heading(c["horizon_title"], 2, color)
+        for p in c["horizon"]:
+            r.text(p)
+    r.heading(c["first_title"], 2, color)
+    r.text(c["first_intro"])
+    _bullets(r, c["first"], numbered=True)
+
+
 def _executive(r: _Report) -> None:
     """1. Synthèse exécutive + analyse globale du consultant."""
     request, scores = r.request, r.scores
@@ -769,6 +819,7 @@ def _closing(r: _Report, cover_art: bytes | None) -> None:
         "Les axes d'amélioration identifiés feront l'objet de plans d'action concrets."
     )
     doc.add_paragraph(conclusion)
+    _closing_synthesis(r)
 
     if r.content.get("methodology"):
         r.heading(TR["pdf_methodo"], 2, colors["secondary"])
@@ -823,6 +874,7 @@ def generate_word_report(request: ESGRequest, scores: ESGScores, content: dict,
     _ceo_quote(r)
     _company(r)
     _executive(r)
+    _overview(r)
     for pillar in ("env", "social", "gov"):
         _pillar(r, pillar)
     r.doc.add_page_break()

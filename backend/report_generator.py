@@ -572,6 +572,7 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     rm = roadmap_12m(request, scores)
 
     _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs[:3])
+    _overview(story, request, scores, chart_images, k, S)
     _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
                  recs)
     if opts["inline_focus"]:
@@ -690,6 +691,53 @@ def _company(story, request, k, S, TR, g):
             flow.append(Paragraph(esc(attrib), k.ps("wa", 9, color="accent_on_primary", spaceBefore=10)))
         story.append(_sp(k, 12))
         story.append(KeepTogether(_box(flow, k, k.c["primary"], pad=20)))
+
+
+def _bullets(story, items, k, S, numbered=False):
+    for n, it in enumerate(items, 1):
+        mark = f"{n}." if numbered else "•"
+        story.append(Paragraph(f'<font color="{hexc(k.c["accent"])}">{mark}</font>&nbsp; {esc(it)}',
+                               S["bullet"]))
+
+
+def _overview(story, request, scores, chart_images, k, S):
+    """Diagnostic d'ensemble (synthesis.py) : profil, enjeux structurants,
+    liens entre piliers — propre au dossier."""
+    import synthesis as SY
+    import illustrations as IL
+    o = SY.overview(request, scores)
+    story.append(Paragraph(esc(o["title"]), S["h2"]))
+    story.append(Paragraph(esc(o["profile_title"]), S["h3"]))
+    story.extend(Paragraph(esc(p), S["body"]) for p in o["profile"])
+    if o["issues"]:
+        story.append(Paragraph(esc(o["issues_title"]), S["h3"]))
+        story.append(Paragraph(esc(o["issues_intro"]), S["body"]))
+        for key in IL.placements_overview():
+            _illustration(story, request, chart_images, key, S)
+        for n, issue in enumerate(o["issues"], 1):
+            story.append(Paragraph(f'<font color="{hexc(k.c[issue.pillar])}">{n}. '
+                                   f'{esc(issue.title)}</font>', S["h3"]))
+            story.append(Paragraph(esc(issue.cause), S["body"]))
+            story.append(Paragraph(esc(issue.csq), S["body"]))
+    if o["links"]:
+        story.append(Paragraph(esc(o["links_title"]), S["h3"]))
+        _bullets(story, o["links"], k, S)
+    story.append(_sp(k, 12))
+
+
+def _closing_synthesis(story, request, scores, k, S):
+    """Ce que nous retenons, si rien ne change, les 90 premiers jours."""
+    import synthesis as SY
+    c = SY.closing(request, scores)
+    if c["retain"]:
+        story.append(Paragraph(esc(c["retain_title"]), S["h2"]))
+        _bullets(story, c["retain"], k, S)
+    if c["horizon"]:
+        story.append(Paragraph(esc(c["horizon_title"]), S["h2"]))
+        story.extend(Paragraph(esc(p), S["body"]) for p in c["horizon"])
+    story.append(Paragraph(esc(c["first_title"]), S["h2"]))
+    story.append(Paragraph(esc(c["first_intro"]), S["body"]))
+    _bullets(story, c["first"], k, S, numbered=True)
 
 
 def _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs3):
@@ -1142,6 +1190,7 @@ def _closing(story, request, scores, content, k, S, TR, anchors):
                                            f"{request.company.name} — score ESG "
                                            f"{score_label(scores.total_esg_score, 1)}/100 (note {scores.rating or NON_NOTE}).")),
                            S["body"]))
+    _closing_synthesis(story, request, scores, k, S)
     if content.get("methodology"):
         story.append(_sp(k, 10))
         story.append(Paragraph(TR["pdf_methodo"], S["h2"]))

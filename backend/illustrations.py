@@ -36,6 +36,14 @@ ANCHORS = {
 }
 
 
+def placements_overview() -> list[str]:
+    """Figures du diagnostic d'ensemble (après l'introduction des enjeux)."""
+    return list(OVERVIEW)
+
+
+OVERVIEW: list[str] = []      # complété au lot 4 (hiérarchie des enjeux)
+
+
 def placements(pillar: str, section_keys: list[str]) -> dict[str, list[str]]:
     """{clé de section ou "_start": [figures]} pour les sections présentes."""
     out: dict[str, list[str]] = {}
