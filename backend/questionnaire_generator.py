@@ -57,14 +57,16 @@ FIELD_META = {
     "disabled_employees_percent": ("Salariés en situation de handicap", "%", ""),
 
     "board_members": ("Membres du conseil", "nombre", "Conseil d'administration ou de surveillance."),
-    "female_board_percent": ("Femmes au conseil", "%", "Seuil légal de référence : 40 %."),
-    "independent_board_percent": ("Administrateurs indépendants", "%", "Référence AFEP-MEDEF : 50 %."),
+    "female_board_percent": ("Femmes au conseil", "%", "Seuil légal de 40 % (art. L225-18-1 du Code de commerce) pour les sociétés employant au moins 250 salariés permanents et réalisant au moins 50 M€ de chiffre d'affaires ou de total de bilan, trois exercices consécutifs."),
+    "independent_board_percent": ("Administrateurs indépendants", "%", "Pour les sociétés cotées se référant au code AFEP-MEDEF : la moitié du conseil, un tiers si la société est contrôlée."),
     "ethics_violations": ("Manquements éthiques constatés", "nombre", "Sur l'exercice. Zéro est une réponse valable."),
     "corruption_cases": ("Cas de corruption", "nombre", ""),
     "data_breaches": ("Incidents de cybersécurité", "nombre", "Violations de données déclarées."),
     "csr_budget_eur": ("Budget RSE", "€", "Moyens dédiés à la démarche."),
     "esg_audit_conducted": ("Reporting vérifié par un tiers", "", "Un organisme indépendant a-t-il audité vos données ESG ?"),
     "sustainability_committee": ("Comité de durabilité", "", "Une instance dédiée existe-t-elle au niveau du conseil ?"),
+    "listed_company": ("Société cotée", "", "Actions admises aux négociations sur un marché réglementé."),
+    "controlled_company": ("Société contrôlée", "", "Un actionnaire détient-il le contrôle de la société ?"),
 
     "turnover_aligned_percent": ("Chiffre d'affaires aligné Taxonomie", "%", ""),
     "capex_aligned_percent": ("Investissements (CapEx) alignés", "%", ""),

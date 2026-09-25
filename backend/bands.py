@@ -14,7 +14,8 @@ La rédaction des clauses (clauses/fr.py) et leur sélection (composer.py) sont
 des modules séparés qui lisent ce fichier, jamais l'inverse.
 """
 
-from esg_calculator import SECTOR_CARBON_THRESHOLDS, _DEFAULT_CARBON_THRESHOLDS
+from esg_calculator import (SECTOR_CARBON_THRESHOLDS, _DEFAULT_CARBON_THRESHOLDS, TF_GRID,
+                            TF_SOURCE, CORRUPTION_PENALTY)
 
 
 # ── Neuf sections du rapport ────────────────────────────────────────────────
@@ -43,7 +44,7 @@ INDICATEURS_PAR_SECTION = {
     "social": [
         "female_employees_percent",     # esg_calculator.py:113-115
         "training_hours_per_employee",  # esg_calculator.py:126-128
-        "accident_frequency_rate",      # esg_calculator.py:133-135 — voir DETTE.md
+        "accident_frequency_rate",      # esg_calculator.TF_GRID (TF national publié)
         "employee_turnover_percent",    # esg_calculator.py:120-122
         "disabled_employees_percent",   # narratif brut, aucun seuil
         "local_suppliers_percent",      # narratif brut, aucun seuil
@@ -55,7 +56,7 @@ INDICATEURS_PAR_SECTION = {
         "independent_board_percent",    # esg_calculator.py:168-170
         "ethics_violations",            # esg_calculator.py:174 (compteur à sens inversé)
         "data_breaches",                # esg_calculator.py:178 (compteur à sens inversé)
-        "corruption_cases",             # absent du score — voir DETTE.md
+        "corruption_cases",             # esg_calculator.CORRUPTION_PENALTY
         "esg_audit_conducted",          # esg_calculator.py:181-184 (booléen)
         "sustainability_committee",     # esg_calculator.py:187-190 (booléen)
         "csr_budget_eur",               # esg_calculator.py:194 (formule linéaire plafonnée)
@@ -130,11 +131,11 @@ SEUILS = {
         "source": "esg_calculator.py:126-128",
     },
     "accident_frequency_rate": {
-        "bornes": [(1, TRANCHE_100), (3, TRANCHE_80), (5, TRANCHE_60), (8, TRANCHE_40), (15, TRANCHE_20)],
+        # Recalibré le 2026-09-24 sur le TF national publié (cf. esg_calculator.TF_GRID)
+        "bornes": [(borne, {100: TRANCHE_100, 80: TRANCHE_80, 60: TRANCHE_60,
+                            40: TRANCHE_40, 20: TRANCHE_20}[score]) for borne, score in TF_GRID],
         "sens": PLUS_BAS_MIEUX,
-        "source": "esg_calculator.py:133-135",
-        # DETTE D'EXACTITUDE (voir DETTE.md) : barème non recalibré vs.
-        # moyenne nationale CNAM (~20). Non corrigé dans ce chantier.
+        "source": f"esg_calculator.TF_GRID — {TF_SOURCE}",
     },
     "employee_turnover_percent": {
         "bornes": [(5, TRANCHE_100), (10, TRANCHE_80), (15, TRANCHE_60), (20, TRANCHE_40), (30, TRANCHE_20)],
@@ -209,14 +210,11 @@ CATEGORIES = {
         "source": "esg_calculator.py:178",
     },
     "corruption_cases": {
-        "type": "compteur_binaire",
+        "type": "compteur_penalite",
+        "formule_origine": f"max(0, 100 - n*{CORRUPTION_PENALTY})",
         "libelle_zero": "zéro cas de corruption enregistré",
-        # DETTE D'EXACTITUDE (voir DETTE.md) : absent de calculate_governance_score,
-        # un cas de corruption ne modifie donc pas le score. libelle_nonzero
-        # volontairement None : le texte actuel ne dit rien si n>0 non plus,
-        # on ne comble pas ce trou par une formulation inventée.
-        "libelle_nonzero": None,
-        "source": "content_generator.py:790-791",
+        "libelle_nonzero": "cas de corruption enregistré(s)",
+        "source": "esg_calculator.CORRUPTION_PENALTY (dans le score depuis le 2026-09-24)",
     },
     # Booléens
     "esg_audit_conducted": {
@@ -263,8 +261,10 @@ CIBLES = {
         ),
     },
     "independent_board_percent": {
+        # Seuil des sociétés cotées au capital dispersé ; 33 si contrôlée.
+        # Imprimé seulement si listed_company (content_generator._afep_lecture).
         "valeur": 50,
-        "source": "Code AFEP-MEDEF, seuil d'administrateurs indépendants (déjà cité content_generator.py:780)",
+        "source": "Code Afep-Medef des sociétés cotées (déc. 2022) — content_generator.AFEP_INDEPENDANCE",
     },
     "energie_renouvelable": {
         "valeur": None,

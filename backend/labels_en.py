@@ -39,14 +39,16 @@ FIELD_META_EN = {
     "disabled_employees_percent": ("Employees with disabilities", "%", ""),
 
     "board_members": ("Board members", "count", "Board of directors or supervisory board."),
-    "female_board_percent": ("Women on the board", "%", "French legal reference threshold: 40%."),
-    "independent_board_percent": ("Independent directors", "%", "AFEP-MEDEF reference: 50%."),
+    "female_board_percent": ("Women on the board", "%", "40% legal threshold (French Commercial Code art. L225-18-1) for companies with at least 250 permanent employees and €50M of revenue or total assets, three consecutive years."),
+    "independent_board_percent": ("Independent directors", "%", "For listed companies referring to the AFEP-MEDEF code: half of the board, one third if the company is controlled."),
     "ethics_violations": ("Ethics breaches identified", "count", "Over the year. Zero is a valid answer."),
     "corruption_cases": ("Corruption cases", "count", ""),
     "data_breaches": ("Cybersecurity incidents", "count", "Reported data breaches."),
     "csr_budget_eur": ("CSR budget", "€", "Resources dedicated to the approach."),
     "esg_audit_conducted": ("Third-party verified reporting", "", "Has an independent body audited your ESG data?"),
     "sustainability_committee": ("Sustainability committee", "", "Is there a dedicated body at board level?"),
+    "listed_company": ("Listed company", "", "Shares admitted to trading on a regulated market."),
+    "controlled_company": ("Controlled company", "", "Does a shareholder control the company?"),
 
     "turnover_aligned_percent": ("Taxonomy-aligned revenue", "%", ""),
     "capex_aligned_percent": ("Aligned investments (CapEx)", "%", ""),

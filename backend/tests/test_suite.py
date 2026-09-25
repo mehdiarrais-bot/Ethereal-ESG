@@ -37,7 +37,7 @@ def make_request(lang="fr", theme="aurora", **overrides):
                                   data_breaches=1, independent_board_percent=45),
         taxonomy=TaxonomyData(turnover_aligned_percent=38, capex_aligned_percent=52),
         language=lang, aesthetic_theme=theme,
-        include_recommendations=True, include_benchmarks=True,
+        include_recommendations=True,
     )
     base.update(overrides)
     return ESGRequest(**base)
@@ -731,7 +731,7 @@ def test_quota_du_conseil_attribue_a_cope_zimmermann():
     s = calculate_esg_scores(r)
     gouv = generate_esg_content(r, s)["governance"]
     assert "Copé-Zimmermann" in gouv
-    assert "pour les sociétés concernées" in gouv
+    assert "L225-18-1" in gouv and "250 salariés permanents" in gouv
     assert "Rixain" not in gouv
 
     r_en = make_request("en")
@@ -739,7 +739,7 @@ def test_quota_du_conseil_attribue_a_cope_zimmermann():
     s_en = calculate_esg_scores(r_en)
     gouv_en = generate_esg_content(r_en, s_en)["governance"]
     assert "Copé-Zimmermann" in gouv_en
-    assert "for companies within its scope" in gouv_en
+    assert "L225-18-1" in gouv_en and "250 permanent employees" in gouv_en
 
 
 def test_tableau_de_conformite_ne_liste_pas_de_mixite_des_effectifs():
@@ -1610,10 +1610,18 @@ def test_temoin_le_silence_paie():
       B silencieuse  ( 3 champs) = 66,5 (A)   <- DEPASSE la transparente
       C = B + 1 chiffre honnete  = 63,0 (BBB) <- l'honnetete coute 3,5 pts
       D vide         ( 0 champ)  = 50,0 (BB)  <- une note lettree sans donnee
+
+    Mis a jour le 2026-09-24 (bareme TF ancre sur le TF national 2024 de
+    16,0, corruption dans le score) : le TF 6,2 des dossiers A et C passe de
+    « fragile » (40) a « solide » (80) -- il est sous la moyenne nationale,
+    l'ancien bareme le jugeait a tort mauvais.
+      A = 69,5 (A)  (+3,5)   B = 66,5 (A)  (inchange)
+      C = 77,0 (AA) (+14)    D = 50,0 (BB) (inchange)
+    Le defaut structurel n'est PAS corrige : voir l'invariant cible ci-dessous.
     """
-    for dossier, total, note in ((dossier_a_transparente(), 66.0, "A"),
+    for dossier, total, note in ((dossier_a_transparente(), 69.5, "A"),
                                  (dossier_b_silencieuse(), 66.5, "A"),
-                                 (dossier_c_un_chiffre_honnete(), 63.0, "BBB"),
+                                 (dossier_c_un_chiffre_honnete(), 77.0, "AA"),
                                  (dossier_vide(), 50.0, "BB")):
         s = calculate_esg_scores(dossier)
         assert (s.total_esg_score, s.rating) == (total, note)
@@ -1635,7 +1643,14 @@ def test_le_silence_ne_doit_pas_surpasser_la_transparence():
     passe, `strict` transforme ce XPASS en ECHEC, et force a retirer le
     marqueur. Il ne peut pas etre oublie.
     """
-    a = calculate_esg_scores(dossier_a_transparente()).total_esg_score
+    # Depuis la recalibration TF du 2026-09-24, le TF 6,2 du dossier A n'est
+    # plus mediocre (sous la moyenne nationale de 16,0) et A devance B par
+    # hasard de donnees. Le dossier garde donc son intention d'origine --
+    # des chiffres honnetes et MOYENS -- avec un TF au-dessus de la moyenne
+    # nationale. Le defaut (l'absence sort de la moyenne) est intact.
+    transparente = dossier_a_transparente()
+    transparente.social.accident_frequency_rate = 20
+    a = calculate_esg_scores(transparente).total_esg_score
     b = calculate_esg_scores(dossier_b_silencieuse()).total_esg_score
     assert a > b, (
         f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "

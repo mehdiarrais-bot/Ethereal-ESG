@@ -492,62 +492,41 @@ en FR et en EN.
   python-pptx et python-docx n'exposent pas tous le même niveau de
   contrôle sur ces champs.
 
-## 0octies. AFEP-MEDEF appliqué hors de son champ — **chantier « exactitude du scoring »**
+## 0octies. AFEP-MEDEF appliqué hors de son champ — **traité le 2026-09-24**
 
-> **Rattachement** : ces trois constats rejoignent le chantier
-> « exactitude du scoring » du registre, avec le § 1 (barème TF non
-> recalibré), le § 1bis (grille carbone non sourcée), le § 2
-> (`corruption_cases` absent du score) et le § 4 (seuil de 40 % conservé
-> comme déclencheur interne). Ce ne sont **pas** des défauts de
-> vocabulaire : le chantier du 2026-09-05 n'a corrigé que l'intitulé, le
-> barème est intact et continue de piloter le statut **et** le score.
+- **Constat d'origine** : le tableau de couverture et le texte de
+  gouvernance mesuraient tout client à « 50 % d'indépendants (AFEP-MEDEF) »,
+  qu'il soit coté ou non, contrôlé ou non.
+- **Texte vérifié** : Code de gouvernement d'entreprise des sociétés cotées
+  (Afep-Medef, version de décembre 2022, PDF publié sur afep.com) — la
+  moitié d'indépendants dans les sociétés au capital dispersé dépourvues
+  d'actionnaire de contrôle, au moins un tiers dans les sociétés
+  contrôlées ; code volontaire, principe « appliquer ou expliquer ».
+- **Traitement** : deux champs collectés (`listed_company`,
+  `controlled_company` : formulaire, questionnaire FR/EN, import). La ligne
+  AFEP-MEDEF du tableau et la mention dans le texte n'existent **que pour
+  une société déclarée cotée**, avec le seuil qui la vise (50 ou 33 %,
+  constantes `AFEP_INDEPENDANCE*` de `content_generator.py`). Sans réponse,
+  aucune référence AFEP-MEDEF n'est imprimée.
+- **Reste, assumé** : le **score** d'indépendance garde sa grille interne
+  (60 / 50 / 40 / 30), qui n'est plus attribuée au code AFEP-MEDEF nulle
+  part — c'est une grille de bonne gouvernance du diagnostic, comme la
+  grille carbone (§ 1bis).
 
-Constaté le 2026-09-05 en vérifiant la formulation du principe avant de
-l'imprimer (chantier « vocabulaire du tableau d'écarts »). **Non corrigé** —
-le barème n'a pas été touché, seul l'intitulé l'a été.
+## 1. `accident_frequency_rate` — **traité le 2026-09-24**
 
-- **Le principe s'appelle « appliquer ou expliquer »** dans le code
-  français ; « comply or explain » en est la traduction usuelle, pas le
-  libellé du texte. L'intitulé retenu emploie donc la forme française.
-- **Le seuil de 50 % n'est pas universel — défaut d'exactitude du
-  scoring, pas de vocabulaire.** Le code retient **la moitié** pour les
-  sociétés à capital dispersé sans actionnaire de contrôle, et **le
-  tiers** pour les sociétés contrôlées. `esg_calculator` (barème
-  d'indépendance) et `compliance_assessment` appliquent 50 %
-  **uniformément**, sans savoir si la société est contrôlée — information
-  que le modèle ne collecte pas. La borne `partial` à 33 % coïncide par
-  hasard avec le seuil des sociétés contrôlées, sans que ce soit
-  intentionnel. Comme au § 1 et au § 1bis, la correction devra toucher
-  **le score et le tableau dans le même commit**.
-- **Le code AFEP-MEDEF vise les sociétés cotées.** Le produit cible des
-  PME/ETI souvent non cotées, pour lesquelles il ne s'applique pas.
-  **Même famille que la ligne « Mixité des effectifs » retirée à l'étape A** :
-  mesurer un écart à une norme qui ne s'applique pas au client est un faux
-  par construction, quel que soit le mot employé pour le dire. La question
-  n'est donc pas de reformuler la ligne mais de décider si elle doit
-  figurer au tableau pour un client non coté.
-- **Mesure prise** : le seuil chiffré a été **retiré de l'intitulé**, qui
-  porte désormais le registre (« AFEP-MEDEF, appliquer ou expliquer »).
-  Le barème reste inchangé et continue de piloter le statut.
-- **Source** : guide d'application du Haut Comité de gouvernement
-  d'entreprise et documents hébergés par le MEDEF. **Le texte primaire du
-  code n'a pas été atteint directement** — même réserve qu'au § 3bis.
-- **À faire** : décider si le tableau doit continuer de porter une ligne
-  AFEP-MEDEF pour un client non coté, et si oui avec quel seuil.
-
-## 1. `accident_frequency_rate` — barème non recalibré
-
-- **Où** : `backend/esg_calculator.py:132-135` (score), recopié tel quel
-  dans `backend/bands.py` (`SEUILS["accident_frequency_rate"]`).
-- **Constat** : le barème de score (1 / 3 / 5 / 8 / 15) n'a jamais été
-  recalibré vers des valeurs réalistes. La moyenne nationale CNAM tourne
-  autour de 20 (ordre de grandeur cité en session, à vérifier contre la
-  source CNAM réelle avant correction — ne pas la recopier telle quelle sans
-  vérification).
-- **Décision pour ce chantier** : `bands.py` s'aligne sciemment sur le
-  barème existant, même faux, pour ne pas introduire une divergence
-  score/texte le jour où on corrige. La correction devra toucher les DEUX
-  endroits **dans le même commit** : `esg_calculator.py` et `bands.py`.
+- **Constat d'origine** : barème 1 / 3 / 5 / 8 / 15 sans source, très
+  en deçà des valeurs réelles (un TF de 10 était « fragile »).
+- **Source vérifiée** : Assurance Maladie – Risques professionnels,
+  rapport annuel 2024, tableau 8 : TF 2024 de **16,0** tous secteurs, de
+  4,9 (activités de services I) à 25,1 (BTP).
+- **Traitement** : grille unique `TF_GRID` dans `esg_calculator.py`, lue
+  par `bands.py` (score et texte dans le même commit) : ≤ 4 exemplaire,
+  ≤ 8 solide, ≤ 16 satisfaisant, ≤ 25 fragile, au-delà critique. Point fort
+  à ≤ 4, axe de progrès au-dessus de la moyenne nationale. La source est
+  citée dans la note méthodologique et dans la lecture de l'indicateur.
+- **Reste** : grille identique pour tous les secteurs (décision) ; la
+  moyenne nationale est à mettre à jour à chaque rapport annuel.
 
 ## 1bis. `SECTOR_CARBON_THRESHOLDS` — grille sectorielle non sourcée
 
@@ -566,23 +545,23 @@ le barème n'a pas été touché, seul l'intitulé l'a été.
   (iii) depuis le chantier clauses, une clause affirme « L'intensité
   carbone est conforme à ce qu'on observe dans son secteur », ce qui
   transforme la grille en affirmation de comparaison sectorielle.
-- **À faire** : adosser les seuils à une source réelle et citable (ADEME /
-  Base Carbone, intensités sectorielles publiées, ou équivalent), et citer
-  cette source dans la note méthodologique. **Même niveau de priorité que
-  le TF1 (point 1)** : à traiter dans le chantier « exactitude du scoring »,
-  avec le barème accidents et `corruption_cases`.
+- **Décision du 2026-09-24 : grille interne assumée.** Aucune source
+  publiée ne donne des seuils d'intensité par famille de secteurs
+  transposables tels quels. La grille reste celle du diagnostic, et le
+  texte le dit : « selon la grille interne du diagnostic, différenciée par
+  famille de secteurs » (la formulation « pour le secteur », qui suggérait
+  une comparaison sectorielle, est retirée). La note méthodologique la
+  présentait déjà comme interne.
+- **Reste** : l'adosser un jour à une source citable si elle existe.
 
-## 2. `corruption_cases` — absent du score
+## 2. `corruption_cases` — **traité le 2026-09-24**
 
-- **Où** : `backend/esg_calculator.py`, fonction `calculate_governance_score`
-  (lignes 155-200). Le champ `corruption_cases` n'y apparaît jamais.
-- **Constat** : un cas de corruption déclaré ne fait bouger ni le score de
-  gouvernance, ni la note globale. Seul le texte (`content_generator.py:
-  790-791`) le mentionne, et uniquement dans le cas `== 0` ("zéro cas de
-  corruption enregistré") — rien n'est dit si `> 0`.
-- **Anormal pour un indicateur ESG** : à corriger (formule de pénalité à
-  ajouter au score, et libellé à écrire pour le cas `> 0`), sujet distinct
-  du socle de clauses.
+- **Constat d'origine** : absent du score ; le texte ne disait rien si
+  un cas était déclaré.
+- **Traitement** : pénalité de 50 points par cas dans le score de
+  gouvernance (`CORRUPTION_PENALTY`, plus sévère que les manquements
+  éthiques, 20, et les incidents cyber, 30) ; le texte FR/EN et les axes de
+  progrès mentionnent désormais le nombre de cas déclarés.
 
 ## 3. Régime du conseil d'administration : renforcement non traité
 
@@ -599,7 +578,21 @@ le barème n'a pas été touché, seul l'intitulé l'a été.
 - **À faire** : décider si le livrable doit citer ce régime consolidé, et
   sous quelle forme.
 
-## 3bis. Seuils de Copé-Zimmermann non vérifiés sur texte primaire
+## 3bis. Seuils de Copé-Zimmermann — **vérifiés et traités le 2026-09-24**
+
+- **Vérifié sur Légifrance** (art. L225-18-1 du Code de commerce, version
+  en vigueur depuis le 1er octobre 2025) : 40 % de chaque sexe dans les
+  sociétés qui, pour le troisième exercice consécutif, emploient au moins
+  250 salariés permanents et présentent un chiffre d'affaires net ou un
+  total de bilan d'au moins 50 M€ (outre les sociétés cotées).
+- **Traitement** : le livrable et le questionnaire citent l'article avec
+  ce champ d'application ; si les données saisies placent l'entreprise
+  hors du champ (effectif ou chiffre d'affaires sous les seuils), le texte
+  le dit au lieu de mesurer un écart. L'outil ne connaît ni la forme
+  sociale ni l'historique sur trois exercices : il n'affirme jamais que
+  l'obligation s'impose au client.
+
+Historique :
 
 - **Constat** : les résumés officiels consultés donnent des seuils
   d'application divergents (**500 salariés / 50 M€** dans l'un,
@@ -640,9 +633,8 @@ Chantier du 2026-09-03 : les phrases qui affirmaient une comparaison
 sectorielle ont été réécrites (18 emplacements, FR et EN). Quatre points
 identifiés au passage et **volontairement non traités** :
 
-- **`carbon_grid_sector_specific` (`esg_calculator.py:80`)** : booléen
-  stocké dans `details`, aucun consommateur trouvé. Donnée morte, à
-  confirmer puis supprimer.
+- **`carbon_grid_sector_specific`** : donnée morte — **supprimée le
+  2026-09-24**.
 - **`donnees["co2_emissions_tonnes"]` (`content_generator.py`)** : la clé
   porte le nom du champ mais contient une **intensité** (t CO₂e/M€ de CA),
   pas la tonne brute. Nommage trompeur, source d'erreur pour qui reprend
@@ -652,10 +644,8 @@ identifiés au passage et **volontairement non traités** :
   encore « barres par pilier vs secteur ». Vérifié : le **rendu** ne
   comporte plus de repère sectoriel (retiré au chantier 2+4), seuls les
   commentaires sont périmés.
-- **`questionnaire_generator.py:59`** : le questionnaire de collecte
-  annonce « Seuil légal de référence : 40 % » pour `female_board_percent`.
-  Formulation à revoir à la lumière du chantier Rixain — le quota relève
-  de Copé-Zimmermann et ne s'applique qu'aux sociétés concernées.
+- **`questionnaire_generator.py`** : « Seuil légal de référence : 40 % » —
+  **traité le 2026-09-24** (cf. § 8).
 
 **Faux positif connu du test de gel** : le marqueur « marché PME/ETI » /
 « SME/mid-cap market » vise un **vocabulaire**, pas une affirmation.
@@ -682,16 +672,14 @@ positif : il faudrait alors distinguer les deux usages.
   ne passent pas par ce point — ils sont rares et à contrôler lors d'un
   chantier graphiques.
 
-## 6. `include_benchmarks` : drapeau défini mais jamais lu
+## 6. `include_benchmarks` : drapeau jamais lu — **retiré le 2026-09-24**
 
-- **Où** : `backend/models.py:245` définit `include_benchmarks: bool = True`.
-- **Constat** : aucun générateur ne teste ce drapeau (`grep` : 2 occurrences
-  en tout, le modèle et un test). La section correspondante s'affiche donc
-  toujours, même si le consultant la désactive dans le formulaire.
-- **Décision** : non traité pendant le chantier « référence sectorielle »
-  — le drapeau perd en partie son objet maintenant que la comparaison
-  externe a disparu. À réévaluer : soit le câbler sur la section
-  Positionnement, soit le retirer du modèle et du formulaire.
+- **Constat d'origine** : défini dans le modèle et proposé dans le
+  formulaire (« Inclure les benchmarks sectoriels »), mais lu par aucun
+  générateur : la case ne faisait rien.
+- **Traitement** : retiré du modèle, du formulaire, des données de
+  démonstration et du calcul de score côté interface. Un ancien dossier qui
+  le contient reste lisible (champ inconnu ignoré par Pydantic).
 
 ## 7. Perte de données : « Données exemple » n'oubliait pas le dossier ouvert — **traité le 2026-09-24**
 
@@ -708,7 +696,15 @@ positif : il faudrait alors distinguer les deux usages.
   l'application réelle (dossier modifié → démo → confirmation ; démo
   enregistrée → nouveau dossier, dossier réel intact).
 
-## 8. Références réglementaires non vérifiées dans le questionnaire envoyé au client
+## 8. Références réglementaires non vérifiées dans le questionnaire envoyé au client — **traité le 2026-09-24**
+
+- **Traitement** : les deux aides (FR et EN, même commit) portent
+  désormais leur condition d'applicabilité vérifiée : art. L225-18-1 avec
+  ses seuils (§ 3bis) ; AFEP-MEDEF limité aux sociétés cotées qui s'y
+  réfèrent, moitié ou tiers si contrôlée (§ 0octies). Deux questions
+  ajoutées : « Société cotée », « Société contrôlée ».
+
+Constat d'origine :
 
 > **Rattachement** : même matière que le § 0octies (AFEP-MEDEF appliqué hors
 > de son champ) et le § 3bis (seuils de Copé-Zimmermann non vérifiés sur

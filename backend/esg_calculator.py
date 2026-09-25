@@ -3,6 +3,26 @@ from typing import List, Tuple
 import math
 
 
+# ── Taux de fréquence des accidents du travail (TF) ─────────────────────
+# TF = accidents avec arrêt en premier règlement par million d'heures
+# travaillées. Référence : Assurance Maladie – Risques professionnels,
+# Rapport annuel 2024, tableau 8 (données 2024) : 16,0 tous secteurs (total
+# des 9 CTN), de 4,9 (services I : banques, assurances, administrations) à
+# 25,1 (BTP). Grille ancrée sur ces valeurs (décision du 2026-09-24) :
+# jusqu'au quart de la moyenne nationale = exemplaire, jusqu'à la moitié =
+# solide, jusqu'à la moyenne nationale = satisfaisant, jusqu'au niveau du
+# BTP = fragile, au-delà = critique. Lue aussi par bands.py.
+TF_NATIONAL_2024 = 16.0
+TF_SOURCE = "Assurance Maladie – Risques professionnels, rapport annuel 2024, tableau 8"
+TF_GRID = [(4, 100), (8, 80), (16, 60), (25, 40), (float("inf"), 20)]
+TF_STRENGTH_MAX = 4                 # point fort : tranche « exemplaire »
+TF_WEAKNESS_MIN = TF_NATIONAL_2024  # axe de progrès : au-dessus de la moyenne nationale
+
+# Pénalité par cas de corruption déclaré (décision du 2026-09-24) : plus
+# sévère que les manquements éthiques (20) et les incidents cyber (30).
+CORRUPTION_PENALTY = 50
+
+
 def score_metric(value: float, thresholds: List[Tuple[float, float]], higher_is_better: bool = True) -> float:
     """Normalize a metric to a 0-100 score."""
     if value is None:
@@ -74,10 +94,9 @@ def calculate_environmental_score(env: EnvironmentalData, revenue: float = None,
     carbon_intensity = None
     if env.co2_emissions_tonnes and revenue:
         carbon_intensity = (env.co2_emissions_tonnes / revenue) * 1_000_000
-        thresholds, sector_specific = carbon_thresholds_for(sector)
+        thresholds, _sector_specific = carbon_thresholds_for(sector)
         scores["carbon"] = score_metric(carbon_intensity, thresholds, higher_is_better=False)
         details["carbon_intensity"] = round(carbon_intensity, 2)
-        details["carbon_grid_sector_specific"] = sector_specific
 
     # Scope completeness bonus
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
@@ -130,9 +149,8 @@ def calculate_social_score(social: SocialData) -> Tuple[float, dict]:
 
     # Safety (lower accidents = better)
     if social.accident_frequency_rate is not None:
-        scores["safety"] = score_metric(social.accident_frequency_rate, [
-            (1, 100), (3, 80), (5, 60), (8, 40), (15, 20)
-        ], higher_is_better=False)
+        scores["safety"] = score_metric(social.accident_frequency_rate, TF_GRID,
+                                        higher_is_better=False)
         details["accident_rate"] = social.accident_frequency_rate
 
     # Customer satisfaction
@@ -172,6 +190,10 @@ def calculate_governance_score(gov: GovernanceData) -> Tuple[float, dict]:
     # Ethics violations (lower = better)
     if gov.ethics_violations is not None:
         scores["ethics"] = 100 if gov.ethics_violations == 0 else max(0, 100 - gov.ethics_violations * 20)
+
+    # Corruption (lower = better) — absent du score jusqu'au 2026-09-24
+    if gov.corruption_cases is not None:
+        scores["corruption"] = max(0, 100 - gov.corruption_cases * CORRUPTION_PENALTY)
 
     # Data security
     if gov.data_breaches is not None:
@@ -229,7 +251,7 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
         strengths.append(f"Bonne parité homme-femme dans les effectifs ({social.female_employees_percent:.0f}%)")
     if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
         strengths.append(f"Investissement significatif dans la formation ({social.training_hours_per_employee:.0f} h/an)")
-    if social.accident_frequency_rate is not None and social.accident_frequency_rate < 3:
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate <= TF_STRENGTH_MAX:
         strengths.append(f"Excellent taux de sécurité au travail (TF {social.accident_frequency_rate:.1f})")
     if gov.esg_audit_conducted:
         strengths.append("Audit ESG indépendant conduit — transparence renforcée")
@@ -266,13 +288,16 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
         # desequilibre reste un jugement de consultant defendable ; lui
         # adosser une cible chiffree en ferait une affirmation normative.
         weaknesses.append(f"Déséquilibre de genre dans les effectifs ({social.female_employees_percent:.0f}% de femmes)")
-    if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate > TF_WEAKNESS_MIN:
         weaknesses.append(f"Taux de fréquence des accidents élevé (TF {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         weaknesses.append(f"Volume de formation insuffisant ({social.training_hours_per_employee:.0f} h/an, objectif 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
         weaknesses.append("Un incident éthique enregistré" if gov.ethics_violations == 1
                           else f"{gov.ethics_violations} incidents éthiques enregistrés")
+    if gov.corruption_cases is not None and gov.corruption_cases > 0:
+        weaknesses.append("Un cas de corruption enregistré" if gov.corruption_cases == 1
+                          else f"{gov.corruption_cases} cas de corruption enregistrés")
     if gov.data_breaches is not None and gov.data_breaches > 0:
         weaknesses.append("Une violation de données — cybersécurité à renforcer" if gov.data_breaches == 1
                           else f"{gov.data_breaches} violations de données — cybersécurité à renforcer")
@@ -316,7 +341,7 @@ def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
         r.append(f"Good gender balance in the workforce ({social.female_employees_percent:.0f}%)")
     if social.training_hours_per_employee and social.training_hours_per_employee >= 25:
         r.append(f"Significant investment in training ({social.training_hours_per_employee:.0f} h/year)")
-    if social.accident_frequency_rate is not None and social.accident_frequency_rate < 3:
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate <= TF_STRENGTH_MAX:
         r.append(f"Excellent workplace safety record (rate {social.accident_frequency_rate:.1f})")
     if gov.esg_audit_conducted: r.append("Independent ESG audit conducted — strengthened transparency")
     if gov.sustainability_committee: r.append("Sustainability committee operating at Board level")
@@ -344,13 +369,16 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
     if social.female_employees_percent is not None and social.female_employees_percent < 40:
         # Voir la note du bloc FR equivalent.
         r.append(f"Gender imbalance in the workforce ({social.female_employees_percent:.0f}% women)")
-    if social.accident_frequency_rate is not None and social.accident_frequency_rate > 5:
+    if social.accident_frequency_rate is not None and social.accident_frequency_rate > TF_WEAKNESS_MIN:
         r.append(f"High accident frequency rate (rate {social.accident_frequency_rate:.1f})")
     if social.training_hours_per_employee is not None and social.training_hours_per_employee < 20:
         r.append(f"Insufficient training volume ({social.training_hours_per_employee:.0f} h/year, target 20 h)")
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
         r.append("One ethics incident recorded" if gov.ethics_violations == 1
                  else f"{gov.ethics_violations} ethics incidents recorded")
+    if gov.corruption_cases is not None and gov.corruption_cases > 0:
+        r.append("One corruption case recorded" if gov.corruption_cases == 1
+                 else f"{gov.corruption_cases} corruption cases recorded")
     if gov.data_breaches is not None and gov.data_breaches > 0:
         r.append("One data breach — cybersecurity to strengthen" if gov.data_breaches == 1
                  else f"{gov.data_breaches} data breaches — cybersecurity to strengthen")

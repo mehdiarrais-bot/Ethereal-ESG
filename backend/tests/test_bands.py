@@ -63,11 +63,17 @@ def test_classer_toutes_les_tranches_plus_bas_mieux():
 def test_classer_accident_frequency_rate_explicite():
     """Cas nommé explicitement par la consigne : les deux sens sur un même
     indicateur emblématique (plus_bas_mieux)."""
+    # Grille ancrée sur le TF national 2024 (16,0, Assurance Maladie) :
+    # quart, moitié, moyenne nationale, niveau du BTP (25,1).
     assert classer("accident_frequency_rate", 1) == TRANCHE_100
-    assert classer("accident_frequency_rate", 3) == TRANCHE_80
-    assert classer("accident_frequency_rate", 5) == TRANCHE_60
-    assert classer("accident_frequency_rate", 8) == TRANCHE_40
-    assert classer("accident_frequency_rate", 15) == TRANCHE_20
+    assert classer("accident_frequency_rate", 4) == TRANCHE_100
+    assert classer("accident_frequency_rate", 4.1) == TRANCHE_80
+    assert classer("accident_frequency_rate", 8) == TRANCHE_80
+    assert classer("accident_frequency_rate", 12) == TRANCHE_60
+    assert classer("accident_frequency_rate", 16) == TRANCHE_60
+    assert classer("accident_frequency_rate", 16.5) == TRANCHE_40
+    assert classer("accident_frequency_rate", 25) == TRANCHE_40
+    assert classer("accident_frequency_rate", 25.1) == TRANCHE_20
     # Au-delà de la pire borne : reste dans la pire tranche, ne casse pas.
     assert classer("accident_frequency_rate", 50) == TRANCHE_20
 

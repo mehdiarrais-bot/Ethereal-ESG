@@ -52,6 +52,8 @@ FIELD_SPECS = [
     ("governance", "csr_budget_eur", "num", ["budget rse", "budget csr", "csr_budget_eur"]),
     ("governance", "esg_audit_conducted", "bool", ["audit esg", "audit esg conduit", "audit esg independant", "esg_audit_conducted"]),
     ("governance", "sustainability_committee", "bool", ["comite de durabilite", "comite rse", "comite durable", "sustainability_committee"]),
+    ("governance", "listed_company", "bool", ["societe cotee", "cotee", "cotation", "listed_company"]),
+    ("governance", "controlled_company", "bool", ["societe controlee", "controlee", "actionnaire de controle", "controlled_company"]),
     # ── Taxonomie ───────────────────────────────────────────────────────
     ("taxonomy", "turnover_aligned_percent", "num", ["ca aligne taxonomie", "ca aligne", "turnover aligne", "turnover_aligned_percent"]),
     ("taxonomy", "capex_aligned_percent", "num", ["capex aligne taxonomie", "capex aligne", "capex_aligned_percent"]),
@@ -230,6 +232,7 @@ def template_csv() -> str:
         "independent_board_percent": "55", "ethics_violations": "0",
         "corruption_cases": "0", "data_breaches": "0", "csr_budget_eur": "250000",
         "esg_audit_conducted": "Oui", "sustainability_committee": "Oui",
+        "listed_company": "Non", "controlled_company": "Non",
         "turnover_aligned_percent": "38", "capex_aligned_percent": "52",
         "opex_aligned_percent": "29",
     }

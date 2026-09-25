@@ -123,6 +123,11 @@ class GovernanceData(BaseModel):
     csr_budget_eur: Optional[float] = Field(None, ge=0, le=1e12)
     esg_audit_conducted: Optional[bool] = None
     sustainability_committee: Optional[bool] = None
+    # Statut de la société : le code AFEP-MEDEF ne vise que les sociétés
+    # cotées qui s'y réfèrent (moitié d'indépendants, un tiers si contrôlée).
+    # Sans ces réponses, aucune référence AFEP-MEDEF n'est imprimée.
+    listed_company: Optional[bool] = None
+    controlled_company: Optional[bool] = None
 
     @model_validator(mode='after')
     def clamp_and_clean(self):
@@ -250,7 +255,6 @@ class ESGRequest(BaseModel):
     # Ajuste l'analyse des écarts (exigences optionnelles vs requises).
     reporting_framework: str = Field("csrd", pattern=r'^(csrd|vsme)$')
     include_recommendations: bool = True
-    include_benchmarks: bool = True
     include_cover_image: bool = True
     # Photos fournies par l'entreprise, par emplacement (cf. report_designs.
     # CLIENT_PHOTO_SLOTS) : data-URL PNG/JPEG. Un emplacement vide est comblé

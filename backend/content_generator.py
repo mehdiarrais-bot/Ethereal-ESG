@@ -5,6 +5,7 @@ lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
 from models import ESGRequest, ESGScores
+from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE
 
 
 def _seed(name: str) -> int:
@@ -646,7 +647,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"indicator on an INTERNAL scoring grid, specific to this tool: its thresholds were "
             f"defined in-house and are not derived from any published external reference. Carbon "
             f"intensity is rated on a grid differentiated by sector family (services, industry, "
-            f"transport, energy…), which is likewise internal. The overall score "
+            f"transport, energy…), which is likewise internal. The accident frequency rate grid is "
+            f"anchored on the national rate published by the French Health Insurance (16.0 in 2024, "
+            f"all sectors; {TF_SOURCE}). The overall score "
             f"is the weighted average of the three pillars, and the letter rating (internal AAA-CCC "
             f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
             f"contains no comparison against an external sector reference: the positioning shown is "
@@ -671,7 +674,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"GRILLE DE NOTATION INTERNE, propre à l'outil : ses seuils ont été définis en interne "
             f"et ne sont adossés à aucun référentiel externe publié. L'intensité carbone est "
             f"notée sur une grille différenciée par famille sectorielle (services, industrie, "
-            f"transport, énergie…), elle aussi interne. Le score global est la moyenne "
+            f"transport, énergie…), elle aussi interne. La grille du taux de fréquence des accidents "
+            f"est ancrée sur le taux national publié par l'Assurance Maladie (16,0 en 2024, tous "
+            f"secteurs ; {TF_SOURCE}). Le score global est la moyenne "
             f"pondérée des trois piliers, et la notation lettrée (échelle interne AAA-CCC) est indicative — "
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
             f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
@@ -859,7 +864,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         lvl = "excellent" if soc.training_hours_per_employee >= 40 else ("satisfaisant" if soc.training_hours_per_employee >= 20 else "à renforcer")
         soc_items.append(f"{soc.training_hours_per_employee:.0f} h/an de formation par collaborateur ({lvl})")
     if soc.accident_frequency_rate is not None:
-        sf = "excellent" if soc.accident_frequency_rate < 2 else ("satisfaisant" if soc.accident_frequency_rate < 5 else "à améliorer en priorité")
+        sf = _tf_reading(soc.accident_frequency_rate, en=False)
         soc_items.append(f"taux de fréquence accidents {soc.accident_frequency_rate:.1f} ({sf})")
     if soc.employee_turnover_percent is not None:
         soc_items.append(f"turnover {soc.employee_turnover_percent:.0f}%")
@@ -896,14 +901,11 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         # cote ni un effectif fiable, il n'affirme donc pas que l'obligation
         # s'applique a CE client (une PME hors champ ne doit pas se voir
         # reprocher une obligation qui ne la vise pas).
-        cible_ca = ("objectif de 40 % atteint (loi Copé-Zimmermann, pour les sociétés concernées)"
-                    if gov.female_board_percent >= 40 else
-                    f"{_pts(40 - gov.female_board_percent)} sous l'objectif de 40 % "
-                    f"fixé par la loi Copé-Zimmermann pour les sociétés concernées")
-        gov_items.append(f"{gov.female_board_percent:.0f}% de femmes au CA ({cible_ca})")
+        gov_items.append(f"{gov.female_board_percent:.0f}% de femmes au CA "
+                         f"({_parite_ca(request, gov.female_board_percent, en=False)})")
     if gov.independent_board_percent is not None:
-        afep = "conforme AFEP-MEDEF (≥50%)" if gov.independent_board_percent >= 50 else "sous le seuil AFEP-MEDEF 50%"
-        gov_items.append(f"{gov.independent_board_percent:.0f}% d'administrateurs indépendants ({afep})")
+        gov_items.append(f"{gov.independent_board_percent:.0f}% d'administrateurs indépendants"
+                         + _afep_lecture(gov, en=False))
     if gov.csr_budget_eur:
         gov_items.append(f"budget RSE {gov.csr_budget_eur:,.0f} €")
     if gov.ethics_violations is not None:
@@ -912,8 +914,10 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.data_breaches is not None and gov.data_breaches > 0:
         gov_items.append(_agree(gov.data_breaches, "incident cybersécurité déclaré",
                                 "incidents cybersécurité déclarés"))
-    if gov.corruption_cases is not None and gov.corruption_cases == 0:
-        gov_items.append("zéro cas de corruption enregistré")
+    if gov.corruption_cases is not None:
+        gov_items.append("zéro cas de corruption enregistré" if gov.corruption_cases == 0
+                         else ("un cas de corruption enregistré" if gov.corruption_cases == 1
+                               else f"{gov.corruption_cases} cas de corruption enregistrés"))
 
     if gov_items:
         gov_detail = _pick(s, 1, GOV_LIAISONS) + " ; ".join(gov_items) + "."
@@ -1310,7 +1314,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         lvl = "excellent" if soc.training_hours_per_employee >= 40 else "satisfactory" if soc.training_hours_per_employee >= 20 else "to strengthen"
         items.append(f"{soc.training_hours_per_employee:.0f} h/year training per employee ({lvl})")
     if soc.accident_frequency_rate is not None:
-        sf = "excellent" if soc.accident_frequency_rate < 2 else "satisfactory" if soc.accident_frequency_rate < 5 else "a priority to improve"
+        sf = _tf_reading(soc.accident_frequency_rate, en=True)
         items.append(f"accident frequency rate {soc.accident_frequency_rate:.1f} ({sf})")
     if soc.employee_turnover_percent is not None:
         items.append(f"{soc.employee_turnover_percent:.0f}% turnover")
@@ -1328,14 +1332,11 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         items.append(f"{gov.board_members}-member Board")
     if gov.female_board_percent is not None:
         # Voir la note du bloc FR equivalent.
-        rx = ("40% objective met (Copé-Zimmermann Act, for companies within its scope)"
-              if gov.female_board_percent >= 40 else
-              f"{_pts(40 - gov.female_board_percent)} below the 40% objective set by the "
-              f"Copé-Zimmermann Act for companies within its scope")
-        items.append(f"{gov.female_board_percent:.0f}% women on the Board ({rx})")
+        items.append(f"{gov.female_board_percent:.0f}% women on the Board "
+                     f"({_parite_ca(request, gov.female_board_percent, en=True)})")
     if gov.independent_board_percent is not None:
-        ind = "≥50% independence met" if gov.independent_board_percent >= 50 else "below the 50% independence threshold"
-        items.append(f"{gov.independent_board_percent:.0f}% independent directors ({ind})")
+        items.append(f"{gov.independent_board_percent:.0f}% independent directors"
+                     + _afep_lecture(gov, en=True))
     if gov.csr_budget_eur:
         items.append(f"CSR budget €{gov.csr_budget_eur:,.0f}")
     if gov.ethics_violations is not None:
@@ -1344,8 +1345,10 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.data_breaches is not None and gov.data_breaches > 0:
         items.append(_agree(gov.data_breaches, "cybersecurity incident reported",
                             "cybersecurity incidents reported", en=True))
-    if gov.corruption_cases is not None and gov.corruption_cases == 0:
-        items.append("zero corruption cases recorded")
+    if gov.corruption_cases is not None:
+        items.append("zero corruption cases recorded" if gov.corruption_cases == 0
+                     else _agree(gov.corruption_cases, "corruption case recorded",
+                                 "corruption cases recorded", en=True))
     gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The governance structure is being documented."
     audit_sent = _pick(s, 2, GOV_AUDITS_EN if gov.esg_audit_conducted else GOV_NO_AUDIT_EN)
     committee_sent = _pick(s, 3, GOV_COMMITTEES_EN if gov.sustainability_committee else GOV_NO_COMMITTEE_EN)
@@ -1690,6 +1693,79 @@ _PILLAR_INSIGHT = {
 }
 
 
+# ── Références sourcées (vérifiées le 2026-09-24) ─────────────────────────
+# Code de gouvernement d'entreprise des sociétés cotées (Afep-Medef, version
+# de décembre 2022) : « La part des administrateurs indépendants doit être de
+# la moitié des membres du conseil dans les sociétés au capital dispersé et
+# dépourvues d'actionnaires de contrôle. Dans les sociétés contrôlées, [...]
+# d'au moins un tiers. » Code volontaire, principe « appliquer ou expliquer ».
+AFEP_INDEPENDANCE = 50
+AFEP_INDEPENDANCE_CONTROLEE = 33
+# Art. L225-18-1 du Code de commerce (version en vigueur depuis le
+# 1er octobre 2025, vérifiée sur Légifrance) : 40 % d'administrateurs de
+# chaque sexe dans les sociétés qui, pour le 3e exercice consécutif,
+# emploient en moyenne au moins 250 salariés permanents et présentent un
+# chiffre d'affaires net ou un total de bilan d'au moins 50 M€.
+PARITE_CA_SEUIL = 40
+PARITE_CA_SALARIES = 250
+PARITE_CA_MONTANT = 50_000_000
+
+
+def _tf_reading(tf: float, en: bool) -> str:
+    """Lecture du taux de fréquence sur la grille ancrée sur la moyenne
+    nationale publiée (esg_calculator.TF_GRID)."""
+    if tf <= TF_STRENGTH_MAX:
+        return "excellent"
+    if tf <= TF_WEAKNESS_MIN:
+        return ("at or below the national average of 16.0" if en
+                else "inférieur ou égal à la moyenne nationale de 16,0")
+    return ("above the national average of 16.0 — a priority" if en
+            else "au-dessus de la moyenne nationale de 16,0 — priorité")
+
+
+def _parite_ca(request: ESGRequest, pct: float, en: bool) -> str:
+    """Parité au conseil : l'obligation légale n'est citée qu'avec son champ
+    d'application exact ; l'outil ne connaît ni la forme sociale ni les
+    trois exercices, il ne l'impose donc jamais au client."""
+    staff, rev = request.social.total_employees, request.company.revenue_eur
+    in_scope = (staff is not None and staff >= PARITE_CA_SALARIES
+                and rev is not None and rev >= PARITE_CA_MONTANT)
+    out_scope = ((staff is not None and staff < PARITE_CA_SALARIES)
+                 or (rev is not None and rev < PARITE_CA_MONTANT))
+    if en:
+        rule = ("the Copé-Zimmermann Act, French Commercial Code art. L225-18-1: 40% of each sex for companies with "
+                "at least 250 permanent employees and €50M of revenue or total assets for "
+                "three consecutive years")
+        if out_scope:
+            return f"the data entered place the company outside the scope of {rule}"
+        verdict = "at or above" if pct >= PARITE_CA_SEUIL else "below"
+        lead = "the company may fall within" if in_scope else "to be read against"
+        return f"{verdict} 40%; {lead} {rule}"
+    rule = ("la loi Copé-Zimmermann, art. L225-18-1 du Code de commerce : 40 % de chaque sexe dans les sociétés d'au "
+            "moins 250 salariés permanents et 50 M€ de chiffre d'affaires ou de total de bilan, "
+            "trois exercices consécutifs")
+    if out_scope:
+        return f"les données saisies placent l'entreprise hors du champ de {rule}"
+    verdict = "au moins 40 %" if pct >= PARITE_CA_SEUIL else "sous les 40 %"
+    lead = "l'entreprise peut relever de" if in_scope else "à lire au regard de"
+    return f"{verdict} ; {lead} {rule}"
+
+
+def _afep_lecture(gov, en: bool) -> str:
+    """Référence AFEP-MEDEF seulement pour une société déclarée cotée."""
+    if not gov.listed_company:
+        return ""
+    seuil = AFEP_INDEPENDANCE_CONTROLEE if gov.controlled_company else AFEP_INDEPENDANCE
+    ok = gov.independent_board_percent >= seuil
+    if en:
+        return (f" ({'meeting' if ok else 'below'} the AFEP-MEDEF recommendation of {seuil}% for "
+                f"a {'controlled' if gov.controlled_company else 'widely held'} listed company"
+                f"{'' if ok else ', a gap to be explained under apply or explain'})")
+    return (f" ({'au niveau de' if ok else 'en deçà de'} la recommandation AFEP-MEDEF de {seuil} % "
+            f"pour une société cotée {'contrôlée' if gov.controlled_company else 'au capital dispersé'}"
+            f"{'' if ok else ', écart à expliquer selon le principe « appliquer ou expliquer »'})")
+
+
 def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     lang = "en" if getattr(request, "language", "fr") == "en" else "fr"
     P = _PILLAR_INSIGHT[lang]
@@ -1782,7 +1858,7 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
         if tr is not None and tr >= 25:
             return (f"Training effort ({num(tr)}h/employee) sets the social pillar apart" if en
                     else f"L'effort de formation ({num(tr)} h/salarié) distingue le social")
-        if af is not None and af > 5:
+        if af is not None and af > TF_WEAKNESS_MIN:
             return (f"Workplace safety (rate {af:.1f}) is the priority to address" if en
                     else f"La sécurité au travail (TF {af:.1f}), priorité à traiter")
         if g is not None and g < 40:
@@ -2066,7 +2142,7 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     if gov.data_breaches is not None and gov.data_breaches > 0:
         risks.append(T("Incident cyber déclaré : risque réputationnel et RGPD", "Réputation",
                        "Reported cyber incident: reputational & GDPR risk", "Reputation", "H", "M"))
-    if soc.accident_frequency_rate is not None and soc.accident_frequency_rate > 5:
+    if soc.accident_frequency_rate is not None and soc.accident_frequency_rate > TF_WEAKNESS_MIN:
         risks.append(T("Sinistralité élevée : risque humain et social", "Opérationnel",
                        "High accident rate: human & social risk", "Operational", "H", "H"))
     if gov.ethics_violations is not None and gov.ethics_violations > 0:
@@ -2188,12 +2264,19 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     # le code retient la moitie pour les societes non controlees et le tiers
     # pour les societes controlees, information que l'outil ne collecte pas
     # (cf. DETTE.md). Le bareme du code n'est PAS modifie ici.
-    R("Indépendance du conseil (AFEP-MEDEF, appliquer ou expliquer)",
-      "Board independence (AFEP-MEDEF code, apply or explain)", "AFEP-MEDEF",
-      "na" if bi is None else ("ok" if bi >= 50 else ("partial" if bi >= 33 else "no")),
-      "Donnée non renseignée" if bi is None else f"{bi:.0f} % d'administrateurs indépendants",
-      "Not reported" if bi is None else f"{bi:.0f}% independent directors",
-      nature=GS.SEUIL)
+    # Depuis le 2026-09-24 : la ligne n'existe que pour une société déclarée
+    # cotée, avec le seuil du code qui la vise (moitié, ou tiers si contrôlée).
+    # Texte vérifié : Code Afep-Medef des sociétés cotées, version déc. 2022.
+    if gov.listed_company:
+        seuil = AFEP_INDEPENDANCE_CONTROLEE if gov.controlled_company else AFEP_INDEPENDANCE
+        R("Indépendance du conseil (code AFEP-MEDEF, appliquer ou expliquer)",
+          "Board independence (AFEP-MEDEF code, apply or explain)", "AFEP-MEDEF",
+          "na" if bi is None else ("ok" if bi >= seuil else "no"),
+          "Donnée non renseignée" if bi is None
+          else f"{bi:.0f} % d'administrateurs indépendants (recommandation : {seuil} %)",
+          "Not reported" if bi is None
+          else f"{bi:.0f}% independent directors (recommendation: {seuil}%)",
+          nature=GS.SEUIL)
 
     # Taxonomie UE
     has_tx = tx and any(v is not None for v in

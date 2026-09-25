@@ -82,7 +82,8 @@ def materiality_topics(request: ESGRequest, scores: ESGScores, lang: str = "fr")
     topics.append({"label": ML[4], "impact": inv(sc),
                    "financial": _clamp(7.2), "pillar": "social"})
     topics.append({"label": ML[5],
-                   "impact": inv(100 - min(100, (soc.accident_frequency_rate or 3) * 10)),
+                   # TF rapporté au niveau du BTP (25,1, le plus élevé publié) : 25 -> 100
+                   "impact": inv(100 - min(100, (soc.accident_frequency_rate or 8) * 4)),
                    "financial": _clamp(6.4), "pillar": "social"})
     topics.append({"label": ML[6],
                    "impact": inv(soc.female_employees_percent if soc.female_employees_percent is not None else sc),

@@ -52,6 +52,5 @@ export const DEMO_DATA = {
   report_type: 'full_report',
   language: 'fr',
   include_recommendations: true,
-  include_benchmarks: true,
   include_cover_image: true,
 }

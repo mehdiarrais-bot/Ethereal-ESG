@@ -225,11 +225,6 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
               Inclure les recommandations
             </label>
             <label className="checkbox-label">
-              <input type="checkbox" checked={form.include_benchmarks}
-                onChange={e => set('include_benchmarks')(e.target.checked)} />
-              Inclure les benchmarks sectoriels
-            </label>
-            <label className="checkbox-label">
               <input type="checkbox" checked={form.include_cover_image ?? true}
                 onChange={e => set('include_cover_image')(e.target.checked)} />
               Illustration de couverture (générée localement)

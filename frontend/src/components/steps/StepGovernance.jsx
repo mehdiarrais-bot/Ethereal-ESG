@@ -52,6 +52,12 @@ export default function StepGovernance({ form, updateSection }) {
           <FormField label="Comité de durabilité au niveau du CA" hint="Comité dédié aux enjeux ESG">
             <BoolToggle value={gov.sustainability_committee} onChange={set('sustainability_committee')} />
           </FormField>
+          <FormField label="Société cotée" hint="Active la référence AFEP-MEDEF (code des sociétés cotées)">
+            <BoolToggle value={gov.listed_company} onChange={set('listed_company')} />
+          </FormField>
+          <FormField label="Société contrôlée" hint="Un actionnaire de contrôle : seuil AFEP-MEDEF d'un tiers">
+            <BoolToggle value={gov.controlled_company} onChange={set('controlled_company')} />
+          </FormField>
         </div>
       </div>
     </div>
