@@ -853,8 +853,12 @@ l'ancien code).
   l'ordonnance n° 2023-1142 (version en vigueur depuis le 3 mai 2025,
   modifiée par la loi n° 2025-391, art. 7) : grandes entreprises et
   sociétés consolidantes d'un grand groupe, exercices ouverts à compter du
-  1er janvier 2027. La transposition de la directive 2026/470 est en cours
-  (projet de loi DDADUE 2026, non encore adopté à cette date).
+  1er janvier 2027. État de la transposition de la directive 2026/470
+  **non vérifié** : seule source consultée, un résumé de février 2026
+  (projet de loi DDADUE 2026 adopté en première lecture au Sénat) ; l'art.
+  33 de l'ordonnance, consulté le 2026-09-25, n'a pas été modifié depuis
+  le 3 mai 2025. Les seuils de l'art. L230-1 du Code de commerce n'ont pas
+  été consultés.
 - **Décision (option B1)** : la CSRD / ESRS est un **référentiel de
   lecture**, jamais une obligation présumée. Risque « Scope 3 non mesuré »
   requalifié *Fiabilité* (était « non-conformité CSRD/ESRS E1 à venir »,
