@@ -991,7 +991,7 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   page et la lettre ; restent le PDF (mise en forme propre, deux phrases
   de synthèse dans `deepen_content`) et la diapositive.
 
-## 19. Livre blanc PDF : plantage sur un pilier non noté, cibles fabriquées — OUVERT
+## 19. Livre blanc PDF : plantage sur un pilier non noté, cibles fabriquées — **traité le 2026-09-27**
 
 Relevé pendant le § 16, non corrigé (règle 2).
 
@@ -1007,6 +1007,11 @@ Relevé pendant le § 16, non corrigé (règle 2).
 - **Correction proposée** : retirer ces cibles (« objectifs à définir »,
   comme les autres livrables) — ce qui supprime aussi le plantage — plus un
   test « livre blanc avec pilier non noté ».
+- **Traitement** : cibles retirées ; la section dit « Horizon {y} — objectifs
+  à définir » et renvoie au plan d'action (clés `wp_horizon`, `wp_targets`,
+  FR/EN). `tests/test_livre_blanc.py` : génération avec un pilier non noté,
+  aucune cible fabriquée (les 4 cas échouent sur l'ancien code). Les cibles
+  reviendront, saisies par le client, avec l'étape B (§ 0bis).
 
 ## 20. Deux listes d'indicateurs notés divergentes — OUVERT
 

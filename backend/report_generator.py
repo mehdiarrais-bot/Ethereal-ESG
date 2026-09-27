@@ -606,7 +606,7 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
                          recs, priority_reading)
     _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images)
     if request.report_type.value == "white_paper":
-        _white_paper(story, request, scores, k, S, TR, anchors)
+        _white_paper(story, request, k, S, TR, anchors)
     _closing(story, request, scores, content, k, S, TR, anchors, chart_images)
     story.full(PG.back_cover, g)
 
@@ -1189,23 +1189,17 @@ def _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images):
     story.append(KeepTogether([t, _sp(k, 12), band]))
 
 
-def _white_paper(story, request, scores, k, S, TR, anchors):
+def _white_paper(story, request, k, S, TR, anchors):
     story.append(_sp(k, 14))
     section_head(story, TR["pdf_s9_wp"], "accent", k, S, anchors)
     story.append(Paragraph(TR["wp_intro"], S["body"]))
     story.append(Paragraph(TR["wp_horizon"].format(
         y=max(request.company.target_year, request.company.reporting_year + 1)), S["h2"]))
-    e, s, g = scores.environmental_score, scores.social_score, scores.governance_score
-    if request.language == "en":
-        objs = [("Environmental", f"Target E score: {min(100, e + 15):.0f}/100 | +50% renewable | Scope 3 measured"),
-                ("Social", f"Target S score: {min(100, s + 10):.0f}/100 | 40% gender balance | 30h training/year"),
-                ("Governance", f"Target G score: {min(100, g + 5):.0f}/100 | Annual audit | Sustainability committee")]
-    else:
-        objs = [("Environnement", f"Score E cible : {min(100, e + 15):.0f}/100 | +50% renouvelable | Scope 3 mesuré"),
-                ("Social", f"Score S cible : {min(100, s + 10):.0f}/100 | Parité 40% | 30h formation/an"),
-                ("Gouvernance", f"Score G cible : {min(100, g + 5):.0f}/100 | Audit annuel | Comité durable")]
-    for label, obj in objs:
-        story.append(Paragraph(f"<b>{esc(label)} :</b> {esc(obj)}", S["bullet"]))
+    # Jusqu'au 2026-09-27, des cibles fabriquées (« score +15 », « parité
+    # 40 % »…) : jamais saisies par le client, et un TypeError sur tout
+    # pilier non noté (DETTE § 19). Aucune cible tant que l'étape B (§ 0bis)
+    # ne permet pas de les collecter.
+    story.append(Paragraph(esc(TR["wp_targets"]), S["body"]))
 
 
 def _closing(story, request, scores, content, k, S, TR, anchors, chart_images):
