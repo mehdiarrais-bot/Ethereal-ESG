@@ -1070,6 +1070,26 @@ Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
   repérés relèvent de la gouvernance ») plutôt que de fragilité du pilier,
   ou croiser avec le rang du pilier avant d'écrire « fragilités ».
 
+## 24. Risque carbone au seuil fixe, point d'appui au seuil sectoriel — OUVERT
+
+Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
+`risque_carbone_contre_appui`, xfail strict dans `tests/test_coherence.py`).
+
+- **Constat** : `content_generator.risks_opportunities` inscrit le risque
+  « Intensité carbone élevée : marge exposée à la tarification du carbone »
+  au-delà de **100 t CO₂e/M€, quel que soit le secteur**. La synthèse
+  (`synthesis.strengths`, tranches de `bands.py`) juge la même intensité sur
+  la **grille sectorielle**. Une entreprise de l'énergie à 121 t/M€, ou de
+  l'agroalimentaire à 110, reçoit à la fois le risque et le point d'appui
+  « Une intensité carbone solide pour le secteur ».
+- **Cause** : deux sources de vérité pour un même seuil (CLAUDE.md : « aucun
+  seuil dupliqué entre fichiers »).
+- **À trancher** : lire le risque sur la tranche de `bands.py` (fragile ou
+  pire). Déplace le risque de tous les dossiers hors services : barème, à
+  arbitrer.
+
+Le § 23 est lui aussi couvert par le banc (`fragilites_pas_sur_le_meilleur_pilier`).
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une
