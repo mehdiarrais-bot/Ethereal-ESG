@@ -253,3 +253,4 @@ Les dossiers clients sont stockés dans `backend/data/clients/` (jamais versionn
 Code publié à des fins de démonstration et d'évaluation. **Tous droits réservés** —
 aucune autorisation de réutilisation, de redistribution ou d'exploitation commerciale
 n'est accordée. Pour toute question : ouvrir une issue.
+Texte complet et ressources de tiers (polices SIL OFL, photos CC0) : [LICENSE](LICENSE).

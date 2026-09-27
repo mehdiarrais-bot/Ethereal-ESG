@@ -1,0 +1,22 @@
+Copyright (c) 2026 Mehdi Arrais. Tous droits réservés. / All rights reserved.
+
+Ce dépôt est publié à des fins de démonstration et d'évaluation. Sa
+publication n'accorde aucune licence : aucune autorisation de réutilisation,
+de modification, de redistribution ou d'exploitation commerciale du code,
+des gabarits ou des livrables d'exemple n'est donnée sans accord écrit
+préalable de l'auteur.
+
+This repository is published for demonstration and evaluation purposes. Its
+publication grants no licence: no permission to reuse, modify, redistribute
+or commercially exploit the code, templates or example deliverables is given
+without the author's prior written consent.
+
+Ressources de tiers / Third-party assets — elles restent sous leur propre
+licence et ne sont pas couvertes par la réserve ci-dessus :
+
+- Polices / Fonts : backend/assets/fonts/ — SIL Open Font License 1.1
+  (texte de licence dans chaque dossier de police, fichier OFL.txt).
+- Photos : backend/assets/photos/ — domaine public / CC0, provenance détaillée
+  dans backend/assets/photos/CREDITS.md.
+- Dépendances logicielles / Software dependencies : sous leurs licences
+  respectives (backend/requirements*.txt, frontend/package.json).
