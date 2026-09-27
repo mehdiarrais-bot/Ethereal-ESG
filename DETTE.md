@@ -1041,7 +1041,7 @@ Relevé pendant le § 16, non corrigé (règle 2).
   la corriger déplacerait le score de tout dossier qui déclare un bilan
   GES. Barème interne : à arbitrer, pas à corriger en passant.
 
-## 22. Phrases de gouvernance qui affirment des faits non déclarés — OUVERT
+## 22. Phrases de gouvernance qui affirment des faits non déclarés — **traité le 2026-09-27**
 
 Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
 - `GOV_NO_AUDIT` : « L'intégration d'un auditeur tiers […] est planifiée »,
@@ -1052,6 +1052,28 @@ Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
   vérification de CE rapport.
 - **À faire** : ne garder que des formulations de constat ou de
   recommandation (même chose pour les équivalents EN et `GOV_*COMMITTEE*`).
+- **Traitement** : revue des 36 listes de `content_generator.py` (252
+  phrases). Réécrites FR/EN : audit (« garantit l'intégrité des données de
+  ce rapport », « un tiers a vérifié », « est planifiée », « engagement
+  inscrit dans la feuille de route »), comité (« permanent », « rend compte
+  directement au Conseil », « supervise l'atteinte des objectifs »),
+  perspective environnementale (« feuille de route », « stratégie
+  pluriannuelle », « engagements de durabilité » du client → levier
+  prioritaire du secteur selon ce diagnostic), Scope 3 « couvrant
+  l'intégralité de la chaîne de valeur », « l'audit ESG positionne » (c'est un
+  diagnostic), ouvertures « stratégie », « engagements ». Retirées :
+  `SOC_STRATEGIES` (politique RH inventée). Replis « en cours de
+  structuration » → « aucun indicateur renseigné ». Conclusion : plus
+  d'engagement prêté au client (« s'engage à amplifier… », « réaffirme son
+  engagement… », « progression régulière » sans historique) ; lecture du
+  niveau sur la grille interne, recommandations « proposées », mise en
+  œuvre laissée aux arbitrages du client. Point fort de repli : constante
+  `AUCUN_POINT_FORT`, exclue des dénombrements (`strengths_count`) — il
+  s'imprimait « un point fort consolidé » dans 48 profils sur 300.
+  Garde-fou : invariant `aucune_affirmation_non_declaree` du banc
+  (formulations entières, § 0quater), vert sur 600 dossiers.
+- **Reste** : le repli dormant du Word (« … réaffirme son engagement vers un
+  modèle d'affaires durable ») relève du § 15.
 
 ## 23. Diagnostic d'ensemble : « fragilités concentrées » sur le meilleur pilier — **traité le 2026-09-27**
 

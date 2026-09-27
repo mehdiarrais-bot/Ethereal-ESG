@@ -249,10 +249,40 @@ def risque_carbone_contre_appui(d: Dossier) -> list[str]:
     return ["risque « intensité carbone élevée » ET point d'appui intensité"] if risque and appui else []
 
 
+# Formulations qui affirment un fait que le client n'a pas déclaré (DETTE
+# § 22). Des formulations ENTIÈRES, jamais un mot nu (DETTE § 0quater) : une
+# phrase qui nie ou recommande doit rester possible.
+NON_DECLARE = [
+    "est planifiée", "is planned",
+    "garantit l'intégrité des données publiées dans ce rapport",
+    "guarantees the integrity of the data published in this report",
+    "Un tiers indépendant a vérifié", "An independent third party has verified",
+    "engagement inscrit dans la feuille de route", "commitment set out in the roadmap",
+    "documenté dans la feuille de route", "documented area for progress in the governance roadmap",
+    "identifié comme tel dans la feuille de route", "inscrite dans la stratégie pluriannuelle",
+    "embedded in the multi-year strategy", "objectifs à horizon 3 ans", "3-year objectives",
+    "conformément aux engagements de durabilité", "in line with sustainability commitments",
+    "couvrant l'intégralité de la chaîne de valeur", "reporting carbone complet",
+    "La politique RH cible", "HR policy targets", "L'audit ESG positionne",
+    "rend compte directement au Conseil", "reporting directly to the Board",
+    "comité de durabilité permanent", "permanent sustainability committee",
+    "en cours de structuration", "en déploiement progressif", "en cours de formalisation",
+    "en cours de documentation", "is being structured", "are being formalised",
+    "is being documented", "opérationnel au niveau du CA",
+]
+
+
+def aucune_affirmation_non_declaree(d: Dossier) -> list[str]:
+    """Aucune phrase n'affirme un plan, un engagement ou une vérification
+    que le client n'a pas déclarés."""
+    return [f"« {f} » dans : {t[:90]}…" for t in d.textes() for f in NON_DECLARE if f in t]
+
+
 INVARIANTS = [fragilites_pas_sur_le_meilleur_pilier, enjeu_et_appui_exclusifs,
               point_fort_pas_point_faible, scores_cites_exacts,
               pilier_dominant_est_le_meilleur, aucun_artefact, faible_contre_appui,
-              fort_contre_enjeu, risque_carbone_contre_appui]
+              fort_contre_enjeu, risque_carbone_contre_appui,
+              aucune_affirmation_non_declaree]
 
 
 def violations(n: int, invariant, langs=("fr", "en")) -> list[str]:

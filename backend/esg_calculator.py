@@ -295,6 +295,18 @@ def get_rating(score: float) -> str:
         return "CCC"
 
 
+# Phrase affichée quand aucun point fort ne ressort : elle occupe la liste
+# pour que chaque livrable ait une ligne à montrer, mais ce n'est PAS un point
+# fort -- les dénombrements passent par strengths_count().
+AUCUN_POINT_FORT = {"fr": "Aucun point fort marqué ne ressort des indicateurs renseignés",
+                    "en": "No marked strength emerges from the reported indicators"}
+
+
+def strengths_count(scores) -> int:
+    """Nombre de vrais points forts (sans la phrase de repli)."""
+    return sum(1 for x in scores.strengths if x not in AUCUN_POINT_FORT.values())
+
+
 def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalData, social: SocialData, gov: GovernanceData) -> List[str]:
     strengths = []
     if env_score is not None and env_score >= 70:
@@ -312,7 +324,7 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
     if gov.esg_audit_conducted:
         strengths.append("Audit ESG indépendant conduit — transparence renforcée")
     if gov.sustainability_committee:
-        strengths.append("Comité de durabilité opérationnel au niveau du CA")
+        strengths.append("Comité de durabilité en place au niveau du CA")
     if gov.female_board_percent and gov.female_board_percent >= 40:
         strengths.append(f"Parité exemplaire au Conseil d'Administration ({gov.female_board_percent:.0f}%)")
     if social_score is not None and social_score >= 70:
@@ -322,7 +334,7 @@ def generate_strengths(env_score, social_score, gov_score, env: EnvironmentalDat
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
         strengths.append("Reporting complet des émissions Scope 1, 2 et 3")
     if not strengths:
-        strengths.append("Démarche ESG en cours de structuration et de formalisation")
+        strengths.append(AUCUN_POINT_FORT["fr"])
     return strengths[:5]
 
 
@@ -401,14 +413,14 @@ def generate_strengths_en(env_score, social_score, gov_score, env, social, gov):
     if social.accident_frequency_rate is not None and social.accident_frequency_rate <= TF_STRENGTH_MAX:
         r.append(f"Excellent workplace safety record (rate {social.accident_frequency_rate:.1f})")
     if gov.esg_audit_conducted: r.append("Independent ESG audit conducted — strengthened transparency")
-    if gov.sustainability_committee: r.append("Sustainability committee operating at Board level")
+    if gov.sustainability_committee: r.append("Sustainability committee in place at Board level")
     if gov.female_board_percent and gov.female_board_percent >= 40:
         r.append(f"Exemplary gender balance on the Board ({gov.female_board_percent:.0f}%)")
     if social_score is not None and social_score >= 70: r.append("Exemplary social policy — human capital valued")
     if gov_score is not None and gov_score >= 75: r.append("High-quality, transparent governance")
     if env.scope1_emissions is not None and env.scope2_emissions is not None and env.scope3_emissions is not None:
         r.append("Full Scope 1, 2 and 3 emissions reporting")
-    if not r: r.append("ESG approach being structured and formalised")
+    if not r: r.append(AUCUN_POINT_FORT["en"])
     return r[:5]
 
 

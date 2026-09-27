@@ -32,7 +32,7 @@ def _violations(invariant):
 
 SAINS = [K.fragilites_pas_sur_le_meilleur_pilier, K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
          K.pilier_dominant_est_le_meilleur, K.aucun_artefact, K.faible_contre_appui,
-         K.fort_contre_enjeu, K.risque_carbone_contre_appui]
+         K.fort_contre_enjeu, K.risque_carbone_contre_appui, K.aucune_affirmation_non_declaree]
 
 
 @pytest.mark.parametrize("invariant", SAINS, ids=lambda f: f.__name__)
@@ -66,6 +66,8 @@ def _item(key, pillar="env", severity=1.0):
         strengths=[], weaknesses=["Énergie renouvelable à renforcer"]))),
     (K.fort_contre_enjeu, _faux(issues=[_item("waste")], s=SimpleNamespace(
         strengths=["Taux de recyclage élevé (71%)"], weaknesses=[]))),
+    (K.aucune_affirmation_non_declaree, _faux(textes=lambda: [
+        "L'intégration d'un auditeur tiers est planifiée."])),
     (K.risque_carbone_contre_appui, _faux(strengths=[_item("intensity_good")],
                                          textes=lambda: ["Intensité carbone élevée : marge"])),
 ], ids=lambda x: getattr(x, "__name__", ""))
@@ -95,3 +97,16 @@ def test_risque_carbone_sur_la_grille_sectorielle(secteur, co2, attendu):
     r.environmental = r.environmental.model_copy(update={"co2_emissions_tonnes": co2})
     texte = str(risks_opportunities(r, calculate_esg_scores(r)))
     assert ("Intensité carbone élevée" in texte) == attendu
+
+
+def test_le_repli_aucun_point_fort_nest_pas_compte():
+    """La phrase « aucun point fort marqué » occupe la liste mais n'est pas
+    comptée : « un point fort consolidé » s'imprimait dans 48 profils sur 300."""
+    from esg_calculator import AUCUN_POINT_FORT, strengths_count
+    vides = [d for d in _dossiers() if d.s.strengths == [AUCUN_POINT_FORT[d.r.language]]]
+    assert vides, "le banc ne produit plus de profil sans point fort"
+    for d in vides:
+        assert strengths_count(d.s) == 0
+        c = d.content["conclusion"]
+        assert "un point fort consolidé" not in c and "one consolidated strength" not in c, c
+        assert "aucun point fort marqué" in c or "no marked strength" in c, c

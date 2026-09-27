@@ -10,6 +10,7 @@ de bands.py (la grille même du score) ; ce module ne fait que sélectionner,
 calculer des ratios et remplir. Aucune donnée absente n'est commentée comme
 présente : un indicateur manquant est listé comme tel.
 """
+from esg_calculator import strengths_count
 from bands import classer
 from narrative_texts import T, READINGS, LABELS, TRANCHES, COUNTS
 
@@ -292,7 +293,7 @@ def act1_intro(request, scores, gaps, risks) -> str:
     _, open_ = _gap_counts(gaps)
     p1 = sum(1 for r in risks if r.get("priority") == "P1")
     return T[lang]["act1_intro"].format(
-        ns=count(lang, "strength", len(scores.strengths)),
+        ns=count(lang, "strength", strengths_count(scores)),
         nw=count(lang, "weak", len(scores.weaknesses)),
         ng=count(lang, "req", len(gaps)), nopen=count(lang, "req_open", open_),
         nr=count(lang, "risk", len(risks)), np1=count(lang, "p1", p1))
@@ -309,7 +310,7 @@ def act2_intro(request, recs, roadmap) -> str:
 def act1_figures(request, scores, gaps, risks) -> list[tuple[str, str]]:
     f = T[request.language]["act_figures"]
     _, open_ = _gap_counts(gaps)
-    return [(str(len(scores.strengths)), f["strengths"]), (str(len(scores.weaknesses)), f["weak"]),
+    return [(str(strengths_count(scores)), f["strengths"]), (str(len(scores.weaknesses)), f["weak"]),
             (str(open_), f["gaps"]), (str(len(risks)), f["risks"])]
 
 
