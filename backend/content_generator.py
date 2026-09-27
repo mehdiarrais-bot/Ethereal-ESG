@@ -566,7 +566,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 "advanced": "advanced", "exemplary": "exemplary"}
     if en:
         content["executive_summary"] += (
-            (f" Overall, ESG maturity is assessed as {stage_en[mat['key']]} ({mat['stage']}/5). "
+            (f" Overall, ESG maturity is assessed as {stage_en[mat['key']]} ({maturite_rang(mat)}). "
              if mat["stage"] is not None else
              " ESG maturity is not assessed, as there is no overall score. ")
             + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
@@ -576,7 +576,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         )
     else:
         content["executive_summary"] += (
-            (f" Au global, la maturité ESG est évaluée comme {stage_fr[mat['key']]} ({mat['stage']}/5). "
+            (f" Au global, la maturité ESG est évaluée comme {stage_fr[mat['key']]} ({maturite_rang(mat)}). "
              if mat["stage"] is not None else
              " La maturité ESG n'est pas évaluée, faute de score global. ")
             + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
@@ -1903,11 +1903,18 @@ def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     return out
 
 
+def maturite_rang(mat: dict) -> str:
+    """« 3/5 » : rang affiché de 1 à 5. `stage` va de 0 à 4 ; l'imprimer tel
+    quel donnait « Structurée (2/5) » quand la diapositive allume la case 3,
+    et « Initiée (0/5) » au premier stade (DETTE § 18)."""
+    return f'{mat["stage"] + 1}/5'
+
+
 def maturite_libelle(mat: dict, TR: dict) -> str:
-    """« Structurée (2/5) » ; « non évaluée (pas de score global) » en abstention."""
+    """« Structurée (3/5) » ; « non évaluée (pas de score global) » en abstention."""
     if mat.get("stage") is None:
         return TR["mat_none"]
-    return f'{TR.get("mat_" + mat["key"], "")} ({mat["stage"]}/5)'
+    return f'{TR.get("mat_" + mat["key"], "")} ({maturite_rang(mat)})'
 
 
 def score_verdict(request: ESGRequest, scores: ESGScores):

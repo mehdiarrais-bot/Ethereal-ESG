@@ -987,7 +987,7 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   signaux de maturité inchangés. `tests/test_booleen_inconnu.py` (trois
   cas échouent sur l'ancien code).
 
-## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, OUVERT
+## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, **traité le 2026-09-27**
 
 - **Constat** : `esg_maturity` rend un rang de 0 à 4. Le PDF, le Word, la
   synthèse une page et la lettre impriment « Structurée (2/5) » ; la
@@ -997,6 +997,10 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   `content_generator.maturite_libelle` sert déjà le Word, la synthèse une
   page et la lettre ; restent le PDF (mise en forme propre, deux phrases
   de synthèse dans `deepen_content`) et la diapositive.
+- **Traitement** : `content_generator.maturite_rang` (« stage + 1 »/5), seule
+  source du rang, lue par `maturite_libelle` (Word, synthèse, lettre), les
+  deux phrases de synthèse et le PDF. La diapositive était déjà juste (cases
+  1-5, case `stage + 1` allumée). `tests/test_maturite_rang.py`.
 
 ## 19. Livre blanc PDF : plantage sur un pilier non noté, cibles fabriquées — **traité le 2026-09-27**
 

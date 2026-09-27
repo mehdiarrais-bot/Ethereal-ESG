@@ -1040,12 +1040,13 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
         story.append(Paragraph(TR["trend_title"], S["h2"]))
         _chart(story, chart_images, "trend", 16.5, 8.4, TR["cap_trend"], S)
 
+    from content_generator import maturite_rang
     if mt["stage"] is None:  # sans score global : maturité non évaluée
         story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : {esc(TR["mat_none"])}', S["h2"]))
     else:
         mat_lbl = TR.get("mat_" + mt["key"], "")
         story.append(Paragraph(f'{esc(TR["pdf_maturity_sub"])} : {esc(mat_lbl)} '
-                               f'<font color="{hexc(k.c["muted"])}">({mt["stage"]}/5)</font>', S["h2"]))
+                               f'<font color="{hexc(k.c["muted"])}">({maturite_rang(mt)})</font>', S["h2"]))
     story.append(Paragraph(esc(mt["next_hint"]), S["body"]))
 
     # Couverture des exigences (libellés et couleurs : source unique gap_status)
