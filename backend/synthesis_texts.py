@@ -509,9 +509,11 @@ T = {
         "profile_counts": "Le dossier de {name} fait ressortir {ni} et {ns}.",
         "n_issue": ("aucun enjeu marqué", "un enjeu", "{n} enjeux"),
         "n_strength": ("aucun point d'appui marqué", "un point d'appui", "{n} points d'appui"),
-        "concentrated": "Les fragilités se concentrent sur le pilier {p} : {names}. C'est là que "
+        # « enjeux », pas « fragilités » : le pilier qui porte les enjeux peut
+        # être le mieux noté (DETTE § 23).
+        "concentrated": "Les enjeux repérés relèvent surtout du pilier {p} : {names}. C'est là que "
                         "le plan d'action doit porter en premier.",
-        "spread": "Les fragilités se répartissent entre plusieurs piliers — {names} —, ce qui "
+        "spread": "Les enjeux repérés se répartissent entre plusieurs piliers — {names} —, ce qui "
                   "appelle un plan d'ensemble plutôt qu'un chantier unique.",
         "no_issue": "Aucune fragilité majeure ne ressort des indicateurs renseignés : l'enjeu est "
                     "désormais de consolider les acquis et de les documenter.",
@@ -547,9 +549,9 @@ T = {
         "profile_counts": "{name}'s file brings out {ni} and {ns}.",
         "n_issue": ("no marked issue", "one issue", "{n} issues"),
         "n_strength": ("no marked strength", "one strength", "{n} strengths"),
-        "concentrated": "Weaknesses are concentrated in the {p} pillar: {names}. This is where the "
+        "concentrated": "The issues identified fall mainly within the {p} pillar: {names}. This is where the "
                         "action plan should focus first.",
-        "spread": "Weaknesses are spread across several pillars — {names} —, which calls for an "
+        "spread": "The issues identified are spread across several pillars — {names} —, which calls for an "
                   "overall plan rather than a single workstream.",
         "no_issue": "No major weakness emerges from the reported indicators: the challenge now is "
                     "to consolidate and document what has been achieved.",

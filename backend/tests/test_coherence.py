@@ -30,7 +30,7 @@ def _violations(invariant):
     return [v for d in _dossiers() for v in invariant(d)]
 
 
-SAINS = [K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
+SAINS = [K.fragilites_pas_sur_le_meilleur_pilier, K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
          K.pilier_dominant_est_le_meilleur, K.aucun_artefact, K.faible_contre_appui,
          K.fort_contre_enjeu]
 
@@ -39,12 +39,6 @@ SAINS = [K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cit
 def test_invariant(invariant):
     vs = _violations(invariant)
     assert not vs, f"{len(vs)} violation(s), dont : " + " | ".join(vs[:3])
-
-
-@pytest.mark.xfail(strict=True, reason="DETTE § 23 : profil « fragilités concentrées » "
-                   "calculé sur la gravité des enjeux, sans regard pour la note du pilier")
-def test_fragilites_pas_sur_le_meilleur_pilier():
-    assert not _violations(K.fragilites_pas_sur_le_meilleur_pilier)
 
 
 @pytest.mark.xfail(strict=True, reason="DETTE § 24 : risque carbone au seuil fixe de 100 t/M€, "
@@ -67,7 +61,8 @@ def _item(key, pillar="env", severity=1.0):
 
 
 @pytest.mark.parametrize("invariant,faux", [
-    (K.fragilites_pas_sur_le_meilleur_pilier, _faux(issues=[_item("renewable")])),
+    (K.fragilites_pas_sur_le_meilleur_pilier, _faux(textes=lambda: [
+        "Les fragilités se concentrent sur le pilier environnemental : x."])),
     (K.enjeu_et_appui_exclusifs, _faux(issues=[_item("mix")], strengths=[_item("mix_good")])),
     (K.point_fort_pas_point_faible, _faux(s=SimpleNamespace(strengths=["x"], weaknesses=["x"]))),
     (K.scores_cites_exacts, _faux(textes=lambda: ["Social (65/100) constitue la marge"])),

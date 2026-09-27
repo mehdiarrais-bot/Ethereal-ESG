@@ -130,22 +130,27 @@ class Dossier:
 
 # ── Invariants ────────────────────────────────────────────────────────────
 
+_FRAGILE = re.compile(r"(?:[Ff]ragilités se concentrent sur le pilier|[Ww]eaknesses are "
+                      r"concentrated in the) (environnemental|social|de gouvernance|environmental|"
+                      r"governance)")
+_PILIER_TEXTE = {"environnemental": "env", "environmental": "env", "social": "social",
+                 "de gouvernance": "gov", "governance": "gov"}
+
+
 def fragilites_pas_sur_le_meilleur_pilier(d: Dossier) -> list[str]:
-    """« Les fragilités se concentrent sur le pilier P » : P n'est pas le
-    pilier strictement le mieux noté (DETTE § 23)."""
-    notes = d.notes()
-    if len(notes) < 2 or not d.issues:
+    """Aucune phrase ne dit les fragilités concentrées sur le pilier
+    strictement le mieux noté (DETTE § 23)."""
+    notes, out = d.notes(), []
+    if len(notes) < 2:
         return []
-    poids: dict[str, float] = {}
-    for i in d.issues:
-        poids[i.pillar] = poids.get(i.pillar, 0) + i.severity
-    principal = max(poids, key=lambda p: poids[p])
-    concentre = poids[principal] / sum(poids.values()) >= 0.6
     meilleur = max(notes, key=lambda p: notes[p])
-    ex_aequo = sum(1 for v in notes.values() if v == notes[meilleur]) > 1
-    if concentre and principal == meilleur and not ex_aequo:
-        return [f"fragilités « concentrées » sur {principal}, pilier le mieux noté {notes}"]
-    return []
+    if sum(1 for v in notes.values() if v == notes[meilleur]) > 1:
+        return []
+    for texte in d.textes():
+        for m in _FRAGILE.finditer(texte):
+            if _PILIER_TEXTE[m.group(1)] == meilleur:
+                out.append(f"fragilités « concentrées » sur {meilleur}, le mieux noté {notes}")
+    return out
 
 
 def enjeu_et_appui_exclusifs(d: Dossier) -> list[str]:

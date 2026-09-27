@@ -1053,7 +1053,7 @@ Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
 - **À faire** : ne garder que des formulations de constat ou de
   recommandation (même chose pour les équivalents EN et `GOV_*COMMITTEE*`).
 
-## 23. Diagnostic d'ensemble : « fragilités concentrées » sur le meilleur pilier — OUVERT
+## 23. Diagnostic d'ensemble : « fragilités concentrées » sur le meilleur pilier — **traité le 2026-09-27**
 
 Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
 
@@ -1069,6 +1069,10 @@ Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
 - **À trancher** : formuler le profil en termes d'enjeux (« les enjeux
   repérés relèvent de la gouvernance ») plutôt que de fragilité du pilier,
   ou croiser avec le rang du pilier avant d'écrire « fragilités ».
+- **Traitement** : formulation en enjeux (« Les enjeux repérés relèvent
+  surtout du pilier X », FR/EN, profils concentré et réparti) ; invariant
+  `fragilites_pas_sur_le_meilleur_pilier` lu sur le texte, vert sur 600
+  dossiers, rouge sur l'ancienne formulation.
 
 ## 24. Risque carbone au seuil fixe, point d'appui au seuil sectoriel — OUVERT
 
