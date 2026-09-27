@@ -1053,6 +1053,23 @@ Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
 - **À faire** : ne garder que des formulations de constat ou de
   recommandation (même chose pour les équivalents EN et `GOV_*COMMITTEE*`).
 
+## 23. Diagnostic d'ensemble : « fragilités concentrées » sur le meilleur pilier — OUVERT
+
+Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
+
+- **Constat** (dossier d'exemple Acme, `examples/Rapport-ESG.pdf` p. 6 et
+  synthèse une page) : « Les fragilités se concentrent sur le pilier de
+  gouvernance », alors que la gouvernance est le pilier le mieux noté
+  (75/100) et que la synthèse exécutive, juste au-dessus, écrit
+  « Gouvernance domine le profil ESG ». Les deux enjeux retenus (violation
+  de données, données non vérifiées) relèvent bien de la gouvernance, mais
+  la phrase de profil les présente comme la faiblesse du dossier.
+- **Où** : `synthesis.py` (profil « concentré / réparti »), textes dans
+  `synthesis_texts.py`.
+- **À trancher** : formuler le profil en termes d'enjeux (« les enjeux
+  repérés relèvent de la gouvernance ») plutôt que de fragilité du pilier,
+  ou croiser avec le rang du pilier avant d'écrire « fragilités ».
+
 ---
 
 *Ce fichier est un registre, pas un plan d'action daté. Le retirer d'une
