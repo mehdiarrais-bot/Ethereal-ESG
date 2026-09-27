@@ -1074,7 +1074,7 @@ Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
   `fragilites_pas_sur_le_meilleur_pilier` lu sur le texte, vert sur 600
   dossiers, rouge sur l'ancienne formulation.
 
-## 24. Risque carbone au seuil fixe, point d'appui au seuil sectoriel — OUVERT
+## 24. Risque carbone au seuil fixe, point d'appui au seuil sectoriel — **traité le 2026-09-27**
 
 Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
 `risque_carbone_contre_appui`, xfail strict dans `tests/test_coherence.py`).
@@ -1091,6 +1091,13 @@ Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
 - **À trancher** : lire le risque sur la tranche de `bands.py` (fragile ou
   pire). Déplace le risque de tous les dossiers hors services : barème, à
   arbitrer.
+- **Traitement (arbitré le 2026-09-27)** : le risque se lit sur la tranche
+  sectorielle de `bands.classer` (fragile ou critique, `analysis._BAD`).
+  Mesure sur 300 profils : 181 → 168 dossiers exposés ; retiré à 13
+  entreprises de secteurs lourds dont l'intensité est correcte pour leur
+  secteur (dont Acme, 171 t/M€, industrie « satisfaisant ») ; ajouté aux
+  services entre 50 et 100 t/M€, jugés fragiles par leur grille.
+  `test_risque_carbone_sur_la_grille_sectorielle` ; invariant du banc vert.
 
 Le § 23 est lui aussi couvert par le banc (`fragilites_pas_sur_le_meilleur_pilier`).
 

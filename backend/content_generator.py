@@ -2290,7 +2290,12 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
         risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
                        "Unaudited reporting: limited credibility with investors", "Assurance", "H", "H"))
     ci = (env.co2_emissions_tonnes / rev * 1e6) if (env.co2_emissions_tonnes and rev) else None
-    if ci is not None and ci > 100:
+    # Tranche de la grille SECTORIELLE (bands.py), comme le point d'appui de
+    # la synthèse ; jusqu'au 2026-09-27, seuil fixe de 100 t/M€ quel que soit
+    # le secteur (DETTE § 24).
+    from analysis import _BAD
+    from bands import classer
+    if ci is not None and classer("co2_emissions_tonnes", round(ci), request.company.sector) in _BAD:
         risks.append(T("Intensité carbone élevée : marge exposée à la tarification du carbone", "Transition",
                        "High carbon intensity: margin exposed to carbon pricing", "Transition", "H", "M"))
     elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:

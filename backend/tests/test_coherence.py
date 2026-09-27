@@ -32,19 +32,13 @@ def _violations(invariant):
 
 SAINS = [K.fragilites_pas_sur_le_meilleur_pilier, K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
          K.pilier_dominant_est_le_meilleur, K.aucun_artefact, K.faible_contre_appui,
-         K.fort_contre_enjeu]
+         K.fort_contre_enjeu, K.risque_carbone_contre_appui]
 
 
 @pytest.mark.parametrize("invariant", SAINS, ids=lambda f: f.__name__)
 def test_invariant(invariant):
     vs = _violations(invariant)
     assert not vs, f"{len(vs)} violation(s), dont : " + " | ".join(vs[:3])
-
-
-@pytest.mark.xfail(strict=True, reason="DETTE § 24 : risque carbone au seuil fixe de 100 t/M€, "
-                   "point d'appui sur la grille sectorielle de bands.py")
-def test_risque_carbone_contre_appui():
-    assert not _violations(K.risque_carbone_contre_appui)
 
 
 # ── Chaque invariant mord ─────────────────────────────────────────────────
@@ -84,3 +78,20 @@ def test_le_banc_couvre_des_profils_varies():
     assert sum(d.s.total_esg_score is None for d in ds) > len(ds) * 0.1   # lacunaires
     assert sum(d.s.total_esg_score is not None for d in ds) > len(ds) * 0.4  # notés
     assert len({d.r.company.sector for d in ds}) == len(K.SECTEURS)
+
+
+@pytest.mark.parametrize("secteur,co2,attendu", [
+    ("Énergie", 5_808, False),      # 121 t/M€ : « solide » pour l'énergie
+    ("Services", 5_808, True),      # 121 t/M€ : « fragile » pour les services
+    ("Services", 3_600, True),      # 75 t/M€ : sous l'ancien seuil fixe, fragile en services
+    ("Industrie manufacturière", 43_200, True),  # 900 t/M€ : critique partout
+])
+def test_risque_carbone_sur_la_grille_sectorielle(secteur, co2, attendu):
+    """DETTE § 24 : le risque se lit sur la tranche sectorielle de bands.py."""
+    from content_generator import risks_opportunities
+    from esg_calculator import calculate_esg_scores
+    r = K.profil(0).model_copy(update={"company": K.profil(0).company.model_copy(
+        update={"sector": secteur, "revenue_eur": 48e6})})
+    r.environmental = r.environmental.model_copy(update={"co2_emissions_tonnes": co2})
+    texte = str(risks_opportunities(r, calculate_esg_scores(r)))
+    assert ("Intensité carbone élevée" in texte) == attendu
