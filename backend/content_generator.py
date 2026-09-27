@@ -5,7 +5,8 @@ lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
 from models import ESGRequest, ESGScores
-from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE, GRILLE_MIXITE_EFFECTIF
+from esg_calculator import (TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE,
+                            GRILLE_MIXITE_EFFECTIF, MIN_INDICATEURS_PILIER)
 
 
 def _seed(name: str) -> int:
@@ -691,8 +692,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"anchored on the national rate published by the French Health Insurance (16.0 in 2024, "
             f"all sectors; {TF_SOURCE}). The overall score "
             f"is the weighted average of the rated pillars (weights 40/35/25, rescaled when a pillar "
-            f"is not rated); a pillar with no scoring-grid indicator is not rated rather than given a "
-            f"default score, and with fewer than two rated pillars there is neither an overall score "
+            f"is not rated); a pillar is rated only from {MIN_INDICATEURS_PILIER} indicators of its "
+            f"scoring grid (an internal threshold of this tool) — below that it is not rated rather "
+            f"than given a score, and the number of rated indicators is shown next to each score; "
+            f"with fewer than two rated pillars there is neither an overall score "
             f"nor a letter rating. A year-on-year change compares overall scores that may rest on "
             f"different pillars. The letter rating (internal AAA-CCC "
             f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
@@ -726,8 +729,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"est ancrée sur le taux national publié par l'Assurance Maladie (16,0 en 2024, tous "
             f"secteurs ; {TF_SOURCE}). Le score global est la moyenne "
             f"pondérée des piliers notés (pondérations 40/35/25, renormalisées quand un pilier n'est pas "
-            f"noté) ; un pilier sans aucun indicateur de la grille n'est pas noté plutôt que de recevoir "
-            f"un score par défaut, et sous deux piliers notés il n'y a ni score global ni notation "
+            f"noté) ; un pilier n'est noté qu'à partir de {MIN_INDICATEURS_PILIER} indicateurs de sa "
+            f"grille (seuil interne à l'outil) — en deçà, il n'est pas noté plutôt que de recevoir un "
+            f"score, et le nombre d'indicateurs notés figure à côté de chaque score ; sous deux piliers notés il n'y a ni score global ni notation "
             f"lettrée. Une évolution d'un exercice à l'autre compare des scores globaux qui peuvent "
             f"reposer sur des piliers différents. La notation lettrée (échelle interne AAA-CCC) est indicative — "
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
@@ -1681,13 +1685,18 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
 # Abstention (DETTE § 11) : un pilier sans indicateur noté n'a pas de score,
 # et sans deux piliers notés il n'y a ni score global ni note lettrée. Le
 # texte le dit au lieu d'imprimer un chiffre par défaut.
+# Sous le seuil de notation (DETTE § 16) : zéro, un ou deux indicateurs.
+_SOUS_SEUIL = {
+    "fr": f"moins de {MIN_INDICATEURS_PILIER} indicateurs de sa grille de notation sont renseignés.",
+    "en": f"fewer than {MIN_INDICATEURS_PILIER} indicators of its scoring grid are reported.",
+}
 PILIER_NON_NOTE = {
-    "fr": {"env": "Le pilier environnemental n'est pas noté : aucun indicateur de la grille de notation n'est renseigné.",
-           "social": "Le pilier social n'est pas noté : aucun indicateur de la grille de notation n'est renseigné.",
-           "gov": "Le pilier gouvernance n'est pas noté : aucun indicateur de la grille de notation n'est renseigné."},
-    "en": {"env": "The environmental pillar is not rated: none of the scoring-grid indicators is reported.",
-           "social": "The social pillar is not rated: none of the scoring-grid indicators is reported.",
-           "gov": "The governance pillar is not rated: none of the scoring-grid indicators is reported."},
+    "fr": {"env": "Le pilier environnemental n'est pas noté : " + _SOUS_SEUIL["fr"],
+           "social": "Le pilier social n'est pas noté : " + _SOUS_SEUIL["fr"],
+           "gov": "Le pilier gouvernance n'est pas noté : " + _SOUS_SEUIL["fr"]},
+    "en": {"env": "The environmental pillar is not rated: " + _SOUS_SEUIL["en"],
+           "social": "The social pillar is not rated: " + _SOUS_SEUIL["en"],
+           "gov": "The governance pillar is not rated: " + _SOUS_SEUIL["en"]},
 }
 POSITIONNEMENT_IMPOSSIBLE = {
     "fr": "Le positionnement interne compare les piliers notés entre eux : il suppose au moins deux piliers notés.",

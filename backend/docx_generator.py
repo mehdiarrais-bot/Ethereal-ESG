@@ -11,7 +11,7 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.document import Document as DocumentObject
 from docx.text.paragraph import Paragraph
-from esg_calculator import NON_NOTE, score_label
+from esg_calculator import NON_NOTE, score_label, coverage_text
 from models import ESGRequest, ESGScores, AestheticTheme
 from i18n import L
 
@@ -127,7 +127,7 @@ def add_kpi_table(doc, kpi_list, colors):
         doc.add_paragraph()
 
 
-def add_score_block(doc, label, score, color_hex):
+def add_score_block(doc, label, score, coverage, color_hex):
     p = doc.add_paragraph()
     run = p.add_run(f"{label} : ")
     run.font.size = Pt(11)
@@ -136,6 +136,8 @@ def add_score_block(doc, label, score, color_hex):
     score_run.font.size = Pt(14)
     score_run.bold = True
     score_run.font.color.rgb = hex_to_rgb(color_hex)
+    cov_run = p.add_run(f"  ·  {coverage}")
+    cov_run.font.size = Pt(10)
 
 
 def add_bullet_list(doc: DocumentObject, items: list[str], icon: str,
@@ -381,6 +383,22 @@ def _cover_meta(r: _Report) -> None:
         pres_p.paragraph_format.space_after = Pt(12)
 
 
+def _score_cell(cell, value, color_hex, coverage, muted_hex) -> None:
+    """Score en grand ; dessous, la complétude de la grille du pilier (DETTE § 16)."""
+    cell.paragraphs[0].clear()
+    rv = cell.paragraphs[0].add_run(score_label(value, 1))
+    rv.font.size = Pt(24)
+    rv.bold = True
+    rv.font.color.rgb = hex_to_rgb(color_hex)
+    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if coverage:
+        cov_p = cell.add_paragraph()
+        cov_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cov = cov_p.add_run(coverage)
+        cov.font.size = Pt(8)
+        cov.font.color.rgb = hex_to_rgb(muted_hex)
+
+
 def _cover_scores(r: _Report) -> None:
     """Tableau des trois piliers + score global, puis la note lettrée."""
     doc, scores, colors, TR = r.doc, r.scores, r.colors, r.TR
@@ -391,7 +409,8 @@ def _cover_scores(r: _Report) -> None:
               scores.governance_score, scores.total_esg_score]
     value_colors = [colors["env"], colors["social"], colors["gov"], colors["accent"]]
 
-    for i, (hdr, val, col) in enumerate(zip(headers, values, value_colors)):
+    keys = ["env", "social", "gov", "total"]
+    for i, (hdr, val, col, key) in enumerate(zip(headers, values, value_colors, keys)):
         hdr_cell = summary_table.rows[0].cells[i]
         shade_cell(hdr_cell, colors.get("light", "F5F5F5"))
         hdr_cell.paragraphs[0].clear()
@@ -401,13 +420,8 @@ def _cover_scores(r: _Report) -> None:
         run.font.color.rgb = hex_to_rgb(colors["secondary"])
         hdr_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        val_cell = summary_table.rows[1].cells[i]
-        val_cell.paragraphs[0].clear()
-        rv = val_cell.paragraphs[0].add_run(score_label(val, 1))
-        rv.font.size = Pt(24)
-        rv.bold = True
-        rv.font.color.rgb = hex_to_rgb(col)
-        val_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        coverage = None if key == "total" else coverage_text(scores, key, TR["coverage"])
+        _score_cell(summary_table.rows[1].cells[i], val, col, coverage, colors["secondary"])
 
     doc.add_paragraph()
 
@@ -592,7 +606,8 @@ def _pillar(r: _Report, pillar: str) -> None:
     r.conclusion(r.headlines[pillar], color)
     if r.notes.get(pillar):
         add_consultant_note(r.doc, r.notes[pillar], r.colors, r.TR)
-    add_score_block(r.doc, r.TR[score_label], getattr(r.scores, score_attr), color)
+    add_score_block(r.doc, r.TR[score_label], getattr(r.scores, score_attr),
+                    coverage_text(r.scores, pillar, r.TR["coverage"]), color)
 
     r.doc.add_paragraph(r.content.get(_CONTENT_KEY[pillar], fallback)).paragraph_format.space_after = Pt(8)
 

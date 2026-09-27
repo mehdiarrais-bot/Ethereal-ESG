@@ -102,8 +102,11 @@ def test_parite_dans_le_champ_sans_affirmer_lobligation():
 # ── Corruption ─────────────────────────────────────────────────────────────
 
 def test_corruption_penalise_le_score_et_se_lit_dans_le_texte():
-    propre = calculate_esg_scores(_req(corruption_cases=0, sustainability_committee=True))
-    un_cas = _req(corruption_cases=1, sustainability_committee=True)
+    # Deux indicateurs de plus que corruption_cases : le pilier en porte ainsi
+    # MIN_INDICATEURS_PILIER et reste noté (DETTE § 16).
+    propre = calculate_esg_scores(_req(corruption_cases=0, sustainability_committee=True,
+                                       ethics_violations=0))
+    un_cas = _req(corruption_cases=1, sustainability_committee=True, ethics_violations=0)
     s = calculate_esg_scores(un_cas)
     assert s.governance_score is not None and propre.governance_score is not None
     assert s.governance_score < propre.governance_score

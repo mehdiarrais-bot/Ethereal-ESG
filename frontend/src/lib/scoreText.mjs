@@ -14,6 +14,17 @@ export function ratingText(rating) {
   return rating || NON_NOTE
 }
 
+/**
+ * Complétude de la grille d'un pilier (DETTE § 16) : « 3/4 indicateurs
+ * notés », affichée sous chaque score. Sous 3 indicateurs, le backend ne
+ * note pas le pilier : la complétude dit pourquoi le score manque.
+ */
+export function coverageText(coverage) {
+  if (!coverage) return ''
+  const [rated, total] = coverage
+  return `${rated}/${total} indicateurs notés`
+}
+
 /** Largeur d'une jauge en %, bornée ; 0 pour un score absent (piste vide). */
 export function gaugePercent(value) {
   return value == null ? 0 : Math.min(100, Math.max(0, value))

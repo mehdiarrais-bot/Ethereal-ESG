@@ -78,6 +78,35 @@ def carbon_thresholds_for(sector: str | None) -> Tuple[list, bool]:
     return _DEFAULT_CARBON_THRESHOLDS, False
 
 
+# Seuil de notation d'un pilier (DETTE § 16) : règle INTERNE à l'outil, adossée
+# à aucun référentiel. Sous ce nombre d'indicateurs de la grille, la moyenne
+# récompenserait le silence -- un seul « comité = oui » valait 100/100.
+MIN_INDICATEURS_PILIER = 3
+
+# Indicateurs de la grille de notation, par pilier. « ghg » réunit l'intensité
+# carbone et la déclaration du bilan : deux sous-notes tirées du même champ,
+# qui ne comptent que pour UN indicateur déclaré.
+GRILLE_INDICATEURS = {
+    "env": ("renewable", "recycling", "ghg", "biodiversity"),
+    "social": ("gender", "turnover", "training", "safety", "satisfaction", "community"),
+    "gov": ("board_gender", "independence", "ethics", "corruption", "security",
+            "audit", "committee", "csr_budget"),
+}
+_MEME_INDICATEUR = {"carbon": "ghg", "scope_reporting": "ghg"}
+
+
+def pillar_score(scores: dict, details: dict) -> Tuple[float | None, dict]:
+    """Moyenne des sous-notes, ou None sous MIN_INDICATEURS_PILIER indicateurs.
+
+    Le nombre d'indicateurs notés est rendu dans details["indicators"] : il est
+    imprimé à côté du score (complétude) pour qu'un dossier qui ne déclare que
+    ses meilleurs chiffres ne passe pas pour un dossier complet."""
+    details["indicators"] = len({_MEME_INDICATEUR.get(k, k) for k in scores})
+    if details["indicators"] < MIN_INDICATEURS_PILIER:
+        return None, details
+    return round(sum(scores.values()) / len(scores), 1), details
+
+
 def calculate_environmental_score(env: EnvironmentalData, revenue: float | None = None,
                                   sector: str | None = None) -> Tuple[float | None, dict]:
     scores = {}
@@ -121,11 +150,7 @@ def calculate_environmental_score(env: EnvironmentalData, revenue: float | None 
     if env.biodiversity_initiatives is not None:
         scores["biodiversity"] = min(100, env.biodiversity_initiatives * 20)
 
-    if not scores:
-        return None, details  # aucun indicateur : pilier non calculable
-
-    env_score = sum(scores.values()) / len(scores)
-    return round(env_score, 1), details
+    return pillar_score(scores, details)
 
 
 def calculate_social_score(social: SocialData) -> Tuple[float | None, dict]:
@@ -168,11 +193,7 @@ def calculate_social_score(social: SocialData) -> Tuple[float | None, dict]:
     if social.community_investment_eur is not None and social.community_investment_eur > 0:
         scores["community"] = min(100, (social.community_investment_eur / 100000) * 20)
 
-    if not scores:
-        return None, details  # aucun indicateur : pilier non calculable
-
-    social_score = sum(scores.values()) / len(scores)
-    return round(social_score, 1), details
+    return pillar_score(scores, details)
 
 
 def calculate_governance_score(gov: GovernanceData) -> Tuple[float | None, dict]:
@@ -220,11 +241,7 @@ def calculate_governance_score(gov: GovernanceData) -> Tuple[float | None, dict]
     if gov.csr_budget_eur is not None and gov.csr_budget_eur > 0:
         scores["csr_budget"] = min(100, (gov.csr_budget_eur / 500000) * 100)
 
-    if not scores:
-        return None, details  # aucun indicateur : pilier non calculable
-
-    gov_score = sum(scores.values()) / len(scores)
-    return round(gov_score, 1), details
+    return pillar_score(scores, details)
 
 
 # Pondération des piliers dans le score global (inchangée depuis l'origine).
@@ -247,6 +264,13 @@ def global_score(pillars: dict[str, float | None]) -> float | None:
 
 
 NON_NOTE = "—"  # affichage d'un score non calculable, dans tous les formats
+
+
+def coverage_text(scores, pillar: str, template: str) -> str:
+    """« 3/4 indicateurs notés » : complétude de la grille du pilier, imprimée
+    à côté de son score (DETTE § 16). Gabarit i18n à champs {n} et {t}."""
+    n, t = scores.indicator_coverage[pillar]
+    return template.format(n=n, t=t)
 
 
 def score_label(value: float | None, decimals: int = 0) -> str:
@@ -450,6 +474,8 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
     gov_score, gov_details = calculate_governance_score(request.governance)
 
     total = global_score({"env": env_score, "social": social_score, "gov": gov_score})
+    coverage = {p: [d["indicators"], len(GRILLE_INDICATEURS[p])]
+                for p, d in (("env", env_details), ("social", social_details), ("gov", gov_details))}
     rating = get_rating(total) if total is not None else None
 
     if lang == "en":
@@ -472,6 +498,7 @@ def calculate_esg_scores(request: ESGRequest) -> ESGScores:
         safety_index=social_details.get("accident_rate"),
         governance_quality=gov_score,
         rating=rating,
+        indicator_coverage=coverage,
         strengths=strengths,
         weaknesses=weaknesses,
         recommendations=recommendations,

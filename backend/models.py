@@ -377,7 +377,8 @@ class ESGRequest(BaseModel):
 
 
 class ESGScores(BaseModel):
-    # None : pilier sans aucun indicateur, ou moins de deux piliers pour le
+    # None : pilier sous le seuil d'indicateurs (esg_calculator.
+    # MIN_INDICATEURS_PILIER), ou moins de deux piliers pour le
     # global (esg_calculator.global_score). Jamais de valeur par défaut.
     environmental_score: Optional[float]
     social_score: Optional[float]
@@ -389,6 +390,9 @@ class ESGScores(BaseModel):
     safety_index: Optional[float] = None
     governance_quality: Optional[float] = None
     rating: Optional[str]
+    # Complétude de la grille par pilier : {"env": [notés, total], …}
+    # (esg_calculator.GRILLE_INDICATEURS). Imprimée à côté de chaque score.
+    indicator_coverage: dict[str, list[int]] = {}
     strengths: list[str]
     weaknesses: list[str]
     recommendations: list[str]

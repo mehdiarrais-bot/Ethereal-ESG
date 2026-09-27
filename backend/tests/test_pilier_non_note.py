@@ -20,9 +20,13 @@ from esg_calculator import (calculate_esg_scores, calculate_environmental_score,
                             global_score, PILLAR_WEIGHTS)
 from models import EnvironmentalData, SocialData, GovernanceData  # noqa: E402
 
-ENV = {"co2_emissions_tonnes": 800, "renewable_energy_percent": 30}
-SOC = {"total_employees": 120, "female_employees_percent": 38, "training_hours_per_employee": 12}
-GOV = {"board_members": 6, "female_board_percent": 33, "esg_audit_conducted": False}
+# Chaque pilier porte MIN_INDICATEURS_PILIER (3) indicateurs de la grille :
+# assez pour être noté (DETTE § 16), le sujet ici étant le pilier ABSENT.
+ENV = {"co2_emissions_tonnes": 800, "renewable_energy_percent": 30, "waste_recycled_percent": 55}
+SOC = {"total_employees": 120, "female_employees_percent": 38, "training_hours_per_employee": 12,
+       "employee_turnover_percent": 9}
+GOV = {"board_members": 6, "female_board_percent": 33, "esg_audit_conducted": False,
+       "ethics_violations": 0}
 
 
 def _dossier(env=None, soc=None, gov=None, lang="fr"):

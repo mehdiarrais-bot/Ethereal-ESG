@@ -22,7 +22,7 @@ from reportlab.platypus import (Flowable, BaseDocTemplate, PageTemplate, Frame, 
                                 Table, TableStyle, Image, PageBreak, KeepTogether,
                                 NextPageTemplate, CondPageBreak)
 
-from esg_calculator import NON_NOTE, score_label
+from esg_calculator import NON_NOTE, score_label, coverage_text
 from models import ESGRequest, ESGScores
 from i18n import L
 from pdf_kit import (Kit, Px, FullPage, Anchor, PX, PAGE_W, PAGE_H, clean, esc, hexc,
@@ -358,6 +358,7 @@ def page_context(request, scores, TR, type_label):
         "year": request.company.reporting_year, "type_label": type_label,
         "e": scores.environmental_score, "s": scores.social_score, "g": scores.governance_score,
         "t": scores.total_esg_score, "rating": scores.rating or "—",
+        "cov": {p: coverage_text(scores, p, TR["coverage_short"]) for p in ("env", "social", "gov")},
         "delta": delta, "prev_vals": prev_vals, "prev_year": prev_year,
         "verdict": score_verdict(request, scores) or TR["cover_tag_" + band],
         "tagline": TR["cover_tag_" + band],
@@ -807,14 +808,15 @@ def _status(request, indicator, value):
     return _BAND_STATUS.get(tranche) if tranche is not None else None
 
 
-def _pillar_intro(story, title, key, score_label, score, insight, note, text, k, S, TR, anchors,
-                  anchor):
+def _pillar_intro(story, title, key, score_label, score, coverage, insight, note, text, k, S, TR,
+                  anchors, anchor):
     # 11 cm : titre, score, lecture et encart consultant restent ensemble
     section_head(story, title, key, k, S, anchors, anchor, keep_cm=11)
     from esg_calculator import score_label as _lbl
     sur_100 = f'<font color="{hexc(k.c["muted"])}">/100</font>' if score is not None else ""
     story.append(Paragraph(f'{esc(score_label)} : <font name="{k.f["display"]}" size="15" '
-                           f'color="{hexc(k.c[key])}">{_lbl(score)}</font>' + sur_100, S["h2"]))
+                           f'color="{hexc(k.c[key])}">{_lbl(score)}</font>' + sur_100
+                           + f'<font color="{hexc(k.c["muted"])}"> · {esc(coverage)}</font>', S["h2"]))
     insight_callout(story, insight, key, k)
     if note:
         consultant_callout(story, note, k, TR)
@@ -884,7 +886,7 @@ def _pillar_analysis(story, request, scores, pillar, chart_images, k, S):
 def _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
                  recs):
     _pillar_intro(story, TR["pdf_s2"], "env", TR["score_env_label"], scores.environmental_score,
-                  pi["env"], notes.get("env"),
+                  coverage_text(scores, "env", TR["coverage"]), pi["env"], notes.get("env"),
                   content.get("environmental", "L'analyse environnementale couvre les émissions, "
                               "l'énergie, l'eau, les déchets et la biodiversité."),
                   k, S, TR, anchors, "s2")
@@ -947,7 +949,7 @@ def _environment(story, request, scores, content, chart_images, k, S, TR, lang, 
 def _social(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
             recs):
     _pillar_intro(story, TR["pdf_s3"], "social", TR["score_soc_label"], scores.social_score,
-                  pi["social"], notes.get("social"),
+                  coverage_text(scores, "social", TR["coverage"]), pi["social"], notes.get("social"),
                   content.get("social", "La performance sociale englobe les ressources humaines, "
                               "la diversité, la sécurité et la formation."),
                   k, S, TR, anchors, "s3")
@@ -978,7 +980,7 @@ def _social(story, request, scores, content, chart_images, k, S, TR, lang, ancho
 def _governance(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes,
                 pi, recs):
     _pillar_intro(story, TR["pdf_s4"], "gov", TR["score_gov_label"], scores.governance_score,
-                  pi["gov"], notes.get("gov"),
+                  coverage_text(scores, "gov", TR["coverage"]), pi["gov"], notes.get("gov"),
                   content.get("governance", "La gouvernance évalue la direction, l'indépendance du "
                               "conseil, l'éthique et le contrôle interne."),
                   k, S, TR, anchors, "s4")

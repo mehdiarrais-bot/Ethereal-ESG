@@ -935,7 +935,7 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   remplacer les replis par une erreur explicite ou une clé i18n.
 
 
-## 16. « Le silence paie » — aggravé par le § 11 (C1), OUVERT, à arbitrer
+## 16. « Le silence paie » — **traité le 2026-09-27 (option c)**
 
 - **Constat** (test témoin `test_temoin_le_silence_paie`) : un pilier est
   noté dès qu'un seul indicateur de sa grille est renseigné, et chaque
@@ -952,6 +952,19 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   complétude de chaque pilier à côté de son score (CLAUDE.md fait déjà de
   la complétude l'information de pilotage) ; (c) les deux. Toute
   pénalité chiffrée pour absence serait un barème à sourcer.
+- **Traitement (option c)** : un pilier n'est noté qu'à partir de
+  `MIN_INDICATEURS_PILIER` = 3 indicateurs de sa grille
+  (`esg_calculator.GRILLE_INDICATEURS` : 4 / 6 / 8), seuil déclaré interne
+  dans la note méthodologique ; l'intensité carbone et la déclaration du
+  bilan, tirées du même champ, comptent pour un seul indicateur. La
+  complétude « notés/total » (`ESGScores.indicator_coverage`) est imprimée à
+  côté de chaque score de pilier : PDF (six pages « coup d'œil », couverture
+  « duo », chapitres), Word, synthèse une page, PPTX, interface. Aucune
+  pénalité chiffrée. Mesures : A 69,5 (A) inchangé ; B, C, D non notés.
+- **Limite assumée** (test `test_le_tri_des_chiffres_se_voit_dans_la_completude`) :
+  E, qui ne déclare que ses trois meilleurs chiffres par pilier, est notée
+  74,3 (A) et devance A. Aucun barème ne voit ce qui n'est pas déclaré ; le
+  lecteur le voit à la complétude (3/4, 3/6, 3/8 contre 3/4, 4/6, 6/8).
 
 ## 17. Donnée absente lue comme « non » — audit et comité, OUVERT
 
@@ -977,6 +990,40 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   `content_generator.maturite_libelle` sert déjà le Word, la synthèse une
   page et la lettre ; restent le PDF (mise en forme propre, deux phrases
   de synthèse dans `deepen_content`) et la diapositive.
+
+## 19. Livre blanc PDF : plantage sur un pilier non noté, cibles fabriquées — OUVERT
+
+Relevé pendant le § 16, non corrigé (règle 2).
+
+- **Plantage** : `report_generator._white_paper` calcule `min(100, e + 15)`
+  sans tester `None`. Un rapport de type « livre blanc » dont un pilier
+  n'est pas noté lève `TypeError` : la génération échoue. Préexistant (un
+  pilier vide suffisait), rendu plus fréquent par le seuil du § 16
+  (reproduit : gouvernance à 2 indicateurs sur 8).
+- **Exactitude** : ces mêmes lignes impriment des cibles que le client n'a
+  jamais données (« Score E cible +15 », « +50 % renouvelable », « Parité
+  40 % », « Audit annuel ») — le type d'engagement fabriqué que l'étape A
+  (§ 0bis) a retiré partout ailleurs.
+- **Correction proposée** : retirer ces cibles (« objectifs à définir »,
+  comme les autres livrables) — ce qui supprime aussi le plantage — plus un
+  test « livre blanc avec pilier non noté ».
+
+## 20. Deux listes d'indicateurs notés divergentes — OUVERT
+
+- `narrative._GRADED` ne compte que 3 indicateurs de gouvernance
+  (indépendants, femmes au conseil, budget RSE), `esg_calculator` en note 8
+  (`GRILLE_INDICATEURS`) ; en environnement, `_GRADED` ignore le bilan
+  Scope et compte le CO₂ seul. Deux sources de vérité pour « ce qui entre
+  dans la note ». À réconcilier sur `GRILLE_INDICATEURS`.
+
+## 21. Bilan GES compté deux fois dans la moyenne du pilier — OUVERT, barème
+
+- L'intensité carbone et la déclaration du bilan (`scope_reporting`, 60 ou
+  80) sont deux sous-notes moyennées à part égale avec les autres : le
+  bilan GES pèse double dans le score environnemental. Le § 16 ne les compte
+  que pour un indicateur dans le seuil, mais n'a pas touché la moyenne :
+  la corriger déplacerait le score de tout dossier qui déclare un bilan
+  GES. Barème interne : à arbitrer, pas à corriger en passant.
 
 ---
 
