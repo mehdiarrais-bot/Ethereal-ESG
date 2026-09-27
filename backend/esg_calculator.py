@@ -357,9 +357,10 @@ def generate_weaknesses(env_score, social_score, gov_score, env: EnvironmentalDa
     if gov.data_breaches is not None and gov.data_breaches > 0:
         weaknesses.append("Une violation de données — cybersécurité à renforcer" if gov.data_breaches == 1
                           else f"{gov.data_breaches} violations de données — cybersécurité à renforcer")
-    if not gov.esg_audit_conducted:
+    # `is False` : un point faible affirme un fait ; non renseigné n'est pas « non » (DETTE § 17)
+    if gov.esg_audit_conducted is False:
         weaknesses.append("Absence d'audit ESG indépendant")
-    if not gov.sustainability_committee:
+    if gov.sustainability_committee is False:
         weaknesses.append("Pas de comité de durabilité au niveau du Conseil")
     if gov_score is not None and gov_score < 50:
         weaknesses.append("Structure de gouvernance à renforcer significativement")
@@ -438,8 +439,8 @@ def generate_weaknesses_en(env_score, social_score, gov_score, env, social, gov)
     if gov.data_breaches is not None and gov.data_breaches > 0:
         r.append("One data breach — cybersecurity to strengthen" if gov.data_breaches == 1
                  else f"{gov.data_breaches} data breaches — cybersecurity to strengthen")
-    if not gov.esg_audit_conducted: r.append("No independent ESG audit")
-    if not gov.sustainability_committee: r.append("No sustainability committee at Board level")
+    if gov.esg_audit_conducted is False: r.append("No independent ESG audit")
+    if gov.sustainability_committee is False: r.append("No sustainability committee at Board level")
     if gov_score is not None and gov_score < 50: r.append("Governance structure to strengthen significantly")
     return r[:5]
 

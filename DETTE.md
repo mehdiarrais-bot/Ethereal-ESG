@@ -966,7 +966,7 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   74,3 (A) et devance A. Aucun barème ne voit ce qui n'est pas déclaré ; le
   lecteur le voit à la complétude (3/4, 3/6, 3/8 contre 3/4, 4/6, 6/8).
 
-## 17. Donnée absente lue comme « non » — audit et comité, OUVERT
+## 17. Donnée absente lue comme « non » — audit et comité, **traité le 2026-09-27**
 
 - **Constat** : `if not gov.esg_audit_conducted` / `if not
   gov.sustainability_committee` traitent `None` (non renseigné) comme
@@ -979,6 +979,13 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   absente.
 - **Correction proposée** : `is False` pour tout ce qui affirme un fait ;
   laisser les recommandations et les lacunes telles quelles.
+- **Traitement** : `is False` dans les points faibles (FR/EN), le titre du
+  pilier gouvernance et le risque « Reporting non audité » ; les phrases
+  audit/comité du texte de gouvernance sont omises si la donnée est absente
+  (`_gov_fact`) ; les deux lignes du tableau de couverture passent en
+  « non renseigné » (`na`). Recommandations, lacunes de reporting et
+  signaux de maturité inchangés. `tests/test_booleen_inconnu.py` (trois
+  cas échouent sur l'ancien code).
 
 ## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, OUVERT
 
@@ -1029,6 +1036,18 @@ Relevé pendant le § 16, non corrigé (règle 2).
   que pour un indicateur dans le seuil, mais n'a pas touché la moyenne :
   la corriger déplacerait le score de tout dossier qui déclare un bilan
   GES. Barème interne : à arbitrer, pas à corriger en passant.
+
+## 22. Phrases de gouvernance qui affirment des faits non déclarés — OUVERT
+
+Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
+- `GOV_NO_AUDIT` : « L'intégration d'un auditeur tiers […] est planifiée »,
+  « […] identifiée comme priorité pour le prochain exercice » — le client n'a
+  rien dit de tel ; seul « non » a été déclaré.
+- `GOV_AUDITS` : « L'audit indépendant conduit garantit l'intégrité des
+  données publiées dans ce rapport » — un audit ESG déclaré ne vaut pas
+  vérification de CE rapport.
+- **À faire** : ne garder que des formulations de constat ou de
+  recommandation (même chose pour les équivalents EN et `GOV_*COMMITTEE*`).
 
 ---
 

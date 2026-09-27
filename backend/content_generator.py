@@ -806,6 +806,14 @@ def _environnement_par_clauses(request: ESGRequest, scores: ESGScores):
                                contexte=contexte, secteur=company.sector) or None
 
 
+def _gov_fact(s, slot: int, value: bool | None, if_yes: list, if_no: list) -> str:
+    """Phrase sur un dispositif de gouvernance ; aucune si non renseigné.
+    Un booléen inconnu n'est jamais lu comme « non » (DETTE § 17)."""
+    if value is None:
+        return ""
+    return _pick(s, slot, if_yes if value else if_no)
+
+
 def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     company = request.company
     env = request.environmental
@@ -973,9 +981,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     else:
         gov_detail = "La structure de gouvernance est en cours de documentation."
 
-    audit_sent = _pick(s, 2, GOV_AUDITS if gov.esg_audit_conducted else GOV_NO_AUDIT)
-    committee_sent = _pick(s, 3, GOV_COMMITTEES if gov.sustainability_committee else GOV_NO_COMMITTEE)
-    governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
+    audit_sent = _gov_fact(s, 2, gov.esg_audit_conducted, GOV_AUDITS, GOV_NO_AUDIT)
+    committee_sent = _gov_fact(s, 3, gov.sustainability_committee, GOV_COMMITTEES, GOV_NO_COMMITTEE)
+    governance = " ".join(p for p in (gov_intro, gov_detail, audit_sent, committee_sent) if p)
 
     # ── Conclusion ─────────────────────────────────────────────────────────
     n_s = len(scores.strengths)
@@ -1418,9 +1426,10 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
                      else _agree(gov.corruption_cases, "corruption case recorded",
                                  "corruption cases recorded", en=True))
     gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The governance structure is being documented."
-    audit_sent = _pick(s, 2, GOV_AUDITS_EN if gov.esg_audit_conducted else GOV_NO_AUDIT_EN)
-    committee_sent = _pick(s, 3, GOV_COMMITTEES_EN if gov.sustainability_committee else GOV_NO_COMMITTEE_EN)
-    governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
+    audit_sent = _gov_fact(s, 2, gov.esg_audit_conducted, GOV_AUDITS_EN, GOV_NO_AUDIT_EN)
+    committee_sent = _gov_fact(s, 3, gov.sustainability_committee, GOV_COMMITTEES_EN,
+                               GOV_NO_COMMITTEE_EN)
+    governance = " ".join(p for p in (gov_intro, gov_detail, audit_sent, committee_sent) if p)
 
     # CSRD sections
     # Voir la note du bloc FR équivalent : décrire le calcul réel, nommer
@@ -1999,10 +2008,10 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
         if bi is not None and bi >= 50:
             return (f"An independent board ({num(bi)}%) strengthens governance" if en
                     else f"Un conseil indépendant ({num(bi)} %) renforce la gouvernance")
-        if not gov.esg_audit_conducted:
+        if gov.esg_audit_conducted is False:  # non renseigné n'est pas « non » (DETTE § 17)
             return ("Independent ESG assurance is the governance priority" if en
                     else "L'assurance ESG indépendante, priorité de la gouvernance")
-        if not gov.sustainability_committee:
+        if gov.sustainability_committee is False:
             return ("A board-level sustainability committee is the missing link" if en
                     else "Un comité de durabilité au conseil, le maillon manquant")
         return None
@@ -2270,7 +2279,7 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
         # plupart des clients (CSRD_CHAMP).
         risks.append(T("Scope 3 non mesuré : empreinte carbone incomplète au regard de l'ESRS E1", "Fiabilité",
                        "Scope 3 not measured: carbon footprint incomplete against ESRS E1", "Reliability", "H", "H"))
-    if not gov.esg_audit_conducted:
+    if gov.esg_audit_conducted is False:  # un risque affirme un fait (DETTE § 17)
         risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
                        "Unaudited reporting: limited credibility with investors", "Assurance", "H", "H"))
     ci = (env.co2_emissions_tonnes / rev * 1e6) if (env.co2_emissions_tonnes and rev) else None
@@ -2328,6 +2337,15 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
     return {"risks": risks[:4], "opportunities": opps[:4]}
 
 
+def _oui_non(value: bool | None) -> str:
+    """Statut d'une ligne oui/non : « na » si non renseigné (DETTE § 17)."""
+    return "na" if value is None else ("ok" if value else "no")
+
+
+def _constat(value: bool | None, oui: str, non: str, inconnu: str) -> str:
+    return inconnu if value is None else (oui if value else non)
+
+
 def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     """Analyse des écarts vs exigences CSRD/réglementaires (données déclarées).
     Chaque ligne : {req, ref, status, note, nature}. FR/EN.
@@ -2381,16 +2399,20 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
 
     # Vérification tierce
     R("Vérification du reporting par un tiers", "Third-party assurance of reporting", "CSRD (assurance limitée)",
-      "ok" if gov.esg_audit_conducted else "no",
-      "Audit ESG indépendant réalisé" if gov.esg_audit_conducted else "Aucune assurance externe à date",
-      "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date",
+      _oui_non(gov.esg_audit_conducted),
+      _constat(gov.esg_audit_conducted, "Audit ESG indépendant réalisé", "Aucune assurance externe à date",
+               "Donnée non renseignée"),
+      _constat(gov.esg_audit_conducted, "Independent ESG audit performed", "No external assurance to date",
+               "Not reported"),
       vsme_out_of_scope=True)
 
     # Gouvernance durabilité
     R("Supervision de la durabilité par la gouvernance", "Sustainability oversight by governance", "ESRS 2 GOV-1",
-      "ok" if gov.sustainability_committee else "no",
-      "Comité de durabilité en place" if gov.sustainability_committee else "Pas de comité dédié",
-      "Sustainability committee in place" if gov.sustainability_committee else "No dedicated committee")
+      _oui_non(gov.sustainability_committee),
+      _constat(gov.sustainability_committee, "Comité de durabilité en place", "Pas de comité dédié",
+               "Donnée non renseignée"),
+      _constat(gov.sustainability_committee, "Sustainability committee in place", "No dedicated committee",
+               "Not reported"))
 
     # (supprime) Ligne « Mixite des effectifs (cible 40 %) », reference
     # « Index egalite / ESRS S1-9 ». Ce tableau analyse les ECARTS
