@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 OUT = os.path.join(ROOT, "examples")
 
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
-                    GovernanceData, TaxonomyData, AestheticTheme)
+                    GovernanceData, TaxonomyData, TargetsData, AestheticTheme)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import generate_esg_content                           # noqa: E402
 from ppt_generator import generate_pptx                                      # noqa: E402
@@ -49,6 +49,9 @@ DEMO = ESGRequest(
         female_board_percent=44),
     taxonomy=TaxonomyData(turnover_aligned_percent=38, capex_aligned_percent=52,
                           opex_aligned_percent=20),
+    # Cible climat déclarée (étape B) : citée comme telle, jamais évaluée
+    targets=TargetsData(climate_reduction_percent=42, climate_base_year=2025,
+                        climate_target_year=2030, climate_scopes="1-2"),
     language="fr", aesthetic_theme="aurora",
     include_recommendations=True, include_benchmarks=True,
     # Historique : fait apparaître l'évolution N-1 et la trajectoire

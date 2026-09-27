@@ -113,6 +113,35 @@ class TaxonomyData(BaseModel):
         return self
 
 
+class TargetsData(BaseModel):
+    """Objectifs DÉCLARÉS par le client (DETTE § 0bis, étape B). L'outil les
+    cite comme tels et n'en évalue jamais l'alignement sur un référentiel.
+    Lot 1 : trajectoire de réduction des émissions."""
+    climate_reduction_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    climate_base_year: Optional[int] = Field(default=None, ge=2000, le=2035)
+    climate_target_year: Optional[int] = Field(default=None, ge=2025, le=2060)
+    climate_scopes: Optional[str] = Field(default=None, pattern=r'^(1-2|1-2-3)$')
+
+    @field_validator('climate_scopes', mode='before')
+    @classmethod
+    def normalize_scopes(cls, v):
+        """« 1-2 », « 1,2 », « 1 et 2 » → « 1-2 » (saisie ou import CSV)."""
+        if not v:
+            return None
+        digits = re.sub(r"\D", "", str(v))
+        return {"12": "1-2", "123": "1-2-3"}.get(digits, v)
+
+    @model_validator(mode='after')
+    def check_years(self):
+        v = self.climate_reduction_percent
+        if v is not None and not math.isfinite(v):
+            self.climate_reduction_percent = None
+        b, t = self.climate_base_year, self.climate_target_year
+        if b is not None and t is not None and t <= b:
+            raise ValueError("Cible climat : l'année cible doit suivre l'année de référence")
+        return self
+
+
 class GovernanceData(BaseModel):
     board_members: Optional[int] = Field(default=None, ge=0, le=999)
     female_board_percent: Optional[float] = Field(default=None, ge=0, le=100)
@@ -247,6 +276,7 @@ class ESGRequest(BaseModel):
     social: SocialData
     governance: GovernanceData
     taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
+    targets: TargetsData = Field(default_factory=lambda: TargetsData())
     presentation_type: PresentationType = PresentationType.EXECUTIVE_SUMMARY
     aesthetic_theme: AestheticTheme = AestheticTheme.AURORA
     report_type: ReportType = ReportType.FULL_REPORT
@@ -263,6 +293,13 @@ class ESGRequest(BaseModel):
     # Actions du plan précédent marquées « réalisées » par le consultant
     # (suivi de mission) : [{title, year}, ...]
     completed_actions: Optional[list] = None
+
+    @model_validator(mode='after')
+    def check_target_base_year(self):
+        b = self.targets.climate_base_year
+        if b is not None and b > self.company.reporting_year:
+            raise ValueError("Cible climat : l'année de référence ne peut pas suivre l'exercice")
+        return self
 
     @field_validator('aesthetic_theme', mode='before')
     @classmethod

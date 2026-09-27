@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
-                    GovernanceData, TaxonomyData)
+                    GovernanceData, TaxonomyData, TargetsData)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import (generate_esg_content, risks_opportunities,    # noqa: E402
                                compliance_assessment, pillar_headline)
@@ -87,7 +87,18 @@ def profil(seed: int, lang: str = "fr") -> ESGRequest:
             esg_audit_conducted=m(lambda: rng.random() < 0.5),
             sustainability_committee=m(lambda: rng.random() < 0.5)),
         taxonomy=TaxonomyData(turnover_aligned_percent=m(lambda: u(0, 60))),
+        targets=_cible(rng),
         language=lang, include_recommendations=True)
+
+
+def _cible(rng) -> TargetsData:
+    """Un profil sur trois déclare une cible climat, parfois incomplète."""
+    if rng.random() > 1 / 3:
+        return TargetsData()
+    base = rng.choice([2019, 2022, 2025])
+    return TargetsData(climate_reduction_percent=rng.choice([None, 25, 42, 55.5]),
+                       climate_base_year=base, climate_target_year=rng.choice([2030, 2035, 2050]),
+                       climate_scopes=rng.choice([None, "1-2", "1-2-3"]))
 
 
 class Dossier:
@@ -278,11 +289,28 @@ def aucune_affirmation_non_declaree(d: Dossier) -> list[str]:
     return [f"« {f} » dans : {t[:90]}…" for t in d.textes() for f in NON_DECLARE if f in t]
 
 
+def cible_citee_est_la_cible_saisie(d: Dossier) -> list[str]:
+    """Une cible climat n'est citée que si elle est complète, et avec ses
+    valeurs saisies ; aucune cible sans saisie."""
+    import targets as TG
+    from narrative import pct
+    c = TG.climate_target(d.r)
+    cite = [t for t in d.textes() if "déclare un objectif de réduction" in t
+            or "reports a target to reduce" in t]
+    if c is None:
+        return [f"cible citée sans saisie complète : {t[:80]}…" for t in cite]
+    if not cite:
+        return ["cible saisie mais jamais citée"]
+    attendu = pct(c.reduction, d.r.language).replace(chr(160), " ")
+    return [f"cible citée sans « {attendu} » ni {c.target_year} : {t[:80]}…" for t in cite
+            if attendu not in t.replace(chr(160), " ") or str(c.target_year) not in t]
+
+
 INVARIANTS = [fragilites_pas_sur_le_meilleur_pilier, enjeu_et_appui_exclusifs,
               point_fort_pas_point_faible, scores_cites_exacts,
               pilier_dominant_est_le_meilleur, aucun_artefact, faible_contre_appui,
               fort_contre_enjeu, risque_carbone_contre_appui,
-              aucune_affirmation_non_declaree]
+              aucune_affirmation_non_declaree, cible_citee_est_la_cible_saisie]
 
 
 def violations(n: int, invariant, langs=("fr", "en")) -> list[str]:

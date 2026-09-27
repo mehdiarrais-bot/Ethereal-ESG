@@ -1200,7 +1200,8 @@ def _white_paper(story, request, k, S, TR, anchors):
     # 40 % »…) : jamais saisies par le client, et un TypeError sur tout
     # pilier non noté (DETTE § 19). Aucune cible tant que l'étape B (§ 0bis)
     # ne permet pas de les collecter.
-    story.append(Paragraph(esc(TR["wp_targets"]), S["body"]))
+    import targets as TG
+    story.append(Paragraph(esc(TG.white_paper_sentence(request) or TR["wp_targets"]), S["body"]))
 
 
 def _closing(story, request, scores, content, k, S, TR, anchors, chart_images):

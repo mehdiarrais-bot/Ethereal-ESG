@@ -51,6 +51,18 @@ de l'étape B, pas les champs eux-mêmes.
 **Ordre impératif** : A avant B. Faire B d'abord aurait laissé les
 affirmations fausses en production le temps du chantier de saisie.
 
+**Avancement (2026-09-27)** — périmètre arbitré : lots 1 et 2, lot 3
+(certifications ISO, ODD en multi-sélection) reporté ; aucun référentiel
+de cible (« validée SBTi »…) saisissable pour l'instant (règle 9).
+- **Lot 1, trajectoire climat — FAIT** : `TargetsData` (réduction %, année
+  de référence, année cible, périmètre 1-2 / 1-2-3), `targets.py` (cible
+  complète ou rien, rythme annuel moyen, tonnes si la référence est
+  l'exercice du rapport et le périmètre couvert par le bilan), texte
+  « Objectifs », ligne ESRS E1-4 (« cible déclarée »), livre blanc,
+  6ᵉ étape « Objectifs » du wizard, questionnaire, import CSV.
+  `tests/test_objectifs.py`, invariant `cible_citee_est_la_cible_saisie`.
+- **Lot 2, cibles par indicateur — À FAIRE.**
+
 ## 0ter. Mapping ODD dérivé des indicateurs réellement collectés
 
 Les six ODD affichés (7, 8, 10, 12, 13, 16) étaient identiques pour tout
@@ -1122,6 +1134,17 @@ Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
   `test_risque_carbone_sur_la_grille_sectorielle` ; invariant du banc vert.
 
 Le § 23 est lui aussi couvert par le banc (`fragilites_pas_sur_le_meilleur_pilier`).
+
+## 25. Interface : trois libellés à revoir — OUVERT
+
+Relevés pendant l'étape B, non corrigés (règle 2).
+- `StepGovernance.jsx` : aide « Recommandation AFEP-MEDEF : >50% ». Le
+  § 0octies a établi : la moitié (≥, pas >), le tiers pour une société
+  contrôlée, et seulement pour une société cotée.
+- `StepCompany.jsx` : aide de l'horizon « Année cible pour la trajectoire
+  ESG (CSRD/SBTi) » — cite deux référentiels sans objet pour ce champ.
+- `StepCompany.jsx` : `YEARS` s'arrête à 2025 alors que le modèle accepte
+  jusqu'à 2035 : l'exercice 2026 n'est pas sélectionnable.
 
 ---
 

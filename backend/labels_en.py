@@ -53,4 +53,9 @@ FIELD_META_EN = {
     "turnover_aligned_percent": ("Taxonomy-aligned revenue", "%", ""),
     "capex_aligned_percent": ("Aligned investments (CapEx)", "%", ""),
     "opex_aligned_percent": ("Aligned expenses (OpEx)", "%", ""),
+
+    "climate_reduction_percent": ("Targeted emissions reduction", "%", "Relative to the base year."),
+    "climate_base_year": ("Target base year", "", "E.g. 2024."),
+    "climate_target_year": ("Target year", "", "E.g. 2030."),
+    "climate_scopes": ("Target scope", "", "\"1-2\" (Scopes 1 and 2) or \"1-2-3\" (Scopes 1, 2 and 3)."),
 }

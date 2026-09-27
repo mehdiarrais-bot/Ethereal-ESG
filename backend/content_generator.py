@@ -5,6 +5,7 @@ lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
 from models import ESGRequest, ESGScores
+import targets as TG
 from esg_calculator import (TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE,
                             GRILLE_MIXITE_EFFECTIF, MIN_INDICATEURS_PILIER, strengths_count)
 
@@ -1050,6 +1051,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         "fixées — leur absence, documentée comme telle, relève de cette même exigence de "
         "transparence."
     )
+    # Étape B (DETTE § 0bis) : une cible DÉCLARÉE par le client remplace le
+    # constat d'absence ; citée comme telle, jamais évaluée.
+    targets_txt = TG.targets_paragraph(request) or targets_txt
 
     # ── Taxonomie UE ───────────────────────────────────────────────────────
     taxonomy = None
@@ -1428,6 +1432,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
                         "quantified reduction pathway. ")
     targets_txt += ("ESRS E1-4 requires disclosing whether and how reduction targets have been set — "
                     "their absence, documented as such, falls under that same transparency requirement.")
+    targets_txt = TG.targets_paragraph(request) or targets_txt
 
     taxonomy = None
     tx = request.taxonomy
@@ -2445,11 +2450,16 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     # des qu'un total CO2 etait saisi, sur la foi d'un objectif que l'outil
     # avait lui-meme invente) — et jamais « non conforme » non plus, ce qui
     # preterait a l'entreprise un manquement qu'on ne peut pas constater.
-    R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
-      "na",
-      "Cibles climatiques non documentées dans ce reporting",
-      "Climate targets not documented in this reporting",
-      nature=GS.NON_COUVERT)
+    declared = TG.compliance_note(request)
+    if declared:  # cible déclarée par le client (étape B) : documentée dans ce reporting
+        R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
+          "ok", declared[0], declared[1])
+    else:
+        R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
+          "na",
+          "Cibles climatiques non documentées dans ce reporting",
+          "Climate targets not documented in this reporting",
+          nature=GS.NON_COUVERT)
 
     return rows
 

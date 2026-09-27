@@ -12,6 +12,12 @@ export const DEMO_DATA = {
     capex_aligned_percent: 52,
     opex_aligned_percent: 29,
   },
+  targets: {
+    climate_reduction_percent: 42,
+    climate_base_year: 2024,
+    climate_target_year: 2030,
+    climate_scopes: '1-2',
+  },
   environmental: {
     co2_emissions_tonnes: 8840,
     energy_consumption_mwh: 21500,

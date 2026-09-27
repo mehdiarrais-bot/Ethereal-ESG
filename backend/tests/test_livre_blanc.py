@@ -37,7 +37,7 @@ def _livre_blanc(lang, gouvernance_vide):
 def test_livre_blanc_genere_avec_un_pilier_non_note(lang):
     s, texte = _livre_blanc(lang, gouvernance_vide=True)
     assert s.governance_score is None
-    assert ("objectifs à définir" if lang == "fr" else "targets to be defined") in texte
+    assert ("Aucun objectif chiffré" if lang == "fr" else "No quantified target") in texte
 
 
 @pytest.mark.parametrize("lang", ["fr", "en"])

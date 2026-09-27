@@ -58,6 +58,11 @@ FIELD_SPECS = [
     ("taxonomy", "turnover_aligned_percent", "num", ["ca aligne taxonomie", "ca aligne", "turnover aligne", "turnover_aligned_percent"]),
     ("taxonomy", "capex_aligned_percent", "num", ["capex aligne taxonomie", "capex aligne", "capex_aligned_percent"]),
     ("taxonomy", "opex_aligned_percent", "num", ["opex aligne taxonomie", "opex aligne", "opex_aligned_percent"]),
+    # ── Objectifs déclarés (étape B) ────────────────────────────────────
+    ("targets", "climate_reduction_percent", "num", ["reduction visee des emissions", "cible de reduction", "objectif de reduction", "climate_reduction_percent"]),
+    ("targets", "climate_base_year", "int", ["annee de reference de la cible", "annee de reference", "climate_base_year"]),
+    ("targets", "climate_target_year", "int", ["annee cible de la reduction", "annee cible climat", "climate_target_year"]),
+    ("targets", "climate_scopes", "str", ["perimetre de la cible", "scopes de la cible", "climate_scopes"]),
 ]
 
 
@@ -147,7 +152,7 @@ def _pairs_from_rows(rows):
 def build_form(pairs):
     """Construit les sections du formulaire depuis des couples (champ, valeur)."""
     sections = {"company": {}, "environmental": {}, "social": {},
-                "governance": {}, "taxonomy": {}}
+                "governance": {}, "taxonomy": {}, "targets": {}}
     matched, unmatched = [], []
     _HEADERS = {"champ", "field", "indicateur", "cle", "key"}
     for field, value in pairs:
@@ -162,6 +167,10 @@ def build_form(pairs):
             continue
         section, key, typ = spec
         coerced = _coerce(typ, value)
+        if key == "climate_scopes" and coerced is not None:
+            # Même normalisation que le modèle, pour que la liste de l'interface la reconnaisse.
+            from models import TargetsData
+            coerced = TargetsData.normalize_scopes(coerced)
         if coerced is not None:
             sections[section][key] = coerced
             matched.append(key)
@@ -235,6 +244,8 @@ def template_csv() -> str:
         "listed_company": "Non", "controlled_company": "Non",
         "turnover_aligned_percent": "38", "capex_aligned_percent": "52",
         "opex_aligned_percent": "29",
+        "climate_reduction_percent": "42", "climate_base_year": "2024",
+        "climate_target_year": "2030", "climate_scopes": "1-2",
     }
     out = io.StringIO()
     w = csv.writer(out, delimiter=";")

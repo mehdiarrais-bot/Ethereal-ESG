@@ -5,6 +5,7 @@ import StepCompany from './components/steps/StepCompany'
 import StepEnvironmental from './components/steps/StepEnvironmental'
 import StepSocial from './components/steps/StepSocial'
 import StepGovernance from './components/steps/StepGovernance'
+import StepTargets from './components/steps/StepTargets'
 import StepOutput from './components/steps/StepOutput'
 import ResultsPanel from './components/ResultsPanel'
 import MiniScorebar from './components/MiniScorebar'
@@ -20,6 +21,7 @@ const STEPS = [
   { id: 'environmental', label: 'Environnement', icon: '🌍' },
   { id: 'social', label: 'Social', icon: '👥' },
   { id: 'governance', label: 'Gouvernance', icon: '⚖️' },
+  { id: 'targets', label: 'Objectifs', icon: '🎯' },
   { id: 'output', label: 'Livrables', icon: '📊' },
 ]
 
@@ -27,6 +29,7 @@ const EMPTY_FORM = {
   company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024,
     target_year: 2030, presenter_name: '', presenter_title: '', logo_base64: null, key_initiatives: '', ceo_quote: '' },
   taxonomy: { turnover_aligned_percent: '', capex_aligned_percent: '', opex_aligned_percent: '' },
+  targets: { climate_reduction_percent: '', climate_base_year: '', climate_target_year: '', climate_scopes: '' },
   environmental: {
     co2_emissions_tonnes: '', energy_consumption_mwh: '', renewable_energy_percent: '',
     water_consumption_m3: '', waste_generated_tonnes: '', waste_recycled_percent: '',
@@ -311,6 +314,7 @@ export default function App() {
     <StepEnvironmental {...stepProps} />,
     <StepSocial {...stepProps} />,
     <StepGovernance {...stepProps} />,
+    <StepTargets {...stepProps} />,
     <StepOutput
       {...stepProps}
       onDownload={handleDownload}

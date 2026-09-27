@@ -148,7 +148,7 @@ LABELS = {
         "score_env_short": "Score Environnemental", "score_soc_short": "Score Social",
         "score_gov_short": "Score Gouvernance", "score_global_short": "Score Global",
         "wp_intro": "Ce livre blanc documente la trajectoire ESG de l'organisation sur le long terme, à partir des indicateurs collectés pour l'exercice. Il constitue un document de travail interne destiné à éclairer les décisions et à situer la maturité extra-financière de l'entreprise. Il ne formule aucun engagement au nom de l'organisation : les objectifs chiffrés restent à définir et à publier par celle-ci.",
-        "wp_horizon": "Horizon {y} — objectifs à définir",
+        "wp_horizon": "Horizon {y} — objectifs",
         "wp_targets": "Aucun objectif chiffré n'a été communiqué pour cet horizon. Il revient à l'organisation de les fixer, pilier par pilier, en s'appuyant sur le plan d'action de ce document ; ils seront repris ici une fois définis.",
         # ── KPI labels ──────────────────────────────────────────
         "kpi": {
@@ -319,7 +319,7 @@ LABELS = {
         "score_env_short": "Environmental Score", "score_soc_short": "Social Score",
         "score_gov_short": "Governance Score", "score_global_short": "Overall Score",
         "wp_intro": "This white paper documents the organisation's long-term ESG trajectory, based on the indicators collected for the financial year. It is an internal working document intended to inform decisions and situate the company's extra-financial maturity. It sets out no commitment on behalf of the organisation: quantified targets remain to be defined and disclosed by the company itself.",
-        "wp_horizon": "Horizon {y} — targets to be defined",
+        "wp_horizon": "Horizon {y} — targets",
         "wp_targets": "No quantified target has been disclosed for this horizon. It is for the organisation to set them, pillar by pillar, drawing on the action plan in this document; they will be shown here once defined.",
         # ── KPI labels ──────────────────────────────────────────
         "kpi": {

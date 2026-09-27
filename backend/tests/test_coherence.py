@@ -32,7 +32,8 @@ def _violations(invariant):
 
 SAINS = [K.fragilites_pas_sur_le_meilleur_pilier, K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
          K.pilier_dominant_est_le_meilleur, K.aucun_artefact, K.faible_contre_appui,
-         K.fort_contre_enjeu, K.risque_carbone_contre_appui, K.aucune_affirmation_non_declaree]
+         K.fort_contre_enjeu, K.risque_carbone_contre_appui, K.aucune_affirmation_non_declaree,
+         K.cible_citee_est_la_cible_saisie]
 
 
 @pytest.mark.parametrize("invariant", SAINS, ids=lambda f: f.__name__)
