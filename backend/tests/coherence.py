@@ -20,7 +20,7 @@ from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # n
                     GovernanceData, TaxonomyData, TargetsData, ExerciseData)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import (generate_esg_content, risks_opportunities,    # noqa: E402
-                               compliance_assessment, pillar_headline)
+                               compliance_assessment, pillar_headline, pillar_insights)
 import synthesis as SY                                                       # noqa: E402
 
 SECTEURS = ["Industrie manufacturière", "Transport & logistique", "Construction & BTP",
@@ -129,6 +129,7 @@ class Dossier:
         self.risks = risks_opportunities(request, self.s)
         self.compliance = compliance_assessment(request, self.s)
         self.headlines = pillar_headline(request, self.s)
+        self.insights = pillar_insights(request, self.s)
         import evolution as EV
         self.evolution = [EV.paragraph(request) or "", EV.table(request) or []]
 
@@ -151,7 +152,7 @@ class Dossier:
             elif hasattr(o, "__dict__"):
                 walk(vars(o))
         walk([self.content, self.overview, self.closing, self.risks, self.compliance,
-              self.headlines, self.s.strengths, self.s.weaknesses, self.s.recommendations,
+              self.headlines, self.insights, self.s.strengths, self.s.weaknesses, self.s.recommendations,
               self.evolution])
         return out
 
@@ -297,6 +298,12 @@ NON_DECLARE = [
     "en cours de structuration", "en déploiement progressif", "en cours de formalisation",
     "en cours de documentation", "is being structured", "are being formalised",
     "is being documented", "opérationnel au niveau du CA",
+    # Titres de pilier par tranche qui nommaient un dispositif (DETTE § 26)
+    "indépendance, audit et supervision ESG", "independence, audit and ESG oversight",
+    "l'assurance externe et le comité de durabilité consolident",
+    "external assurance and a sustainability committee reinforce",
+    "Capital humain valorisé et sécurisé", "Human capital valued and protected",
+    "la maîtrise du carbone et de l'énergie constitue", "carbon and energy control is",
 ]
 
 

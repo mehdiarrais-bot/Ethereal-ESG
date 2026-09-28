@@ -1767,45 +1767,50 @@ def _band(score: float | None) -> str | None:
     return "low"
 
 
+# Titre de pilier choisi par TRANCHE de score : il ne nomme aucun dispositif
+# (audit, comité, assurance, Scope 3…) que la tranche ne garantit pas —
+# « Gouvernance exemplaire : indépendance, audit… » s'imprimait à côté de
+# « Audit ESG : Non » (DETTE § 26). Le détail vient de la lecture des
+# indicateurs, écrite depuis les données juste en dessous.
 _PILLAR_INSIGHT = {
     "fr": {
         "env": {
-            "high": "Performance environnementale de premier plan : la maîtrise du carbone et de l'énergie constitue un actif différenciant.",
-            "good": "Performance environnementale solide ; l'intensité carbone reste le principal levier de création de valeur durable.",
-            "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la qualité du reporting climat.",
+            "high": "Performance environnementale de premier plan sur la grille du diagnostic : un actif différenciant à documenter et à défendre.",
+            "good": "Performance environnementale solide ; les indicateurs les moins bien placés sur la grille sont les prochains leviers.",
+            "mid": "Performance environnementale inégale : les indicateurs en retrait sur la grille conditionnent la qualité du reporting climat.",
             "low": "Performance environnementale en retrait : la transition bas-carbone doit devenir une priorité stratégique à court terme.",
         },
         "social": {
-            "high": "Capital humain valorisé et sécurisé : un atout de marque employeur et de résilience opérationnelle.",
-            "good": "Socle social solide ; la diversité et la formation sont les leviers pour transformer la conformité en avantage compétitif.",
-            "mid": "Performance sociale en construction : parité et sécurité au travail appellent des objectifs chiffrés pour fidéliser les talents.",
+            "high": "Performance sociale de premier plan sur la grille du diagnostic : un atout de marque employeur et de résilience opérationnelle.",
+            "good": "Socle social solide ; les indicateurs les moins bien placés sur la grille sont les leviers pour transformer la conformité en avantage.",
+            "mid": "Performance sociale en construction : les indicateurs en retrait sur la grille appellent un suivi chiffré pour fidéliser les talents.",
             "low": "Performance sociale à renforcer : le risque de rétention et de conformité justifie un plan d'action RH immédiat.",
         },
         "gov": {
-            "high": "Gouvernance exemplaire : indépendance, audit et supervision ESG inspirent confiance aux investisseurs.",
-            "good": "Gouvernance robuste ; l'assurance externe et le comité de durabilité consolident la crédibilité du reporting.",
-            "mid": "Gouvernance à structurer : l'audit indépendant et un comité dédié sont attendus par les marchés financiers.",
-            "low": "Gouvernance insuffisante : l'absence de contrôle ESG expose l'entreprise à un risque réputationnel et réglementaire.",
+            "high": "Gouvernance de premier plan sur la grille du diagnostic : un gage de confiance pour les investisseurs.",
+            "good": "Gouvernance robuste ; les dispositifs encore absents ou non renseignés sont les prochains leviers de crédibilité.",
+            "mid": "Gouvernance à structurer : les dispositifs de contrôle et de supervision ESG sont les premiers leviers.",
+            "low": "Gouvernance insuffisante sur la grille du diagnostic : le risque réputationnel et réglementaire justifie un plan de gouvernance prioritaire.",
         },
     },
     "en": {
         "env": {
-            "high": "Leading environmental performance: carbon and energy control is a differentiating asset.",
-            "good": "Solid environmental performance; carbon intensity remains the main lever for sustainable value creation.",
-            "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive the quality of climate reporting.",
+            "high": "Leading environmental performance on this diagnostic's grid: a differentiating asset to document and defend.",
+            "good": "Solid environmental performance; the indicators placed lowest on the grid are the next levers.",
+            "mid": "Uneven environmental performance: the indicators lagging on the grid drive the quality of climate reporting.",
             "low": "Lagging environmental performance: the low-carbon transition must become a near-term strategic priority.",
         },
         "social": {
-            "high": "Human capital valued and protected: an asset for employer brand and operational resilience.",
-            "good": "Solid social foundation; diversity and training are the levers to turn compliance into a competitive edge.",
-            "mid": "Social performance under construction: gender balance and workplace safety call for quantified targets to retain talent.",
+            "high": "Leading social performance on this diagnostic's grid: an asset for employer brand and operational resilience.",
+            "good": "Solid social foundation; the indicators placed lowest on the grid are the levers to turn compliance into a competitive edge.",
+            "mid": "Social performance under construction: the indicators lagging on the grid call for quantified tracking to retain talent.",
             "low": "Social performance to strengthen: retention and compliance risk warrants an immediate HR action plan.",
         },
         "gov": {
-            "high": "Exemplary governance: independence, audit and ESG oversight inspire investor confidence.",
-            "good": "Robust governance; external assurance and a sustainability committee reinforce reporting credibility.",
-            "mid": "Governance to structure: independent audit and a dedicated committee are expected by financial markets.",
-            "low": "Insufficient governance: the lack of ESG control exposes the company to reputational and regulatory risk.",
+            "high": "Leading governance on this diagnostic's grid: a mark of confidence for investors.",
+            "good": "Robust governance; the arrangements still missing or not reported are the next levers of credibility.",
+            "mid": "Governance to structure: ESG control and oversight arrangements are the first levers.",
+            "low": "Insufficient governance on this diagnostic's grid: reputational and regulatory risk warrants a priority governance plan.",
         },
     },
 }
