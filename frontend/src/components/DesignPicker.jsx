@@ -37,8 +37,40 @@ function downscale(file) {
 // aucune couleur de livrable n'est recopiée dans le frontend.
 const SWATCHES = ['paper', 'primary', 'accent', 'env', 'social', 'gov']
 
+// Largeur de rendu demandée au serveur, par paliers : un redimensionnement de
+// fenêtre ne relance pas un rendu à chaque pixel, et le cache reste utile.
+const WIDTH_STEP = 160
+const MIN_PAGE_PX = 320
+const MAX_PAGE_PX = 1600
+
+function usePageWidth(ref) {
+  const [px, setPx] = useState(0)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const cs = getComputedStyle(el)
+      const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      if (inner <= 0) { setPx(0); return }                 // pas encore disposé : aucun rendu
+      const pageCss = inner / 2                             // deux pages côte à côte
+      const real = pageCss * (window.devicePixelRatio || 1)
+      const stepped = Math.ceil(real / WIDTH_STEP) * WIDTH_STEP
+      setPx(Math.max(MIN_PAGE_PX, Math.min(MAX_PAGE_PX, stepped)))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref])
+  return px
+}
+
 function DesignStage({ design, form }) {
-  const { url, loading, unavailable } = usePreview(design.id, form)
+  // Conteneur stable (hors du bloc remonté à chaque gabarit) : l'observateur
+  // de taille reste attaché au bon élément.
+  const stageRef = useRef(null)
+  const pageWidth = usePageWidth(stageRef)
+  const { url, loading, unavailable } = usePreview(design.id, form, pageWidth)
   const [liveShown, setLiveShown] = useState(false)
   useEffect(() => { setLiveShown(false) }, [url])
   const status = unavailable ? 'Aperçu générique (rendu indisponible sur cette installation)'
@@ -46,11 +78,11 @@ function DesignStage({ design, form }) {
     : loading ? 'Rendu avec vos données…'
     : url ? 'Aperçu avec vos données : couverture et « ESG en un coup d’œil »' : ''
   return (
-    <div className="design-stage" aria-live="polite">
+    <div className="design-stage" aria-live="polite" ref={stageRef}>
       {/* key : chaque gabarit remonte le bloc, ce qui rejoue l'animation d'entrée */}
       <div key={design.id} className="design-stage-inner">
         <div className="design-stage-frame">
-          <img className="design-stage-thumb" src={`/designs/${design.id}.jpg`}
+          <img className="design-stage-thumb" src={`/designs/${design.id}.webp`}
             alt={`Aperçu du gabarit ${design.label.fr}`} />
           {url && (
             <img className={`design-stage-live ${liveShown ? 'shown' : ''}`} src={url}

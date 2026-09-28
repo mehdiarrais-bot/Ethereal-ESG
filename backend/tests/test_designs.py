@@ -227,7 +227,7 @@ def test_dossier_ancien_relu_avec_le_nouveau_gabarit(tmp_path, monkeypatch):
 def test_vignettes_du_selecteur_presentes():
     racine = os.path.dirname(BACKEND)
     for t in AestheticTheme:
-        assert os.path.isfile(os.path.join(racine, "frontend", "public", "designs", f"{t.value}.jpg")), t
+        assert os.path.isfile(os.path.join(racine, "frontend", "public", "designs", f"{t.value}.webp")), t
 
 
 # ── Pagination (retour utilisateur du 2026-09-24) ─────────────────────────

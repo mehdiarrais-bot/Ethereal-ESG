@@ -125,10 +125,10 @@ def main(exe):
                 if not ok:
                     failures.append(f"{label} : statut {status}, {len(out)} octets")
 
-        # Apercu du selecteur de gabarit : pypdfium2 et pdfium.dll embarques
+        # Apercu du selecteur de gabarit (WebP) : pypdfium2 et pdfium.dll embarques
         try:
             status, ctype, out = request("POST", "/api/preview", dict(PAYLOAD, language="fr"))
-            ok = status == 200 and out[:4] == b"\x89PNG"
+            ok = status == 200 and out[:4] == b"RIFF" and out[8:12] == b"WEBP"
         except urllib.error.HTTPError as e:
             ok, status, out = False, e.code, b""
         print(f"  {'OK ' if ok else 'KO '} {'apercu gabarit':<18} {len(out):>9} octets")

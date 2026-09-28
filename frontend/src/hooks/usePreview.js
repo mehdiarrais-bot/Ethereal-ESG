@@ -17,13 +17,18 @@ function remember(key, url) {
   }
 }
 
-/** { url, loading, unavailable } pour le gabarit `design` et le formulaire `form`. */
-export function usePreview(design, form) {
+/**
+ * { url, loading, unavailable } pour le gabarit `design`, le formulaire `form`
+ * et `pageWidth` : largeur d'une page en pixels RÉELS (taille affichée × densité
+ * de l'écran). Sans elle, un écran à 150-200 % étire l'image : elle est floue.
+ */
+export function usePreview(design, form, pageWidth) {
   const [state, setState] = useState({ url: null, loading: false, unavailable: false })
   const abortRef = useRef(null)
 
   const payload = form?.company?.name ? { ...buildPayload(form), aesthetic_theme: design } : null
-  const key = payload ? JSON.stringify(payload) : null
+  const body = payload ? JSON.stringify(payload) : null
+  const key = body && pageWidth ? `${pageWidth}|${body}` : null
 
   useEffect(() => {
     if (!key) { setState({ url: null, loading: false, unavailable: false }); return }
@@ -34,9 +39,9 @@ export function usePreview(design, form) {
       const ctrl = new AbortController()
       abortRef.current = ctrl
       try {
-        const res = await fetch('/api/preview', {
+        const res = await fetch(`/api/preview?width=${pageWidth}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: key, signal: ctrl.signal,
+          body, signal: ctrl.signal,
         })
         if (!res.ok) {                       // 503 : installation sans rendu d'aperçu
           setState({ url: null, loading: false, unavailable: res.status === 503 })
@@ -50,7 +55,7 @@ export function usePreview(design, form) {
       }
     }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [key])
+  }, [key])  // eslint-disable-line react-hooks/exhaustive-deps -- key contient body et pageWidth
 
   useEffect(() => () => abortRef.current?.abort(), [])
   return state

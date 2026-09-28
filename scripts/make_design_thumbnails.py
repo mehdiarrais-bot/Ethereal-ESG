@@ -8,14 +8,13 @@ gabarit (report_designs.py, pdf_pages.py) :
 
     python scripts/make_design_thumbnails.py
 
-Sortie : frontend/public/designs/<gabarit>.jpg (dépendance de dev : PyMuPDF).
+Sortie : frontend/public/designs/<gabarit>.webp. Mêmes pages et même mise en
+page que l'aperçu vivant (report_generator.preview_pdf + preview.render) : la
+vignette et le rendu réel se superposent exactement pendant le fondu.
 """
 import io
 import os
 import sys
-
-import fitz  # PyMuPDF
-from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
@@ -25,36 +24,23 @@ OUT = os.path.join(ROOT, "frontend", "public", "designs")
 from make_examples import DEMO                                   # noqa: E402
 from models import AestheticTheme                                # noqa: E402
 from esg_calculator import calculate_esg_scores                  # noqa: E402
-from content_generator import generate_esg_content               # noqa: E402
-from report_generator import generate_pdf_report                 # noqa: E402
+from report_generator import preview_pdf                         # noqa: E402
+import preview                                                   # noqa: E402
 
-PAGE_W = 300          # largeur d'une page dans la vignette (px)
-GAP = 10
-
-
-def page_image(doc, index: int) -> Image.Image:
-    pix = doc[index].get_pixmap(dpi=90)
-    im = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-    return im.resize((PAGE_W, round(im.height * PAGE_W / im.width)), Image.LANCZOS)
+# Largeur d'une page de vignette, en pixels réels : nette jusqu'à un écran
+# à 200 % pour la taille d'affichage du sélecteur.
+PAGE_WIDTH = 720
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     scores = calculate_esg_scores(DEMO)
-    content = generate_esg_content(DEMO, scores)
     for theme in AestheticTheme:
         req = DEMO.model_copy(update={"aesthetic_theme": theme})
-        doc = fitz.open(stream=generate_pdf_report(req, scores, content, {}), filetype="pdf")
-        # page 1 = couverture ; la page « coup d'œil » suit le sommaire,
-        # l'entreprise en bref et le mot de la direction
-        glance = next(i for i in range(doc.page_count)
-                      if "coup d" in doc[i].get_text() and i > 1)
-        cover, g = page_image(doc, 0), page_image(doc, glance)
-        sheet = Image.new("RGB", (PAGE_W * 2 + GAP, cover.height), "#d9d8d3")
-        sheet.paste(cover, (0, 0))
-        sheet.paste(g, (PAGE_W + GAP, 0))
-        path = os.path.join(OUT, f"{theme.value}.jpg")
-        sheet.save(path, quality=82, optimize=True)
+        image = preview.render(preview_pdf(req, scores), PAGE_WIDTH)
+        path = os.path.join(OUT, f"{theme.value}.webp")
+        with open(path, "wb") as f:
+            f.write(image)
         print(f"  {theme.value:16s} {os.path.getsize(path) // 1024:4d} Ko")
 
 

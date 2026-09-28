@@ -213,18 +213,19 @@ def designs_endpoint():
 
 
 @app.post("/api/preview")
-def preview_endpoint(request: ESGRequest):
+def preview_endpoint(request: ESGRequest, width: int = 900):
     """Couverture + « coup d'œil » du gabarit demandé, avec les données du
-    dossier, en PNG : l'aperçu vivant du sélecteur de gabarit."""
+    dossier, en WebP : l'aperçu vivant du sélecteur de gabarit. `width` : largeur
+    d'une page en pixels réels (bornée dans preview.render)."""
     import preview
     from report_generator import preview_pdf
     scores = calculate_esg_scores(request)
     logo_bytes, _ = build_extras(request)
     try:
-        image = preview.render(preview_pdf(request, scores, logo_bytes))
+        image = preview.render(preview_pdf(request, scores, logo_bytes), width)
     except preview.PreviewUnavailable:
         raise HTTPException(status_code=503, detail="Aperçu indisponible sur cette installation")
-    return Response(content=image, media_type="image/png",
+    return Response(content=image, media_type="image/webp",
                     headers={"Cache-Control": "no-store"})
 
 
