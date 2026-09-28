@@ -14,7 +14,7 @@ const PRES_LABELS = {
 const REPORT_LABELS = {
   full_report: 'Rapport ESG Complet',
   white_paper: 'Livre Blanc RSE',
-  executive_summary_pdf: 'Synthèse Exécutive PDF',
+  annual_followup: 'Suivi annuel ESG',
 }
 
 function ScoreBar({ label, value, color }) {

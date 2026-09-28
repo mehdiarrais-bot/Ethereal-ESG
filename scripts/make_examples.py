@@ -15,6 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 OUT = os.path.join(ROOT, "examples")
 
+from models import ReportType  # noqa: E402
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
                     GovernanceData, TaxonomyData, TargetsData, AestheticTheme)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
@@ -108,6 +109,9 @@ def main():
         "Presentation.pptx": generate_pptx(DEMO, scores, content, charts_dark, logo_bytes=logo),
         "Rapport-ESG.docx": generate_word_report(DEMO, scores, content, logo_bytes=logo),
         "Synthese-1-page.pdf": generate_onepager_pdf(DEMO, scores),
+        "Suivi-annuel.pdf": generate_pdf_report(
+            DEMO.model_copy(update={"report_type": ReportType.ANNUAL_FOLLOWUP}), scores, content,
+            charts_light, logo_bytes=logo),
         "Lettre-de-mission.docx": generate_proposal_docx(DEMO, scores),
         "Questionnaire_collecte_Acme_2025.html": generate_questionnaire_html(
             DEMO.company.name, DEMO.company.reporting_year,

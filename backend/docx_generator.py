@@ -354,7 +354,9 @@ def _cover_meta(r: _Report) -> None:
     type_map = {
         "white_paper": TR["rep_white_paper"],
         "full_report": TR["rep_full_report"],
-        "executive_summary_pdf": TR["rep_executive_summary_pdf"],
+        # Le suivi annuel n'existe qu'en PDF : le Word reste le rapport complet
+        # et le dit (jamais un rapport complet titré « suivi »).
+        "annual_followup": TR["rep_full_report"],
     }
     sub_p = doc.add_paragraph()
     sub_run = sub_p.add_run(type_map.get(request.report_type.value, "Rapport ESG"))

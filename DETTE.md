@@ -1165,6 +1165,10 @@ Relevés pendant l'étape B, non corrigés (règle 2).
   ESG (CSRD/SBTi) » — cite deux référentiels sans objet pour ce champ.
 - `StepCompany.jsx` : `YEARS` s'arrête à 2025 alors que le modèle accepte
   jusqu'à 2035 : l'exercice 2026 n'est pas sélectionnable.
+- `StepOutput.jsx` (l. 149, 151, 152, 174) : `’` écrit dans du texte
+  JSX s'affiche tel quel (« L’analyse du consultant », « Suivi du plan
+  d’action ») ; seul l'échappement dans une chaîne JS (l. 164) est
+  interprété. Relevé le 2026-09-28 en vérifiant le suivi annuel.
 
 ## 26. Titres de pilier qui affirment un dispositif non déclaré — **traité le 2026-09-28**
 
@@ -1185,6 +1189,20 @@ plus ni audit, ni assurance externe, ni comité, ni Scope 3, ni sécurité.
 Les titres entrent désormais dans le banc de cohérence (ils n'y étaient
 pas : le garde-fou ne pouvait pas les voir) ; les anciennes formulations
 sont dans `NON_DECLARE`, et le test échoue sur l'ancien code.
+
+## 27. « Synthèse PDF » : rapport complet sous un autre titre — **traité le 2026-09-28**
+
+- **Constat** : le type de rapport « Synthèse PDF — Résumé exécutif
+  condensé » produisait exactement le rapport complet (23 pages mesurées),
+  seul le titre changeait.
+- **Traitement (arbitré)** : remplacé par le **suivi annuel**
+  (`annual_followup`, PDF de 6 à 9 pages : l'exercice en bref, ce qui a
+  changé, le plan d'action précédent, les cibles, les priorités à venir,
+  note méthodologique), grisé dans l'interface sans exercice antérieur. Les
+  dossiers enregistrés avec l'ancienne valeur sont relus en rapport complet.
+  Le Word d'un suivi reste un rapport complet, titré et nommé comme tel.
+  `_compose` découpé (tronc commun + `_body_full` / `_body_followup`) ;
+  rapport complet et livre blanc vérifiés identiques au texte près.
 
 ---
 

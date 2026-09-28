@@ -43,7 +43,7 @@ commercial du consultant qui l'utilise (« vos données ne quittent pas ma machi
 
 ## Ce que ça produit
 
-Six livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
+Sept livrables, générés en un clic à partir du même jeu de données, bilingues **FR/EN**
 et déclinables en **6 gabarits éditoriaux** (Aurora, Annuel, Institutionnel, Portrait,
 Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 
@@ -53,6 +53,7 @@ Terre, Galerie) — voir [les six rapports d'exemple](examples/gabarits/).
 | **Présentation** (21-23 slides) | Deck de comité de direction, titres porteurs de conclusion ; l'analyse détaillée du rapport en notes de l'orateur |
 | **Rapport Word** | Même texte analytique que le PDF, éditable par le client |
 | **Synthèse une page** | Le document que le dirigeant transfère à son conseil |
+| **Suivi annuel** (6-9 p.) | Ce qui a changé depuis l'exercice précédent (indicateur par indicateur), actions du plan précédent, écart aux cibles déclarées, priorités de l'exercice à venir |
 | **Lettre de mission** | Proposition commerciale bâtie sur le pré-diagnostic réel du prospect |
 | **Questionnaire de collecte** | Fichier HTML autonome envoyé au client : il le remplit hors ligne, renvoie un CSV réimporté sans ressaisie |
 

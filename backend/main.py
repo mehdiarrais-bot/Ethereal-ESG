@@ -513,7 +513,7 @@ def generate_report(request: ESGRequest):
     type_suffix = {
         "white_paper": "Livre_Blanc",
         "full_report": "Rapport_ESG",
-        "executive_summary_pdf": "Synthèse_Exécutive",
+        "annual_followup": "Suivi_Annuel",
     }.get(request.report_type.value, "Rapport")
 
     filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.pdf"
@@ -548,11 +548,8 @@ def generate_word(request: ESGRequest):
     docx_bytes = generate_word_report(request, scores, content,
                                       logo_bytes=logo_bytes, cover_art=art,
                                       charts=adv_charts)
-    type_suffix = {
-        "white_paper": "Livre_Blanc",
-        "full_report": "Rapport_ESG",
-        "executive_summary_pdf": "Synthèse_Exécutive",
-    }.get(request.report_type.value, "Rapport")
+    # Le suivi annuel n'existe qu'en PDF : le Word reste le rapport complet.
+    type_suffix = {"white_paper": "Livre_Blanc"}.get(request.report_type.value, "Rapport_ESG")
     filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.docx"
     return StreamingResponse(
         io.BytesIO(docx_bytes),

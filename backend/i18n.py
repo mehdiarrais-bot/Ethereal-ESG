@@ -55,7 +55,7 @@ LABELS = {
         # ── Report types ────────────────────────────────────────
         "rep_white_paper": "Livre Blanc ESG / RSE",
         "rep_full_report": "Rapport ESG Complet",
-        "rep_executive_summary_pdf": "Synthèse Exécutive ESG",
+        "rep_annual_followup": "Suivi annuel ESG",
         "rep_default": "Rapport ESG",
         # ── PPTX / PDF sections ─────────────────────────────────
         "dashboard": "Tableau de Bord ESG",
@@ -120,6 +120,14 @@ LABELS = {
         "quote_kicker": "LE MOT DE LA DIRECTION",
         "consultant_note": "L'ANALYSE DU CONSULTANT",
         "done_head": "Actions engagées depuis le précédent plan",
+        "toc_fu": "Suivi de l'exercice",
+        "fu_s1": "L'exercice en bref", "fu_s2": "Ce qui a changé",
+        "fu_s3": "Le plan d'action précédent", "fu_s4": "Où en sont les cibles",
+        "fu_s5": "Les priorités de l'exercice à venir",
+        "fu_no_prev": "Les indicateurs de l'exercice précédent ne sont pas conservés dans le dossier : "
+                      "l'évolution ne peut être lue qu'à travers les scores ci-dessus. Elle le sera "
+                      "indicateur par indicateur dès le prochain exercice.",
+        "fu_no_done": "Aucune action du plan précédent n'est déclarée engagée à ce jour.",
         "trend_kicker": "TRAJECTOIRE", "trend_title": "Une trajectoire ESG mesurée exercice après exercice",
         "cap_trend": "Évolution pluriannuelle du score ESG (global et par pilier)",
         "cap_trend_old": " — exercices {years} : scores calculés selon la grille alors en vigueur",
@@ -231,7 +239,7 @@ LABELS = {
         # ── Report types ────────────────────────────────────────
         "rep_white_paper": "ESG / CSR White Paper",
         "rep_full_report": "Full ESG Report",
-        "rep_executive_summary_pdf": "ESG Executive Summary",
+        "rep_annual_followup": "Annual ESG follow-up",
         "rep_default": "ESG Report",
         # ── PPTX / PDF sections ─────────────────────────────────
         "dashboard": "ESG Dashboard",
@@ -292,6 +300,14 @@ LABELS = {
         "quote_kicker": "A WORD FROM MANAGEMENT",
         "consultant_note": "CONSULTANT'S VIEW",
         "done_head": "Actions reported since the previous plan",
+        "toc_fu": "Year in review",
+        "fu_s1": "The year at a glance", "fu_s2": "What has changed",
+        "fu_s3": "The previous action plan", "fu_s4": "Where the targets stand",
+        "fu_s5": "Priorities for the coming year",
+        "fu_no_prev": "The previous year's indicators are not kept in the client file: the change can "
+                      "only be read through the scores above. It will be read indicator by indicator "
+                      "from next year.",
+        "fu_no_done": "No action from the previous plan is reported as under way to date.",
         "trend_kicker": "TRAJECTORY", "trend_title": "An ESG trajectory measured year after year",
         "cap_trend": "Multi-year evolution of the ESG score (overall and per pillar)",
         "cap_trend_old": " — years {years}: scores computed under the grid then in force",

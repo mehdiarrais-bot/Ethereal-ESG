@@ -49,7 +49,10 @@ class AestheticTheme(str, Enum):
 class ReportType(str, Enum):
     WHITE_PAPER = "white_paper"
     FULL_REPORT = "full_report"
-    EXECUTIVE_SUMMARY_PDF = "executive_summary_pdf"
+    # « executive_summary_pdf » (« Synthèse PDF ») produisait le rapport complet
+    # sous un autre titre : remplacé le 2026-09-28 par le suivi annuel ; les
+    # dossiers qui le portent sont relus en rapport complet (map_legacy_report).
+    ANNUAL_FOLLOWUP = "annual_followup"
 
 
 # ── Sub-models ────────────────────────────────────────────────────────────────
@@ -332,6 +335,11 @@ class ESGRequest(BaseModel):
         if b is not None and b > self.company.reporting_year:
             raise ValueError("Cible climat : l'année de référence ne peut pas suivre l'exercice")
         return self
+
+    @field_validator('report_type', mode='before')
+    @classmethod
+    def map_legacy_report(cls, v):
+        return "full_report" if v == "executive_summary_pdf" else v
 
     @field_validator('aesthetic_theme', mode='before')
     @classmethod

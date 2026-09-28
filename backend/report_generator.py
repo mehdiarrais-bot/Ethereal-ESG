@@ -428,6 +428,99 @@ class _Story(list):
             self.mode = "content"
 
 
+def _body_full(story, request, scores, content, chart_images, k, TR, lang, anchors, g, opts):
+    """Rapport complet : les trois actes (situation, diagnostic, plan d'action)."""
+    story.content()
+    S = build_styles(k)
+    _company(story, request, k, S, TR, g, chart_images)
+    story.full(PG.glance_page, g)
+    story.content()
+    S = build_styles(k)
+
+    from content_generator import (pillar_insights, risks_opportunities, enriched_recommendations,
+                                   benchmark_verdict, maturity_text, compliance_assessment,
+                                   roadmap_12m, priority_reading)
+    pi = pillar_insights(request, scores)
+    notes = getattr(request, "consultant_notes", None) or {}
+    ro = risks_opportunities(request, scores)
+    gaps = compliance_assessment(request, scores)
+    recs = enriched_recommendations(request, scores) if request.include_recommendations else []
+    rm = roadmap_12m(request, scores)
+
+    _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs[:3])
+    _overview(story, request, scores, chart_images, k, S)
+    _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+                 recs)
+    if opts["inline_focus"]:
+        _focus_inline(story, k, S, g)
+    else:
+        story.full(PG.focus_page, g)
+        story.content()
+        S = build_styles(k)
+    _social(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+            recs)
+    _governance(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
+                recs)
+    _analyses(story, content, chart_images, k, S, TR, anchors)
+
+    story.full(PG.divider_page, g, "01", TR["div1_title"], TR["div1_sub"],
+               NR.act1_intro(request, scores, gaps, ro["risks"]),
+               NR.act1_figures(request, scores, gaps, ro["risks"]))
+    story.content()
+    S = build_styles(k)
+    _strategic(story, request, scores, chart_images, k, S, TR, anchors,
+               benchmark_verdict(request, scores), maturity_text(request, scores),
+               ro, gaps, g["refs"])
+
+    story.full(PG.divider_page, g, "02", TR["div2_title"], TR["div2_sub"],
+               NR.act2_intro(request, recs, rm), NR.act2_figures(request, recs, rm))
+    story.content()
+    S = build_styles(k)
+    if request.include_recommendations:
+        _recommendations(story, request, scores, chart_images, k, S, TR, anchors,
+                         recs, priority_reading)
+    _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images)
+    if request.report_type.value == "white_paper":
+        _white_paper(story, request, k, S, TR, anchors)
+    _closing(story, request, scores, content, k, S, TR, anchors, chart_images)
+
+
+def _body_followup(story, request, scores, content, chart_images, k, TR, lang, anchors, g, opts):
+    """Suivi annuel : ce qui a changé depuis l'exercice précédent, le plan
+    d'action précédent, les cibles, les priorités à venir. 6 à 8 pages."""
+    from content_generator import enriched_recommendations
+    story.full(PG.glance_page, g)
+    story.content()
+    S = build_styles(k)
+    notes = getattr(request, "consultant_notes", None) or {}
+    section_head(story, TR["fu_s1"], "accent", k, S, anchors, "f1")
+    story.append(Paragraph(esc(content.get("executive_summary", "")), S["lead"]))
+    if notes.get("global"):
+        consultant_callout(story, notes["global"], k, TR)
+    section_head(story, TR["fu_s2"], "accent", k, S, anchors, "f2", keep_cm=8)
+    if request.previous_data is None:
+        story.append(Paragraph(esc(TR["fu_no_prev"]), S["body"]))
+    _evolution(story, request, k, S)
+    if "trend" in chart_images:
+        _chart(story, chart_images, "trend", 16.5, 8.4, trend_caption(request, TR), S)
+    section_head(story, TR["fu_s3"], "accent", k, S, anchors, "f3", keep_cm=6)
+    if not _done_actions(story, request, k, TR):
+        story.append(Paragraph(esc(TR["fu_no_done"]), S["body"]))
+    section_head(story, TR["fu_s4"], "accent", k, S, anchors, "f4", keep_cm=6)
+    story.append(Paragraph(esc(content.get("targets", "")), S["body"]))
+    section_head(story, TR["fu_s5"], "accent", k, S, anchors, "f5", keep_cm=10)
+    recs = enriched_recommendations(request, scores)[:3] if request.include_recommendations else []
+    if recs:
+        _recs_table(story, request, recs, k, S, TR)
+    _closing_synthesis(story, request, scores, k, S, chart_images)
+    _methodology(story, content, k, TR)
+
+
+def _toc_parts_followup(TR):
+    return [("01", TR["toc_fu"], [("f1", TR["fu_s1"]), ("f2", TR["fu_s2"]), ("f3", TR["fu_s3"]),
+                                  ("f4", TR["fu_s4"]), ("f5", TR["fu_s5"])])]
+
+
 def _toc_parts(TR):
     """Entrées du sommaire, par acte : (numéro, acte, [(clé d'ancre, libellé)])."""
     return [
@@ -535,7 +628,7 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     TR = L(request.language)
     lang = request.language
     type_label = {"white_paper": TR["rep_white_paper"], "full_report": TR["rep_full_report"],
-                  "executive_summary_pdf": TR["rep_executive_summary_pdf"]
+                  "annual_followup": TR["rep_annual_followup"]
                   }.get(request.report_type.value, TR["rep_default"])
     g = page_context(request, scores, TR, type_label)
     buf = io.BytesIO()
@@ -565,60 +658,10 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
 
     story = _Story(k, opts["densities"], state)
     story.full(PG.cover_page, g)
-    story.full(PG.toc_page, g, _toc_parts(TR), pages_in)
-    story.content()
-    S = build_styles(k)
-    _company(story, request, k, S, TR, g, chart_images)
-    story.full(PG.glance_page, g)
-    story.content()
-    S = build_styles(k)
-
-    from content_generator import (pillar_insights, risks_opportunities, enriched_recommendations,
-                                   benchmark_verdict, maturity_text, compliance_assessment,
-                                   roadmap_12m, priority_reading)
-    pi = pillar_insights(request, scores)
-    notes = getattr(request, "consultant_notes", None) or {}
-    ro = risks_opportunities(request, scores)
-    gaps = compliance_assessment(request, scores)
-    recs = enriched_recommendations(request, scores) if request.include_recommendations else []
-    rm = roadmap_12m(request, scores)
-
-    _executive(story, request, scores, content, k, S, TR, anchors, notes, ro, recs[:3])
-    _overview(story, request, scores, chart_images, k, S)
-    _environment(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
-                 recs)
-    if opts["inline_focus"]:
-        _focus_inline(story, k, S, g)
-    else:
-        story.full(PG.focus_page, g)
-        story.content()
-        S = build_styles(k)
-    _social(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
-            recs)
-    _governance(story, request, scores, content, chart_images, k, S, TR, lang, anchors, notes, pi,
-                recs)
-    _analyses(story, content, chart_images, k, S, TR, anchors)
-
-    story.full(PG.divider_page, g, "01", TR["div1_title"], TR["div1_sub"],
-               NR.act1_intro(request, scores, gaps, ro["risks"]),
-               NR.act1_figures(request, scores, gaps, ro["risks"]))
-    story.content()
-    S = build_styles(k)
-    _strategic(story, request, scores, chart_images, k, S, TR, anchors,
-               benchmark_verdict(request, scores), maturity_text(request, scores),
-               ro, gaps, g["refs"])
-
-    story.full(PG.divider_page, g, "02", TR["div2_title"], TR["div2_sub"],
-               NR.act2_intro(request, recs, rm), NR.act2_figures(request, recs, rm))
-    story.content()
-    S = build_styles(k)
-    if request.include_recommendations:
-        _recommendations(story, request, scores, chart_images, k, S, TR, anchors,
-                         recs, priority_reading)
-    _roadmap(story, request, scores, k, S, TR, anchors, rm, chart_images)
-    if request.report_type.value == "white_paper":
-        _white_paper(story, request, k, S, TR, anchors)
-    _closing(story, request, scores, content, k, S, TR, anchors, chart_images)
+    followup = request.report_type.value == "annual_followup"
+    story.full(PG.toc_page, g, _toc_parts_followup(TR) if followup else _toc_parts(TR), pages_in)
+    body = _body_followup if followup else _body_full
+    body(story, request, scores, content, chart_images, k, TR, lang, anchors, g, opts)
     story.full(PG.back_cover, g)
 
     doc.build(story)
@@ -1152,20 +1195,32 @@ def _positioning(story, request, scores, bv, k, S, TR):
 def _recommendations(story, request, scores, chart_images, k, S, TR, anchors, recs, priority_reading):
     section_head(story, TR["pdf_s7"], "accent", k, S, anchors, "s7", keep_cm=10)
     story.append(Paragraph(esc(NR.recs_intro(request, recs)), S["lead"]))
-    done = getattr(request, "completed_actions", None) or []
-    if done:
-        flow = [Paragraph(esc(TR["done_head"]).upper(), k.ps("dh", 8, font="body_b",
-                                                             color=colors.HexColor(_STATUS_HEX["good"]),
-                                                             charSpace=0.6, spaceAfter=5))]
-        for item in done:
-            yr = f" ({item['year']})" if item.get("year") else ""
-            flow.append(Paragraph(f'<font color="{_STATUS_HEX["good"]}">—</font>&nbsp; '
-                                  f'{esc(item["title"])}{esc(yr)}', k.ps("di", 9, color="ink", leading=12)))
-        story.append(_box(flow, k, k.c["env_soft"], left=colors.HexColor(_STATUS_HEX["good"])))
-        story.append(_sp(k, 8))
+    _done_actions(story, request, k, TR)
     if "priority" in chart_images:
         _chart(story, chart_images, "priority", 16.5, 9.5, TR["cap_prio"], S)
         insight_callout(story, priority_reading(request, scores), "accent", k)
+    _recs_table(story, request, recs, k, S, TR)
+
+
+def _done_actions(story, request, k, TR) -> bool:
+    """Actions du plan précédent déclarées engagées ; False s'il n'y en a pas."""
+    done = getattr(request, "completed_actions", None) or []
+    if not done:
+        return False
+    flow = [Paragraph(esc(TR["done_head"]).upper(), k.ps("dh", 8, font="body_b",
+                                                         color=colors.HexColor(_STATUS_HEX["good"]),
+                                                         charSpace=0.6, spaceAfter=5))]
+    for item in done:
+        yr = f" ({item['year']})" if item.get("year") else ""
+        flow.append(Paragraph(f'<font color="{_STATUS_HEX["good"]}">—</font>&nbsp; '
+                              f'{esc(item["title"])}{esc(yr)}', k.ps("di", 9, color="ink", leading=12)))
+    story.append(_box(flow, k, k.c["env_soft"], left=colors.HexColor(_STATUS_HEX["good"])))
+    story.append(_sp(k, 8))
+    return True
+
+
+def _recs_table(story, request, recs, k, S, TR):
+    """Tableau des actions : titre, détail, objectif, responsable, échéance."""
     pcol = {"env": k.c["env"], "social": k.c["social"], "gov": k.c["gov"]}
     due = "Due" if request.language == "en" else "Échéance"
     rows = [["", Paragraph("ACTION", S["th"]),
@@ -1237,6 +1292,16 @@ def _white_paper(story, request, k, S, TR, anchors):
     story.append(Paragraph(esc(TG.white_paper_sentence(request) or TR["wp_targets"]), S["body"]))
 
 
+def _methodology(story, content, k, TR):
+    if content.get("methodology"):
+        story.append(_sp(k, 10))
+        story.append(Paragraph(TR["pdf_methodo"], build_styles(k)["h2"]))
+        story.append(_box(Paragraph(esc(content["methodology"]),
+                                    k.ps("mn", 8.6, color="ink", leading=13, allowWidows=0,
+                                         allowOrphans=0)),
+                          k, k.c["panel"], left=k.c["accent"]))
+
+
 def _closing(story, request, scores, content, k, S, TR, anchors, chart_images):
     from glossary import glossary_entries
     story.append(_sp(k, 14))
@@ -1247,13 +1312,7 @@ def _closing(story, request, scores, content, k, S, TR, anchors, chart_images):
                                            f"{score_label(scores.total_esg_score, 1)}/100 (note {scores.rating or NON_NOTE}).")),
                            S["body"]))
     _closing_synthesis(story, request, scores, k, S, chart_images)
-    if content.get("methodology"):
-        story.append(_sp(k, 10))
-        story.append(Paragraph(TR["pdf_methodo"], S["h2"]))
-        story.append(_box(Paragraph(esc(content["methodology"]),
-                                    k.ps("mn", 8.6, color="ink", leading=13, allowWidows=0,
-                                         allowOrphans=0)),
-                          k, k.c["panel"], left=k.c["accent"]))
+    _methodology(story, content, k, TR)
     if k.uses_bank():
         story.append(Paragraph(esc(TR["ed_photo_note"]), k.ps("pn", 7.6, font="body_i", color="muted",
                                                               leading=10.5, spaceBefore=6)))

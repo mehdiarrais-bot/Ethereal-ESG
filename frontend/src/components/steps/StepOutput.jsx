@@ -14,7 +14,8 @@ const PRES_TYPES = [
 const REPORT_TYPES = [
   { id: 'full_report', name: 'Rapport ESG Complet', desc: 'Analyse detaillee tous piliers' },
   { id: 'white_paper', name: 'Livre Blanc RSE', desc: 'Document de reference strategique' },
-  { id: 'executive_summary_pdf', name: 'Synthese PDF', desc: 'Resume executif condense' },
+  { id: 'annual_followup', name: 'Suivi annuel', desc: "Évolution, actions réalisées, cibles — PDF de 6 à 9 pages",
+    needsHistory: true },
 ]
 
 // Palette déterministe depuis le nom du client (même logique que le backend :
@@ -36,11 +37,12 @@ function autoBrand(name) {
   return { primary: hsl(hue, 0.42, 0.20), accent: hsl(accentHue, 0.72, 0.55) }
 }
 
-function OptionCard({ item, selected, onClick }) {
+function OptionCard({ item, selected, onClick, disabled = false, disabledNote = '' }) {
   return (
-    <button className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick} type="button">
+    <button className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick} type="button"
+      disabled={disabled} title={disabled ? disabledNote : undefined}>
       <div className="option-name">{item.name}</div>
-      <div className="option-desc">{item.desc}</div>
+      <div className="option-desc">{disabled ? disabledNote : item.desc}</div>
       {selected && <div className="option-check">✓</div>}
     </button>
   )
@@ -65,7 +67,7 @@ function ProgressBar({ progress, loading }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores, clientId, clientActions, onToggleAction }) {
+export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores, clientId, clientActions, onToggleAction, hasPrevious = false }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
   const [showPreview, setShowPreview] = useState(false)
   const busy = loading
@@ -100,7 +102,9 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           <div className="options-grid">
             {REPORT_TYPES.map(r => (
               <OptionCard key={r.id} item={r} selected={form.report_type === r.id}
-                onClick={() => set('report_type')(r.id)} />
+                onClick={() => set('report_type')(r.id)}
+                disabled={r.needsHistory && !hasPrevious}
+                disabledNote="Disponible dès qu'un exercice antérieur est enregistré dans le dossier" />
             ))}
           </div>
         </div>
@@ -378,6 +382,8 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           color: var(--text); min-height: 74px;
         }
         .option-card:hover { border-color: var(--brand); background: var(--bg-subtle);  }
+        .option-card:disabled { opacity: 0.5; cursor: not-allowed; }
+        .option-card:disabled:hover { border-color: inherit; background: inherit; }
         .option-card.selected {
           border-color: var(--brand); background: var(--brand-soft);
           box-shadow: none;

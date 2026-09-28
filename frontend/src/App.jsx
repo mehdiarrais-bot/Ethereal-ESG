@@ -14,6 +14,7 @@ import PortfolioView from './components/PortfolioView'
 import { useESGScore } from './hooks/useESGScore'
 import { DEMO_DATA } from './demoData'
 import { sessionAfter, mayDiscard } from './lib/formSession.mjs'
+import { hasPreviousExercise } from './lib/followup.mjs'
 import './App.css'
 
 const STEPS = [
@@ -326,6 +327,7 @@ export default function App() {
       downloadLink={downloadLink}
       onClearLink={() => setDownloadLink(null)}
       scores={scores} clientId={clientId} clientActions={clientActions} onToggleAction={toggleAction}
+      hasPrevious={hasPreviousExercise(clientHistory, form.company?.reporting_year)}
     />,
   ]
 
