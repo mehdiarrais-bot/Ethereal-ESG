@@ -306,7 +306,25 @@ class ESGRequest(BaseModel):
         p = self.previous_data
         if p is not None and p.year >= self.company.reporting_year:
             raise ValueError("Exercice précédent : son année doit précéder l'exercice du rapport")
+        if p is not None:
+            self._recalculate_previous(p)
         return self
+
+    def _recalculate_previous(self, p: "ExerciseData") -> None:
+        """Score de l'exercice précédent refait avec la grille ACTUELLE : un
+        écart ne mêle plus deux barèmes (le barème a changé plusieurs fois,
+        DETTE §§ 11, 16, 24). Remplace l'entrée stockée de cet exercice."""
+        from esg_calculator import calculate_esg_scores
+        prev = ESGRequest(company=self.company.model_copy(update={"reporting_year": p.year,
+                                                                  "revenue_eur": p.revenue_eur}),
+                          environmental=p.environmental, social=p.social, governance=p.governance,
+                          taxonomy=p.taxonomy, targets=p.targets, language=self.language)
+        s = calculate_esg_scores(prev)
+        entry = {"year": p.year, "env": s.environmental_score, "social": s.social_score,
+                 "gov": s.governance_score, "total": s.total_esg_score, "recalculated": True}
+        self.previous_scores = entry
+        others = [h for h in (self.score_history or []) if h["year"] != p.year]
+        self.score_history = sorted(others + [entry], key=lambda h: h["year"])
 
     @model_validator(mode='after')
     def check_target_base_year(self):
@@ -426,7 +444,10 @@ def _exercise_scores(h) -> dict | None:
         f = float(v)
         return f if math.isfinite(f) and 0 <= f <= 100 else None
     try:
-        return {"year": int(h["year"]), **{k: score(h.get(k)) for k in ("env", "social", "gov", "total")}}
+        # recalculated : score refait selon la grille actuelle (lot B) ; à défaut,
+        # score tel qu'il a été calculé à l'époque, selon la grille alors en vigueur.
+        return {"year": int(h["year"]), **{k: score(h.get(k)) for k in ("env", "social", "gov", "total")},
+                "recalculated": h.get("recalculated") is True}
     except (KeyError, TypeError, ValueError):
         return None  # année absente ou illisible : entrée ignorée
 

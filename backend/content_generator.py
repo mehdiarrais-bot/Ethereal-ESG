@@ -596,6 +596,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 move = f"{'gains' if dt > 0 else 'loses'} {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
             content["executive_summary"] += (
                 f" Versus fiscal year {prev['year']}, the overall score {move}{detail}.")
+            if not prev.get("recalculated"):
+                content["executive_summary"] += (
+                    f" The {prev['year']} score is shown as computed at the time, under the grid "
+                    f"then in force.")
         else:
             if abs(dt) < 0.5:
                 move = "est stable"
@@ -603,6 +607,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 move = f"{'progresse' if dt > 0 else 'recule'} de {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
             content["executive_summary"] += (
                 f" Par rapport à l'exercice {prev['year']}, le score global {move}{detail}.")
+            if not prev.get("recalculated"):
+                content["executive_summary"] += (
+                    f" Le score {prev['year']} est repris tel qu'il a été calculé à l'époque, selon "
+                    f"la grille alors en vigueur.")
 
     # ── 4quater. Suivi du plan d'action (actions déclarées engagées) ─────
     # Formulation volontairement en retrait : l'outil reporte une case cochée
@@ -685,7 +693,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"than given a score, and the number of rated indicators is shown next to each score; "
             f"with fewer than two rated pillars there is neither an overall score "
             f"nor a letter rating. A year-on-year change compares overall scores that may rest on "
-            f"different pillars. The letter rating (internal AAA-CCC "
+            f"different pillars; when a past year's indicators are kept in the client file, its "
+            f"score is recomputed under the current grid, otherwise it is shown as computed at the "
+            f"time, under the grid then in force. The letter rating (internal AAA-CCC "
             f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
             f"contains no comparison against an external sector reference: the positioning shown is "
             f"internal, comparing the three pillars with one another. No external data transfer "
@@ -721,7 +731,9 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"grille (seuil interne à l'outil) — en deçà, il n'est pas noté plutôt que de recevoir un "
             f"score, et le nombre d'indicateurs notés figure à côté de chaque score ; sous deux piliers notés il n'y a ni score global ni notation "
             f"lettrée. Une évolution d'un exercice à l'autre compare des scores globaux qui peuvent "
-            f"reposer sur des piliers différents. La notation lettrée (échelle interne AAA-CCC) est indicative — "
+            f"reposer sur des piliers différents ; quand les indicateurs d'un exercice passé sont "
+            f"conservés dans le dossier, son score est recalculé selon la grille actuelle, sinon il "
+            f"est repris tel qu'il a été calculé à l'époque, selon la grille alors en vigueur. La notation lettrée (échelle interne AAA-CCC) est indicative — "
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
             f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
             f"piliers entre eux. Aucun transfert de données externe n'a lieu — l'ensemble du "

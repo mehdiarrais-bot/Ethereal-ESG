@@ -339,6 +339,14 @@ def _facts(request, TR, lang):
     return out[:4]
 
 
+def trend_caption(request, TR) -> str:
+    """Légende de la trajectoire : signale les exercices non recalculés."""
+    year = request.company.reporting_year
+    old = [str(h["year"]) for h in (request.score_history or [])
+           if h["year"] < year and not h.get("recalculated")]
+    return TR["cap_trend"] + (TR["cap_trend_old"].format(years=", ".join(old)) if old else "")
+
+
 def page_context(request, scores, TR, type_label):
     from content_generator import score_verdict, hero_stat, pillar_headline, _band
     lang = request.language
@@ -1041,7 +1049,7 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
 
     if "trend" in chart_images:
         story.append(Paragraph(TR["trend_title"], S["h2"]))
-        _chart(story, chart_images, "trend", 16.5, 8.4, TR["cap_trend"], S)
+        _chart(story, chart_images, "trend", 16.5, 8.4, trend_caption(request, TR), S)
 
     from content_generator import maturite_rang
     if mt["stage"] is None:  # sans score global : maturité non évaluée

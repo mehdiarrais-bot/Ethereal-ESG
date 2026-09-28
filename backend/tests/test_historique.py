@@ -30,12 +30,14 @@ def test_un_pilier_non_note_ne_fait_plus_disparaitre_l_exercice():
               previous_scores={"year": 2024, "env": 58, "social": None, "gov": 60, "total": 58.9})
     assert [h["year"] for h in r.score_history or []] == [2023, 2024]
     assert r.score_history and r.score_history[0]["social"] is None
-    assert r.previous_scores == {"year": 2024, "env": 58.0, "social": None, "gov": 60.0, "total": 58.9}
+    assert r.previous_scores == {"year": 2024, "env": 58.0, "social": None, "gov": 60.0, "total": 58.9,
+                                 "recalculated": False}
 
 
 def test_score_hors_bornes_ou_annee_illisible():
     r = _avec(score_history=[{"year": "x", "env": 1}, {"year": 2024, "env": 250, "total": float("nan")}])
-    assert r.score_history == [{"year": 2024, "env": None, "social": None, "gov": None, "total": None}]
+    assert r.score_history == [{"year": 2024, "env": None, "social": None, "gov": None, "total": None,
+                                "recalculated": False}]
 
 
 def test_donnees_de_l_exercice_precedent():
@@ -67,3 +69,37 @@ def test_page_coup_d_oeil_ecart_pilier_par_pilier():
     ctx = page_context(r, calculate_esg_scores(r), L("fr"), "Rapport")
     assert ctx["delta"]["env"] is not None and ctx["delta"]["social"] is None
     assert ctx["prev_vals"] is None                   # radar N-1 : il faut les trois piliers
+
+
+# ── Lot B : scores comparables ────────────────────────────────────────────
+
+def test_score_precedent_recalcule_avec_la_grille_actuelle():
+    """Le score stocké (ancienne grille) est remplacé par le recalcul des
+    indicateurs conservés : ici 75,4 (grille d'avant le § 16) → non noté."""
+    silencieuse = {"environmental": {"co2_emissions_tonnes": 8200}, "social": {"total_employees": 320},
+                   "governance": {"sustainability_committee": True}}
+    r = _avec(previous_scores={"year": 2024, "env": 60, "social": None, "gov": 100, "total": 75.4},
+              score_history=[{"year": 2023, "env": 50, "social": 50, "gov": 50, "total": 50},
+                             {"year": 2024, "env": 60, "social": None, "gov": 100, "total": 75.4}],
+              previous_data={"year": 2024, "revenue_eur": 48e6, **silencieuse})
+    assert r.previous_scores is not None
+    assert r.previous_scores["total"] is None and r.previous_scores["recalculated"] is True
+    hist = {h["year"]: h for h in r.score_history or []}
+    assert hist[2024]["recalculated"] and not hist[2023]["recalculated"]
+
+
+@pytest.mark.parametrize("lang,mention", [("fr", "selon la grille alors en vigueur"),
+                                          ("en", "under the grid then in force")])
+def test_score_non_recalcule_signale(lang, mention):
+    from esg_calculator import calculate_esg_scores
+    from content_generator import generate_esg_content
+    from report_generator import trend_caption
+    from i18n import L
+    r = _avec(language=lang, previous_scores={"year": 2024, "env": 60, "social": 55, "gov": 70, "total": 61},
+              score_history=[{"year": 2024, "env": 60, "social": 55, "gov": 70, "total": 61}])
+    assert mention in generate_esg_content(r, calculate_esg_scores(r))["executive_summary"]
+    assert "2024" in trend_caption(r, L(lang)) and mention in trend_caption(r, L(lang))
+    avec_donnees = _avec(language=lang, previous_data={"year": 2024, "revenue_eur": 48e6,
+                                                       "environmental": {"renewable_energy_percent": 30}})
+    s = calculate_esg_scores(avec_donnees)
+    assert mention not in generate_esg_content(avec_donnees, s)["executive_summary"]
