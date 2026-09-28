@@ -43,7 +43,7 @@ def test_secteur_non_reconnu_garde_la_photo_du_gabarit():
 
 def test_l_environnement_reste_un_paysage():
     r = _req("Logistique & Transport")
-    assert Kit(r).photo("environment") == bank_photo(design(r.aesthetic_theme)["photos"]["environment"])
+    assert Kit(r).photo("focus") == bank_photo(design(r.aesthetic_theme)["photos"]["environment"])
 
 
 def test_la_photo_du_client_prime():

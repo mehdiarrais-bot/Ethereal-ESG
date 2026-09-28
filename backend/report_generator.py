@@ -699,7 +699,7 @@ def _focus_inline(story, k, S, g):
     from pdf_kit import crop_jpeg
     hs, TR = g["hero"], g["TR"]
     w_img, h = CW * 0.42, CW * 0.52
-    photo = k.photo("environment")
+    photo = k.photo("focus")
     img = Image(io.BytesIO(crop_jpeg(photo, round(w_img / h, 3))), width=w_img, height=h) if photo else ""
     text = [Paragraph(esc(TR["ed_focus"]).upper(), k.ps("fk", 7.8, color="muted", charSpace=0.9,
                                                          spaceAfter=8)),
@@ -749,7 +749,7 @@ def _company(story, request, k, S, TR, g, chart_images):
         story.append(Paragraph(esc(para), S["body"]))
     for key in IL.spot("company")[1:]:          # complétude, après sa lecture
         _illustration(story, request, chart_images, key, S)
-    photo = k.photo("company") if k.has_client_photo("company") else None
+    photo = k.photo("company_section")      # photo de l'entreprise seulement
     if photo:
         from pdf_kit import crop_jpeg
         story.append(_sp(k, 8))

@@ -18,11 +18,11 @@ from pdf_kit import (Px, Kit, draw_radar, draw_header, draw_footer, paint_paper,
 _PILLAR_ICON = {"env": "leaf", "social": "people", "gov": "scale"}
 
 
-def photo_or_tile(p: Px, k: Kit, slot, pillar, label, x, y, w, h, radius=0):
-    """Photo fournie par l'entreprise pour l'emplacement ; sinon (ou banque
-    pour l'environnement) une tuile sobre : fond du pilier et pictogramme.
-    Jamais une photo d'illustration sans rapport avec le pilier."""
-    raw = k.photo(slot)
+def photo_or_tile(p: Px, k: Kit, place, pillar, label, x, y, w, h, radius=0):
+    """Photo attribuée à l'emplacement (entreprise, sinon banque filtrée par
+    thème et secteur, photo_bank) ; sinon une tuile sobre : fond du pilier et
+    pictogramme. Jamais une photo répétée ni sans rapport avec le pilier."""
+    raw = k.photo(place)
     if raw:
         p.image(raw, x, y, w, h, radius=radius)
         return
@@ -112,7 +112,7 @@ def glance_aurora(p: Px, k: Kit, g):
     p.text(56, 122, "01", "display", 34, color="accent")
     p.text(56, 170, TR["ed_glance"], "display", 42, color="ink", max_w=680)
     p.para(56, 190, 560, esc(g["verdict"]), k.ps("v", 14.5 * 0.75, color="muted", leading=22 * 0.75))
-    p.image(k.photo("cover"), 56, 272, 682, 200)
+    p.image(k.photo("glance"), 56, 272, 682, 200)
     # Quatre colonnes à filets
     y0, h = 500, 128
     p.line(56, y0, 738, y0, color="ink", lw=0.8)
@@ -156,7 +156,7 @@ def glance_annuel(p: Px, k: Kit, g):
     p.rect(373, 192, 48, 2, "accent")
     p.para(157, 212, 480, esc(g["verdict"]),
            k.ps("v", 16 * 0.75, font="display", color="muted", leading=24 * 0.75, alignment=1))
-    p.image(k.photo("cover"), 76, 296, 642, 180)
+    p.image(k.photo("glance"), 76, 296, 642, 180)
     p.rect(76, 296, 642, 180, None, stroke="rule", lw=0.8)
     # Tableau à doubles filets
     y0, h = 506, 132
@@ -190,7 +190,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
     p.text(56, 126, "01 · " + TR["toc_part1"], "body_b", 12.5, color="accent", track=0.06, upper=True)
     p.text(56, 180, TR["ed_glance"], "display", 56, color="ink", max_w=680)
     p.para(56, 198, 540, esc(g["verdict"]), k.ps("v", 15 * 0.75, color="muted", leading=23 * 0.75))
-    p.image(k.photo("cover"), 56, 276, 682, 170, radius=16)
+    p.image(k.photo("glance"), 56, 276, 682, 170, radius=16)
     cw, gap, y0, h = (682 - 36) / 4, 12, 460, 132
     for i, (key, lab, val) in enumerate(_pillars(g)):
         x = 56 + i * (cw + gap)
@@ -227,7 +227,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
 def glance_portrait(p: Px, k: Kit, g):
     TR = g["TR"]
     paint_paper(p, k)
-    p.image(k.photo("company") or k.photo("cover"), 0, 0, 794, 440)
+    p.image(k.photo("glance"), 0, 0, 794, 440)
     p.gradient_v(0, 0, 794, 110, "primary", 0.45, 0.0)
     p.text(56, 44, g["name"], "body", 10, color="on_primary", track=0.12, upper=True, max_w=400)
     p.text(738, 44, TR["ed_report_year"].format(y=g["year"]), "body", 10, color="on_primary",
@@ -271,8 +271,8 @@ def glance_terre(p: Px, k: Kit, g):
     p.text(738 - w - 6, 168, score_label(g['t']), "display", 62, color="ink", align="right")
     p.text(738, 190, _global_line(g), "body", 12.5, color="muted", align="right")
     cw, y0 = (682 - 14) / 2, 214
-    tiles = (("env", "environment", TR["ed_env"], g["e"], g["env_m"]),
-             ("social", "social", TR["ed_soc"], g["s"], g["soc_m"]))
+    tiles = (("env", "glance_environment", TR["ed_env"], g["e"], g["env_m"]),
+             ("social", "glance_social", TR["ed_soc"], g["s"], g["soc_m"]))
     for i, (key, slot, lab, val, items) in enumerate(tiles):
         x = 56 + i * (cw + 14)
         p.rect(x, y0, cw, 430, f"{key}_soft", radius=3)
@@ -303,10 +303,10 @@ def glance_galerie(p: Px, k: Kit, g):
     p.text(64, 130, "01 · " + TR["toc_part1"], "body", 12.5, color="accent", track=0.14, upper=True)
     p.text(64, 180, TR["ed_glance"], "display", 48, color="ink", max_w=660)
     big_w = (666 - 8) * 1.6 / 2.6
-    p.image(k.photo("environment"), 64, 210, big_w, 308)
+    p.image(k.photo("glance_environment"), 64, 210, big_w, 308)
     sx, sw = 64 + big_w + 8, 666 - big_w - 8
-    photo_or_tile(p, k, "social", "social", TR["ed_soc"], sx, 210, sw, 150)
-    photo_or_tile(p, k, "governance", "gov", TR["ed_gov"], sx, 368, sw, 150)
+    photo_or_tile(p, k, "glance_social", "social", TR["ed_soc"], sx, 210, sw, 150)
+    photo_or_tile(p, k, "glance_governance", "gov", TR["ed_gov"], sx, 368, sw, 150)
     y0 = 560
     p.text(64, y0 + 10, TR["ed_global"], "body", 11, color="muted", track=0.14, upper=True)
     p.text(64, y0 + 82, score_label(g['t']), "display", 70, color="ink")
@@ -512,8 +512,8 @@ def cover_mosaic(p, k, g):
     big_w = (666 - 8) * 1.6 / 2.6
     p.image(k.photo("cover"), 64, y0, big_w, 470)
     sx, sw = 64 + big_w + 8, 666 - big_w - 8
-    p.image(k.photo("environment"), sx, y0, sw, 231)
-    photo_or_tile(p, k, "social", "social", TR["ed_soc"], sx, y0 + 239, sw, 231)
+    p.image(k.photo("cover_environment"), sx, y0, sw, 231)
+    photo_or_tile(p, k, "cover_social", "social", TR["ed_soc"], sx, y0 + 239, sw, 231)
     y1 = y0 + 470 + 40
     p.para(64, y1, 360, esc(g["tagline"]), k.ps("tg", 15 * 0.75, color="muted", leading=22 * 0.75))
     p.text(730, y1 + 20, TR["ed_global"], "body", 10.5, color="muted", align="right", track=0.14, upper=True)
@@ -570,7 +570,7 @@ def focus_page(p: Px, k: Kit, g):
     hs = g["hero"]
     paint_paper(p, k)
     draw_header(p, k, TR["ed_report_year"].format(y=g["year"]))
-    p.image(k.photo("environment"), 56, 90, 330, 960, radius=k.layout["radius"])
+    p.image(k.photo("focus"), 56, 90, 330, 960, radius=k.layout["radius"])
     x, w = 424, 314
     p.text(x, 150, TR["ed_focus"], "body", 11, color="muted", track=0.14, upper=True)
     y = 166 + p.para(x, 166, w, esc(hs["statement"]),
@@ -614,8 +614,9 @@ def divider_page(p: Px, k: Kit, g, num, title, subtitle, intro, figures):
 
 
 def back_cover(p: Px, k: Kit, g):
-    """Quatrième de couverture : la photo de couverture, en écho."""
-    p.image(k.photo("cover"), 0, 0, 794, 1123)
+    """Quatrième de couverture : une autre photo du secteur, en écho à la
+    couverture (jamais la même : photo_bank)."""
+    p.image(k.photo("back"), 0, 0, 794, 1123)
     p.gradient_v(0, 0, 794, 520, "paper", 0.88, 0.0)
     p.gradient_v(0, 960, 794, 163, "primary", 0.0, 0.55)
     p.para(56, 40, 300, esc(g["name"].upper()),

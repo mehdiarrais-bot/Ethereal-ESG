@@ -120,19 +120,36 @@ def test_photo_client_prioritaire_sur_la_banque():
     url = _jpeg_data_url()
     k = Kit(make_request(report_photos={"cover": url}))
     assert k.photo("cover") == base64.b64decode(url.split(",", 1)[1])
-    assert k.photo("environment") == bank_photo(k.d["photos"]["environment"])
+    assert k.photo("focus") == bank_photo(k.d["photos"]["environment"])
 
 
-@pytest.mark.parametrize("slot", ["company", "social", "governance"])
-def test_aucune_photo_d_illustration_hors_sujet(slot):
+# Emplacement -> préfixes de la banque autorisés (thème de l'emplacement)
+THEMES_BANQUE = {"glance_social": ("people-",), "cover_social": ("people-",),
+                 "glance_governance": ("governance-",)}
+
+
+@pytest.mark.parametrize("place", ["glance_social", "cover_social", "glance_governance"])
+def test_aucune_photo_d_illustration_hors_sujet(place):
     """Retour utilisateur du 2026-09-24 : « des images aléatoires à des
-    emplacements aléatoires ». Hors couverture et environnement, seule une
-    photo fournie par l'entreprise peut apparaître ; sinon, rien."""
+    emplacements aléatoires ». Depuis le 2026-09-28 (« des images manquantes »),
+    la banque comble aussi les tuiles social et gouvernance, mais uniquement
+    avec une photo de leur thème (équipes au travail, salle de réunion) ; la
+    photo fournie par l'entreprise passe toujours en premier."""
     from pdf_kit import Kit
-    for theme in AestheticTheme:
-        assert Kit(make_request(theme=theme.value)).photo(slot) is None
+    k = Kit(make_request(theme="galerie"))
+    origine = k._photos[place][0]
+    assert origine.startswith("bank:") and origine[5:].startswith(THEMES_BANQUE[place]), origine
+    slot = "governance" if place.endswith("governance") else "social"
     url = _jpeg_data_url()
-    assert Kit(make_request(report_photos={slot: url})).photo(slot)
+    # la photo du client occupe le premier emplacement de son thème, une seule fois
+    origines = [o for o, _ in Kit(make_request(theme="galerie", report_photos={slot: url}))._photos.values()]
+    assert origines.count(f"client:{slot}") == 1
+
+
+def test_la_section_entreprise_ne_montre_que_la_photo_du_client():
+    from pdf_kit import Kit
+    assert Kit(make_request()).photo("company_section") is None
+    assert Kit(make_request(report_photos={"company": _jpeg_data_url()})).photo("company_section")
 
 
 def test_emplacement_photo_inconnu_refuse():

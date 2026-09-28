@@ -9,6 +9,7 @@ Les maquettes sources sont dessinées sur une page de 794 × 1123 px (A4 à
 pour que les pages composées au canevas restent fidèles aux maquettes :
 1 px = 0,75 pt.
 """
+import photo_bank
 import io
 import math
 import os
@@ -137,6 +138,16 @@ class Kit:
             raw = decode_logo(url)
             if raw and slot in CLIENT_PHOTO_SLOTS:
                 self._client_photos[slot] = raw
+        self._plan_photos(request)
+
+    def _plan_photos(self, request):
+        """Répartition des photos du rapport, planifiée une fois dans l'ordre du
+        document : une photo n'apparaît jamais deux fois (photo_bank)."""
+        from analysis import family
+        places = photo_bank.document_places(self.layout["cover"], self.layout["glance"])
+        self._photos = photo_bank.allocate(places, self._client_photos,
+                                           family(request.company.sector), self.d["photos"],
+                                           bank_photo)
 
     def _apply_brand(self, custom):
         if not custom:
@@ -156,29 +167,22 @@ class Kit:
         self.c["accent"] = acc
 
     # -- photos ---------------------------------------------------------
-    def photo(self, slot: str) -> bytes | None:
-        """Photo client de l'emplacement, sinon photo de la banque : pour la
-        couverture, celle du secteur du client (sector-<famille>.jpg) si sa
-        famille est reconnue, sinon celle du gabarit."""
-        if slot in self._client_photos:
-            return self._client_photos[slot]
-        if slot == "cover" and "cover" in self.d["photos"]:
-            from analysis import family
-            fam = family(self.request.company.sector)
-            sector = bank_photo(f"sector-{fam}") if fam != "general" else None
-            if sector:
-                return sector
-        name = self.d["photos"].get(slot)
-        return bank_photo(name) if name else None
+    def photo(self, place: str) -> bytes | None:
+        """Photo attribuée à l'emplacement `place` (photo_bank.PLACES), ou None :
+        l'appelant dessine alors une composition, jamais une photo répétée."""
+        if place not in self._photos and place not in photo_bank.PLACES:
+            raise KeyError(f"Emplacement photo inconnu : {place}")
+        return self._photos[place][1] if place in self._photos else None
 
     def has_client_photo(self, slot: str) -> bool:
         return slot in self._client_photos
 
-    def uses_bank(self, slots=("cover", "environment")) -> bool:
+    def uses_bank(self, places=None) -> bool:
         """Une photo d'illustration de la banque apparaît-elle ? (mention
-        obligatoire dans la note méthodologique). Par défaut : couverture et
-        environnement, les deux seuls emplacements comblés par la banque."""
-        return any(s in self.d["photos"] and not self.has_client_photo(s) for s in slots)
+        obligatoire dans la note méthodologique). Exact : lu dans la
+        répartition planifiée, sur tous les emplacements ou sur `places`."""
+        return any(origin.startswith("bank:") for place, (origin, _) in self._photos.items()
+                   if places is None or place in places)
 
     # -- styles de paragraphe -----------------------------------------------
     # Densité de composition de la séquence en cours (1 = normale). Réglée

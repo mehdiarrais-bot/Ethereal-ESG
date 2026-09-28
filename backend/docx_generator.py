@@ -886,7 +886,7 @@ def _closing(r: _Report, cover_art: bytes | None) -> None:
     # Photo de couverture issue de la banque d'illustration : mention
     if cover_art:
         from pdf_kit import Kit
-        if Kit(request).uses_bank(("cover",)):
+        if Kit(request).uses_bank(("cover",)):   # le Word ne montre que la couverture
             r.text(TR["ed_photo_note"], size=8, italic=True)
 
 
