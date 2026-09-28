@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
-                    GovernanceData, TaxonomyData, TargetsData)
+                    GovernanceData, TaxonomyData, TargetsData, ExerciseData)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import (generate_esg_content, risks_opportunities,    # noqa: E402
                                compliance_assessment, pillar_headline)
@@ -88,7 +88,17 @@ def profil(seed: int, lang: str = "fr") -> ESGRequest:
             sustainability_committee=m(lambda: rng.random() < 0.5)),
         taxonomy=TaxonomyData(turnover_aligned_percent=m(lambda: u(0, 60))),
         targets=_cible(rng),
+        previous_data=_precedent(rng, seed),
         language=lang, include_recommendations=True)
+
+
+def _precedent(rng, seed: int):
+    """Un profil sur trois a un exercice 2024 conservé, tiré indépendamment."""
+    if seed >= 10_000 or rng.random() > 1 / 3:   # un exercice précédent n'a pas le sien
+        return None
+    prev = profil(seed + 10_000)
+    return ExerciseData(year=2024, revenue_eur=prev.company.revenue_eur,
+                        environmental=prev.environmental, social=prev.social, governance=prev.governance)
 
 
 def _cible(rng) -> TargetsData:
@@ -119,6 +129,8 @@ class Dossier:
         self.risks = risks_opportunities(request, self.s)
         self.compliance = compliance_assessment(request, self.s)
         self.headlines = pillar_headline(request, self.s)
+        import evolution as EV
+        self.evolution = [EV.paragraph(request) or "", EV.table(request) or []]
 
     def notes(self) -> dict[str, float]:
         return {p: getattr(self.s, a) for p, a in PILIERS.items() if getattr(self.s, a) is not None}
@@ -139,7 +151,8 @@ class Dossier:
             elif hasattr(o, "__dict__"):
                 walk(vars(o))
         walk([self.content, self.overview, self.closing, self.risks, self.compliance,
-              self.headlines, self.s.strengths, self.s.weaknesses, self.s.recommendations])
+              self.headlines, self.s.strengths, self.s.weaknesses, self.s.recommendations,
+              self.evolution])
         return out
 
 
@@ -329,12 +342,49 @@ def cibles_indicateurs_citees_telles_quelles(d: Dossier) -> list[str]:
     return out
 
 
+def evolution_coherente(d: Dossier) -> list[str]:
+    """Chaque lecture « en progrès / en recul » concorde avec le signe de la
+    variation et le sens de bands ; chaque valeur citée est la valeur saisie."""
+    import evolution as EV
+    from bands import PLUS_HAUT_MIEUX
+    res = EV.changes(d.r)
+    if res is None:
+        return []
+    out, lang = [], d.r.language
+    texte = (EV.paragraph(d.r) or "").replace(chr(160), " ")
+    for c in res[0]:
+        if c.reading in ("up", "down") and c.delta is not None:
+            attendu = "up" if (c.delta > 0) == (c.sens == PLUS_HAUT_MIEUX) else "down"
+            if c.reading != attendu:
+                out.append(f"{c.field} : {c.prev} → {c.cur} lu « {c.reading} »")
+        tete = EV.T[lang]["item"].split("{a}")[0].format(label=EV.label(c.field, lang))
+        item = EV._item(c, lang).replace(chr(160), " ")
+        if tete in texte and item not in texte:
+            out.append(f"{c.field} cité avec d'autres valeurs que « {item} »")
+    return out
+
+
+def aucun_caractere_perdu_a_l_impression(d: Dossier) -> list[str]:
+    """pdf_kit.clean() supprime EN SILENCE tout caractère hors cp1252 non
+    translittéré (« − » et « → » s'effaçaient du PDF jusqu'au 2026-09-28)."""
+    from pdf_kit import _PDF_CHARS
+    perdus = set()
+    for t in d.textes():
+        for ch in set(t.translate(_PDF_CHARS)):
+            try:
+                ch.encode("cp1252")
+            except UnicodeEncodeError:
+                perdus.add(ch)
+    return [f"« {ch} » (U+{ord(ch):04X}) disparaîtrait du PDF" for ch in sorted(perdus)]
+
+
 INVARIANTS = [fragilites_pas_sur_le_meilleur_pilier, enjeu_et_appui_exclusifs,
               point_fort_pas_point_faible, scores_cites_exacts,
               pilier_dominant_est_le_meilleur, aucun_artefact, faible_contre_appui,
               fort_contre_enjeu, risque_carbone_contre_appui,
               aucune_affirmation_non_declaree, cible_citee_est_la_cible_saisie,
-              cibles_indicateurs_citees_telles_quelles]
+              cibles_indicateurs_citees_telles_quelles, evolution_coherente,
+              aucun_caractere_perdu_a_l_impression]
 
 
 def violations(n: int, invariant, langs=("fr", "en")) -> list[str]:

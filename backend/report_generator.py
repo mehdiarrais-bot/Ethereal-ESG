@@ -1045,6 +1045,7 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
 
     story.append(_sp(k, 12))
     section_head(story, TR["pdf_diag"], "accent", k, S, anchors, "diag", keep_cm=10)
+    _evolution(story, request, k, S)
     _positioning(story, request, scores, bv, k, S, TR)
 
     if "trend" in chart_images:
@@ -1091,6 +1092,27 @@ def _strategic(story, request, scores, chart_images, k, S, TR, anchors, bv, mt, 
         opp.append(Paragraph(f'<font color="{hexc(k.c["env"])}"><b>{esc(it["tag"])}</b></font> — '
                              f'{esc(it["text"])}', k.ps("oi", 9, color="ink", leading=13, spaceAfter=5)))
     story.append(KeepTogether(_box(opp, k, k.c["env_soft"], left=k.c["env"])))
+
+
+def _evolution(story, request, k, S):
+    """Évolution depuis l'exercice précédent, indicateur par indicateur
+    (evolution.py) ; rien sans données de l'exercice précédent."""
+    import evolution as EV
+    text, rows = EV.paragraph(request), EV.table(request)
+    if text is None:
+        return
+    story.append(KeepTogether([Paragraph(esc(EV.title(request) or ""), S["h2"]),
+                               Paragraph(esc(text), S["body"])]))
+    if rows:
+        # Hors du bloc insécable : un tableau de 15 à 20 lignes forcé d'un
+        # tenant laissait une page presque vide avant lui ; GuardedTable le
+        # coupe proprement (en-tête répété, jamais moins de 3 lignes).
+        center = k.ps("ec", 8.8, color="ink", alignment=TA_CENTER)
+        cells = [[Paragraph(esc(c).upper(), S["th"]) for c in rows[0]]]
+        cells += [[Paragraph(esc(r[0]), S["small_b"])] + [Paragraph(esc(v), center) for v in r[1:]]
+                  for r in rows[1:]]
+        story.append(data_table(cells, [CW * 0.36, CW * 0.15, CW * 0.15, CW * 0.16, CW * 0.18], k))
+    story.append(_sp(k, 12))
 
 
 def _positioning(story, request, scores, bv, k, S, TR):

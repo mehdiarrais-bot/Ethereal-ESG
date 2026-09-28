@@ -1104,8 +1104,9 @@ def _slide_strategic(d: _Deck) -> None:
     import narrative as NR
     theme, t, request, scores, dark = d.theme, d.t, d.request, d.scores, d.dark
     slide = d.content_slide(d.section_heads["strategic"], kicker=t["strategic"])
-    add_notes(slide, [NR.act1_intro(request, scores, d.gaps, d.ro["risks"]), NR.bench_intro(request),
-                      NR.gaps_intro(request, d.gaps, d.ref)])
+    import evolution as EV
+    add_notes(slide, [NR.act1_intro(request, scores, d.gaps, d.ro["risks"]), EV.paragraph(request),
+                      NR.bench_intro(request), NR.gaps_intro(request, d.gaps, d.ref)])
     red = RGBColor(0xE7, 0x4C, 0x3C)
     panel_shape = ROUNDED_RECT if d.style["card"] != "flat" else RECT
     for (px, pw, ptitle, pcolor, items) in [

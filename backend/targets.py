@@ -27,7 +27,7 @@ T = {
                        "documente sans évaluer leur alignement sur une trajectoire de référence.",
         "esrs": " La norme ESRS E1-4 demande de publier si et comment des cibles de réduction ont "
                 "été fixées : la cible ci-dessus en constitue la déclaration.",
-        "row_note": "Cible déclarée : −{r} entre {b} et {t} ({scopes})",
+        "row_note": "Cible déclarée : -{r} entre {b} et {t} ({scopes})",
         "wp": "Trajectoire climat déclarée par l'entreprise : {r} de réduction des émissions entre "
               "{b} et {t} ({scopes}).",
         "esrs_absent": " La norme ESRS E1-4 demande de publier si et comment des cibles de réduction "
@@ -45,7 +45,7 @@ T = {
                        "them without assessing their alignment with a reference pathway.",
         "esrs": " ESRS E1-4 requires disclosing whether and how reduction targets have been set: "
                 "the target above constitutes that disclosure.",
-        "row_note": "Reported target: −{r} between {b} and {t} ({scopes})",
+        "row_note": "Reported target: -{r} between {b} and {t} ({scopes})",
         "wp": "Climate pathway reported by the company: {r} emissions reduction between {b} and "
               "{t} ({scopes}).",
         "esrs_absent": " ESRS E1-4 requires disclosing whether and how emissions reduction targets "

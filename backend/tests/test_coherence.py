@@ -33,7 +33,8 @@ def _violations(invariant):
 SAINS = [K.fragilites_pas_sur_le_meilleur_pilier, K.enjeu_et_appui_exclusifs, K.point_fort_pas_point_faible, K.scores_cites_exacts,
          K.pilier_dominant_est_le_meilleur, K.aucun_artefact, K.faible_contre_appui,
          K.fort_contre_enjeu, K.risque_carbone_contre_appui, K.aucune_affirmation_non_declaree,
-         K.cible_citee_est_la_cible_saisie, K.cibles_indicateurs_citees_telles_quelles]
+         K.cible_citee_est_la_cible_saisie, K.cibles_indicateurs_citees_telles_quelles,
+         K.evolution_coherente, K.aucun_caractere_perdu_a_l_impression]
 
 
 @pytest.mark.parametrize("invariant", SAINS, ids=lambda f: f.__name__)
@@ -72,6 +73,7 @@ def _item(key, pillar="env", severity=1.0):
     (K.cibles_indicateurs_citees_telles_quelles, _faux(
         r=K.profil(0).model_copy(update={"targets": K.TargetsData()}),
         textes=lambda: ["Cibles déclarées par l'entreprise à horizon 2030 : x."])),
+    (K.aucun_caractere_perdu_a_l_impression, _faux(textes=lambda: ["environ ≈ 3 points"])),
     (K.risque_carbone_contre_appui, _faux(strengths=[_item("intensity_good")],
                                          textes=lambda: ["Intensité carbone élevée : marge"])),
 ], ids=lambda x: getattr(x, "__name__", ""))

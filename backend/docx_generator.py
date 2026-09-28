@@ -702,6 +702,32 @@ def _recommendations(r: _Report) -> None:
         meta.font.color.rgb = hex_to_rgb("7F8C8D")
 
 
+def _evolution(r: _Report) -> None:
+    """Évolution depuis l'exercice précédent (evolution.py), si le dossier
+    a conservé ses indicateurs."""
+    import evolution as EV
+    text, rows = EV.paragraph(r.request), EV.table(r.request)
+    if text is None:
+        return
+    p = r.doc.add_paragraph()
+    run = p.add_run(EV.title(r.request) or ""); run.bold = True; run.font.size = Pt(12)
+    run.font.color.rgb = hex_to_rgb(r.colors["secondary"])
+    r.text(text, after=4)
+    if not rows:
+        return
+    tbl = r.doc.add_table(rows=len(rows), cols=len(rows[0]))
+    tbl.style = "Table Grid"
+    for ri, row in enumerate(rows):
+        for ci, val in enumerate(row):
+            run = tbl.rows[ri].cells[ci].paragraphs[0].add_run(val)
+            run.font.size = Pt(9 if ri == 0 else 9.5)
+            run.bold = ri == 0 or ci == 0
+        if ri == 0:
+            for c in tbl.rows[0].cells:
+                shade_cell(c, r.light)
+    r.doc.add_paragraph()
+
+
 def _positioning(r: _Report) -> None:
     """Diagnostic stratégique : positionnement interne des piliers + maturité.
     Aucune référence externe (cf. report_generator.py)."""
@@ -713,6 +739,7 @@ def _positioning(r: _Report) -> None:
 
     r.heading(TR["pdf_diag"], 1, colors["primary"])
     add_hr(doc, colors["accent"])
+    _evolution(r)
     if bv is None:  # moins de deux piliers notés : rien à positionner
         from content_generator import POSITIONNEMENT_IMPOSSIBLE
         r.text(POSITIONNEMENT_IMPOSSIBLE[r.lang])

@@ -6,7 +6,7 @@ consignés ici pour ne pas être perdus. À traiter en bloc, après le socle de
 clauses (`backend/bands.py`, `backend/composer.py`, `backend/clauses/`) et
 la rédaction des clauses elles-mêmes.
 
-## 0. ÉVOLUTION PRIORITAIRE — donner un contenu propre à la section Positionnement
+## 0. ÉVOLUTION PRIORITAIRE — donner un contenu propre à la section Positionnement — **traité le 2026-09-28**
 
 - **Contexte** : la comparaison à une référence sectorielle inventée a été
   retirée (chantier du 2026-09-02). La section « Positionnement » affiche
@@ -19,6 +19,19 @@ la rédaction des clauses elles-mêmes.
   (évolution par pilier, écart au précédent exercice, tendance). Sourcé,
   vrai, et sans doublon. Limite connue : rien à afficher au premier
   exercice — prévoir le repli sur le classement interne actuel.
+- **Traitement (lots A, B, C)** : chaque exercice du dossier conserve ses
+  indicateurs (`client_store.exercise_snapshot`) ; le score N-1 est
+  recalculé selon la grille actuelle quand ils existent, sinon signalé
+  « selon la grille alors en vigueur » ; section « Évolution depuis
+  l'exercice N-1 » (`evolution.py`) en tête du Diagnostic (PDF, Word, notes
+  PPTX) : variation de chaque indicateur présent les deux années, sens lu
+  dans `bands` (grilles et compteurs de pénalité), intensité carbone plutôt
+  que tonnes, indicateurs apparus / disparus. Le classement interne des
+  piliers reste en repli. Bug corrigé en chemin : un exercice dont un pilier
+  n'était pas noté disparaissait de la courbe et de l'évolution N-1.
+  Cause racine d'un défaut de rendu : `pdf_kit.clean` supprime en silence
+  tout caractère hors cp1252 (« − », « → ») — translittérés, et invariant
+  `aucun_caractere_perdu_a_l_impression` au banc.
 
 ## 0bis. ÉTAPE B — collecter les objectifs et engagements du client
 
@@ -1152,6 +1165,18 @@ Relevés pendant l'étape B, non corrigés (règle 2).
   ESG (CSRD/SBTi) » — cite deux référentiels sans objet pour ce champ.
 - `StepCompany.jsx` : `YEARS` s'arrête à 2025 alors que le modèle accepte
   jusqu'à 2035 : l'exercice 2026 n'est pas sélectionnable.
+
+## 26. Titres de pilier qui affirment un dispositif non déclaré — OUVERT
+
+Relevé en vérifiant la pagination du 2026-09-28 (dossier d'exemple, p. 15),
+non corrigé (règle 2). `content_generator.py` (titres par tranche de score,
+~l. 1785) : « Gouvernance exemplaire : indépendance, **audit** et
+supervision ESG inspirent confiance » s'imprime pour un score de
+gouvernance élevé, alors que l'encart de la même page affiche « Audit ESG :
+Non ». Même classe que le § 22 : un titre déduit d'une tranche de score
+nomme des dispositifs précis. Revue à faire des titres « high / mid / low »
+des trois piliers : ne nommer que ce qui est déclaré, ou rester sur la
+tranche.
 
 ---
 

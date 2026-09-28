@@ -103,3 +103,78 @@ def test_score_non_recalcule_signale(lang, mention):
                                                        "environmental": {"renewable_energy_percent": 30}})
     s = calculate_esg_scores(avec_donnees)
     assert mention not in generate_esg_content(avec_donnees, s)["executive_summary"]
+
+
+# ── Lot C : évolution indicateur par indicateur ───────────────────────────
+
+PRECEDENT = {"year": 2024, "revenue_eur": 45e6,
+             "environmental": {"co2_emissions_tonnes": 8900, "renewable_energy_percent": 35,
+                               "water_consumption_m3": 110000},
+             "social": {"training_hours_per_employee": 18, "accident_frequency_rate": 8.1},
+             "governance": {"data_breaches": 0, "sustainability_committee": False, "csr_budget_eur": 1e5}}
+
+
+def _evol(lang="fr"):
+    return _avec(language=lang, previous_data=PRECEDENT)
+
+
+def test_sens_de_lecture_tire_de_bands():
+    import evolution as EV
+    res = EV.changes(_evol())
+    assert res is not None
+    lecture = {c.field: c.reading for c in res[0]}
+    assert lecture["renewable_energy_percent"] == "up"          # 35 → 42, plus haut = mieux
+    assert lecture["accident_frequency_rate"] == "up"           # 8,1 → 6,2, plus bas = mieux
+    assert lecture["data_breaches"] == "down"                   # 0 → 1, compteur de pénalité
+    assert lecture["water_consumption_m3"] == "neutral"         # aucun sens défini dans bands
+    assert lecture["co2_emissions_tonnes"] == "neutral"         # tonnes : l'activité pèse
+    assert lecture[EV.INTENSITE] == "up"                        # 197,8 → 170,8 t/M€
+    assert lecture["sustainability_committee"] == "up"          # non → oui
+    assert "csr_budget_eur" in res[2] and "female_board_percent" in res[1]
+
+
+@pytest.mark.parametrize("lang,attendus", [
+    ("fr", ("Par rapport à l'exercice 2024", "en progrès", "en recul",
+            "part d'énergie renouvelable de 35 % à 42 % (+7 pts)", "Renseignés en 2024 mais plus cette année")),
+    ("en", ("Versus fiscal year 2024", "improving", "deteriorating",
+            "renewable energy share from 35% to 42% (+7 pts)", "Reported in 2024 but no longer this year")),
+])
+def test_paragraphe_d_evolution(lang, attendus):
+    import evolution as EV
+    texte = (EV.paragraph(_evol(lang)) or "").replace("\xa0", " ")
+    for a in attendus:
+        assert a in texte, (lang, a, texte)
+
+
+def test_sans_exercice_precedent_rien_n_est_imprime():
+    import evolution as EV
+    assert EV.paragraph(dossier_a_transparente()) is None and EV.table(dossier_a_transparente()) is None
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_livrables_portent_l_evolution(lang):
+    from test_typo import _pdf_text, _docx_text
+    from test_parite import _pptx_notes
+    from esg_calculator import calculate_esg_scores
+    from content_generator import generate_esg_content
+    from report_generator import generate_pdf_report
+    from docx_generator import generate_word_report
+    from ppt_generator import generate_pptx
+    r = _evol(lang)
+    s = calculate_esg_scores(r)
+    c = generate_esg_content(r, s)
+    titre = "Évolution depuis l'exercice 2024" if lang == "fr" else "Change since fiscal year 2024"
+    assert titre in _pdf_text(generate_pdf_report(r, s, c, {})).replace("\n", " ")
+    assert titre in _docx_text(generate_word_report(r, s, c))
+    marque = "Par rapport à l'exercice 2024" if lang == "fr" else "Versus fiscal year 2024"
+    assert marque in _pptx_notes(generate_pptx(r, s, c, {}))
+
+
+def test_signes_et_fleches_survivent_au_pdf():
+    """clean() supprimait en silence tout caractère hors cp1252 : le signe
+    moins U+2212 et la flèche disparaissaient du PDF."""
+    from pdf_kit import clean
+    assert clean("−26,9") == "-26,9" and clean("0 → 1") == "0 -> 1"
+    import evolution as EV
+    texte = " ".join([EV.paragraph(_evol()) or ""] + [" ".join(r) for r in EV.table(_evol()) or []])
+    assert clean(texte).count("-") >= texte.count("-")     # rien de perdu à l'impression

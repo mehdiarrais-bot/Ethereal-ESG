@@ -83,6 +83,9 @@ _PDF_CHARS = str.maketrans({
     '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
     '⁰': '0', '✓': '+', '✗': 'x', '✅': '', '⚠': '',
     '️': '', '█': '', '░': '',
+    # Hors cp1252 : sans translittération, clean() les supprimerait en silence
+    # (« −26,9 » s'imprimait « 26,9 », « 0 → 1 » s'imprimait « 0 1 »).
+    '−': '-', '→': '->',
 })
 
 
