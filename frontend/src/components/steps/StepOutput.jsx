@@ -146,10 +146,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         </div>
 
         <div className="output-section">
-          <div className="output-section-title">💬 Vos analyses (encarts « L\u2019analyse du consultant »)</div>
+          <div className="output-section-title">💬 Vos analyses (encarts « L’analyse du consultant »)</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-            Facultatif — vos commentaires d\u2019expert, affichés dans des encarts dédiés des livrables.
-            C\u2019est ce qui distingue votre diagnostic d\u2019un rapport automatique.
+            Facultatif — vos commentaires d’expert, affichés dans des encarts dédiés des livrables.
+            C’est ce qui distingue votre diagnostic d’un rapport automatique.
           </div>
           <div className="notes-grid">
             {[['global', 'Synthèse globale'], ['env', 'Environnement'], ['social', 'Social'], ['gov', 'Gouvernance']].map(([k, label]) => (
@@ -161,8 +161,8 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
                   value={form.consultant_notes?.[k] || ''}
                   onChange={e => set('consultant_notes')({ ...(form.consultant_notes || {}), [k]: e.target.value })}
                   placeholder={k === 'global'
-                    ? 'Ex: La priorité 2026 est la fiabilisation du reporting énergie avant l\u2019audit\u2026'
-                    : 'Votre lecture de ce pilier\u2026'}
+                    ? 'Ex: La priorité 2026 est la fiabilisation du reporting énergie avant l’audit…'
+                    : 'Votre lecture de ce pilier…'}
                 />
               </label>
             ))}
@@ -171,7 +171,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
 
         {clientId && scores?.recommendations?.length > 0 && (
           <div className="output-section">
-            <div className="output-section-title">✅ Suivi du plan d\u2019action</div>
+            <div className="output-section-title">✅ Suivi du plan d’action</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
               Cochez les actions réalisées : elles apparaîtront comme « acquis » dans les
               prochains livrables (encart vert + mention en synthèse). Sauvegarde immédiate.
