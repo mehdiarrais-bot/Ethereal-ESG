@@ -1166,7 +1166,7 @@ Relevés pendant l'étape B, non corrigés (règle 2).
 - `StepCompany.jsx` : `YEARS` s'arrête à 2025 alors que le modèle accepte
   jusqu'à 2035 : l'exercice 2026 n'est pas sélectionnable.
 
-## 26. Titres de pilier qui affirment un dispositif non déclaré — OUVERT
+## 26. Titres de pilier qui affirment un dispositif non déclaré — **traité le 2026-09-28**
 
 Relevé en vérifiant la pagination du 2026-09-28 (dossier d'exemple, p. 15),
 non corrigé (règle 2). `content_generator.py` (titres par tranche de score,
@@ -1177,6 +1177,14 @@ Non ». Même classe que le § 22 : un titre déduit d'une tranche de score
 nomme des dispositifs précis. Revue à faire des titres « high / mid / low »
 des trois piliers : ne nommer que ce qui est déclaré, ou rester sur la
 tranche.
+
+**Traitement** : les 24 titres (`_PILLAR_INSIGHT`, 3 piliers × 4 tranches,
+FR/EN) restent sur la tranche (« de premier plan sur la grille du
+diagnostic », « les indicateurs en retrait sur la grille… ») et ne nomment
+plus ni audit, ni assurance externe, ni comité, ni Scope 3, ni sécurité.
+Les titres entrent désormais dans le banc de cohérence (ils n'y étaient
+pas : le garde-fou ne pouvait pas les voir) ; les anciennes formulations
+sont dans `NON_DECLARE`, et le test échoue sur l'ancien code.
 
 ---
 
