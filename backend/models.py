@@ -49,7 +49,10 @@ class AestheticTheme(str, Enum):
 class ReportType(str, Enum):
     WHITE_PAPER = "white_paper"
     FULL_REPORT = "full_report"
-    EXECUTIVE_SUMMARY_PDF = "executive_summary_pdf"
+    # « executive_summary_pdf » (« Synthèse PDF ») produisait le rapport complet
+    # sous un autre titre : remplacé le 2026-09-28 par le suivi annuel ; les
+    # dossiers qui le portent sont relus en rapport complet (map_legacy_report).
+    ANNUAL_FOLLOWUP = "annual_followup"
 
 
 # ── Sub-models ────────────────────────────────────────────────────────────────
@@ -110,6 +113,42 @@ class TaxonomyData(BaseModel):
             v = getattr(self, f)
             if v is not None and not math.isfinite(v):
                 setattr(self, f, None)
+        return self
+
+
+class TargetsData(BaseModel):
+    """Objectifs DÉCLARÉS par le client (DETTE § 0bis, étape B). L'outil les
+    cite comme tels et n'en évalue jamais l'alignement sur un référentiel.
+    Lot 1 : trajectoire de réduction des émissions ; lot 2 : cibles par indicateur."""
+    climate_reduction_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    climate_base_year: Optional[int] = Field(default=None, ge=2000, le=2035)
+    climate_target_year: Optional[int] = Field(default=None, ge=2025, le=2060)
+    climate_scopes: Optional[str] = Field(default=None, pattern=r'^(1-2|1-2-3)$')
+    # Lot 2 : cibles par indicateur, à l'horizon company.target_year.
+    renewable_target_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    female_employees_target_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    training_hours_target: Optional[float] = Field(default=None, ge=0, le=10_000)
+    accident_rate_target: Optional[float] = Field(default=None, ge=0, le=10_000)
+
+    @field_validator('climate_scopes', mode='before')
+    @classmethod
+    def normalize_scopes(cls, v):
+        """« 1-2 », « 1,2 », « 1 et 2 » → « 1-2 » (saisie ou import CSV)."""
+        if not v:
+            return None
+        digits = re.sub(r"\D", "", str(v))
+        return {"12": "1-2", "123": "1-2-3"}.get(digits, v)
+
+    @model_validator(mode='after')
+    def check_years(self):
+        for f in ('climate_reduction_percent', 'renewable_target_percent',
+                  'female_employees_target_percent', 'training_hours_target', 'accident_rate_target'):
+            v = getattr(self, f)
+            if v is not None and not math.isfinite(v):
+                setattr(self, f, None)
+        b, t = self.climate_base_year, self.climate_target_year
+        if b is not None and t is not None and t <= b:
+            raise ValueError("Cible climat : l'année cible doit suivre l'année de référence")
         return self
 
 
@@ -247,6 +286,7 @@ class ESGRequest(BaseModel):
     social: SocialData
     governance: GovernanceData
     taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
+    targets: TargetsData = Field(default_factory=lambda: TargetsData())
     presentation_type: PresentationType = PresentationType.EXECUTIVE_SUMMARY
     aesthetic_theme: AestheticTheme = AestheticTheme.AURORA
     report_type: ReportType = ReportType.FULL_REPORT
@@ -263,6 +303,43 @@ class ESGRequest(BaseModel):
     # Actions du plan précédent marquées « réalisées » par le consultant
     # (suivi de mission) : [{title, year}, ...]
     completed_actions: Optional[list] = None
+
+    @model_validator(mode='after')
+    def check_previous_year(self):
+        p = self.previous_data
+        if p is not None and p.year >= self.company.reporting_year:
+            raise ValueError("Exercice précédent : son année doit précéder l'exercice du rapport")
+        if p is not None:
+            self._recalculate_previous(p)
+        return self
+
+    def _recalculate_previous(self, p: "ExerciseData") -> None:
+        """Score de l'exercice précédent refait avec la grille ACTUELLE : un
+        écart ne mêle plus deux barèmes (le barème a changé plusieurs fois,
+        DETTE §§ 11, 16, 24). Remplace l'entrée stockée de cet exercice."""
+        from esg_calculator import calculate_esg_scores
+        prev = ESGRequest(company=self.company.model_copy(update={"reporting_year": p.year,
+                                                                  "revenue_eur": p.revenue_eur}),
+                          environmental=p.environmental, social=p.social, governance=p.governance,
+                          taxonomy=p.taxonomy, targets=p.targets, language=self.language)
+        s = calculate_esg_scores(prev)
+        entry = {"year": p.year, "env": s.environmental_score, "social": s.social_score,
+                 "gov": s.governance_score, "total": s.total_esg_score, "recalculated": True}
+        self.previous_scores = entry
+        others = [h for h in (self.score_history or []) if h["year"] != p.year]
+        self.score_history = sorted(others + [entry], key=lambda h: h["year"])
+
+    @model_validator(mode='after')
+    def check_target_base_year(self):
+        b = self.targets.climate_base_year
+        if b is not None and b > self.company.reporting_year:
+            raise ValueError("Cible climat : l'année de référence ne peut pas suivre l'exercice")
+        return self
+
+    @field_validator('report_type', mode='before')
+    @classmethod
+    def map_legacy_report(cls, v):
+        return "full_report" if v == "executive_summary_pdf" else v
 
     @field_validator('aesthetic_theme', mode='before')
     @classmethod
@@ -346,38 +423,59 @@ class ESGRequest(BaseModel):
     # Historique complet des exercices du dossier client (trajectoire
     # pluriannuelle) : [{year, env, social, gov, total}, ...]
     score_history: Optional[list] = None
+    # Données saisies de l'exercice précédent, si le dossier les a conservées
+    # (sauvegardes depuis le 2026-09-28) : comparaison indicateur par indicateur.
+    previous_data: Optional["ExerciseData"] = None
 
     @field_validator('score_history', mode='before')
     @classmethod
     def check_history(cls, v):
         if not v:
             return None
-        out = []
-        for h in v:
-            try:
-                out.append({"year": int(h["year"]), "env": float(h["env"]),
-                            "social": float(h["social"]), "gov": float(h["gov"]),
-                            "total": float(h["total"])})
-            except (KeyError, TypeError, ValueError):
-                continue  # entrée incomplète ignorée
+        out = [e for e in (_exercise_scores(h) for h in v) if e is not None]
         out.sort(key=lambda h: h["year"])
         return out[:15] or None
 
     @field_validator('previous_scores', mode='before')
     @classmethod
     def check_previous(cls, v):
-        if not v:
+        return _exercise_scores(v) if v else None
+
+
+def _exercise_scores(h) -> dict | None:
+    """{year, env, social, gov, total} d'un exercice passé. Un pilier non noté
+    reste None (« — ») : jusqu'au 2026-09-28, float(None) faisait écarter
+    l'exercice ENTIER, en silence, de la courbe et de l'évolution N-1."""
+    def score(v):
+        if v is None:
             return None
-        try:
-            return {"year": int(v["year"]), "env": float(v["env"]),
-                    "social": float(v["social"]), "gov": float(v["gov"]),
-                    "total": float(v["total"])}
-        except (KeyError, TypeError, ValueError):
-            return None  # historique incomplet : ignoré silencieusement
+        f = float(v)
+        return f if math.isfinite(f) and 0 <= f <= 100 else None
+    try:
+        # recalculated : score refait selon la grille actuelle (lot B) ; à défaut,
+        # score tel qu'il a été calculé à l'époque, selon la grille alors en vigueur.
+        return {"year": int(h["year"]), **{k: score(h.get(k)) for k in ("env", "social", "gov", "total")},
+                "recalculated": h.get("recalculated") is True}
+    except (KeyError, TypeError, ValueError):
+        return None  # année absente ou illisible : entrée ignorée
+
+
+class ExerciseData(BaseModel):
+    """Données saisies d'un exercice passé (dossier client), pour la
+    comparaison d'un exercice à l'autre. Mêmes validations que l'exercice
+    courant : ce sont les mêmes sous-modèles."""
+    year: int = Field(..., ge=2000, le=2035)
+    revenue_eur: Optional[float] = Field(default=None, ge=0, le=1e13)
+    environmental: EnvironmentalData = Field(default_factory=lambda: EnvironmentalData())
+    social: SocialData = Field(default_factory=lambda: SocialData())
+    governance: GovernanceData = Field(default_factory=lambda: GovernanceData())
+    taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
+    targets: TargetsData = Field(default_factory=lambda: TargetsData())
 
 
 class ESGScores(BaseModel):
-    # None : pilier sans aucun indicateur, ou moins de deux piliers pour le
+    # None : pilier sous le seuil d'indicateurs (esg_calculator.
+    # MIN_INDICATEURS_PILIER), ou moins de deux piliers pour le
     # global (esg_calculator.global_score). Jamais de valeur par défaut.
     environmental_score: Optional[float]
     social_score: Optional[float]
@@ -389,6 +487,9 @@ class ESGScores(BaseModel):
     safety_index: Optional[float] = None
     governance_quality: Optional[float] = None
     rating: Optional[str]
+    # Complétude de la grille par pilier : {"env": [notés, total], …}
+    # (esg_calculator.GRILLE_INDICATEURS). Imprimée à côté de chaque score.
+    indicator_coverage: dict[str, list[int]] = {}
     strengths: list[str]
     weaknesses: list[str]
     recommendations: list[str]

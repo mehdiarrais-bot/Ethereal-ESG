@@ -1,5 +1,5 @@
-import { scoreText, ratingText, gaugePercent } from '../lib/scoreText.mjs'
-function ScoreGauge({ label, score, color }) {
+import { scoreText, ratingText, gaugePercent, coverageText } from '../lib/scoreText.mjs'
+function ScoreGauge({ label, score, color, coverage }) {
   const pct = gaugePercent(score)
   const r = 44
   const circ = 2 * Math.PI * r
@@ -26,6 +26,7 @@ function ScoreGauge({ label, score, color }) {
         </text>
       </svg>
       <div className="gauge-label">{label}</div>
+      {coverage && <div className="gauge-coverage">{coverageText(coverage)}</div>}
     </div>
   )
 }
@@ -63,9 +64,12 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
       </div>
 
       <div className="gauges-row">
-        <ScoreGauge label="Environnement" score={scores.environmental_score} color="var(--env)" />
-        <ScoreGauge label="Social" score={scores.social_score} color="var(--social)" />
-        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="var(--gov)" />
+        <ScoreGauge label="Environnement" score={scores.environmental_score} color="var(--env)"
+                    coverage={scores.indicator_coverage?.env} />
+        <ScoreGauge label="Social" score={scores.social_score} color="var(--social)"
+                    coverage={scores.indicator_coverage?.social} />
+        <ScoreGauge label="Gouvernance" score={scores.governance_score} color="var(--gov)"
+                    coverage={scores.indicator_coverage?.gov} />
         <ScoreGauge label="Global" score={scores.total_esg_score} color="var(--brand)" />
       </div>
 
@@ -159,6 +163,7 @@ export default function ResultsPanel({ scores, onDownloadPptx, onDownloadPdf, on
         }
         .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .gauge-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-align: center; }
+        .gauge-coverage { font-size: 10px; color: var(--muted); text-align: center; }
         .result-section { display: flex; flex-direction: column; gap: 8px; }
         .result-section-title {
           font-size: 12px;

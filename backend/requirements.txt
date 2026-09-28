@@ -8,3 +8,5 @@ pillow>=10.4.0
 python-multipart>=0.0.9
 pydantic>=2.11.0
 openpyxl>=3.1.5
+# Aperçu du sélecteur de gabarit (PDF -> image) ; licence BSD/Apache.
+pypdfium2>=4.30

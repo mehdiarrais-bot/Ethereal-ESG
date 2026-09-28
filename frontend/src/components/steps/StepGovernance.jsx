@@ -17,7 +17,7 @@ export default function StepGovernance({ form, updateSection }) {
           <FormField label="Part des femmes au CA (%)" hint="Seuil légal de 40 % (art. L225-18-1 du Code de commerce) pour les sociétés d'au moins 250 salariés permanents et 50 M€ de CA ou de bilan, trois exercices consécutifs">
             <NumberInput value={gov.female_board_percent} onChange={set('female_board_percent')} placeholder="Ex: 38" min={0} max={100} />
           </FormField>
-          <FormField label="Part des administrateurs indépendants (%)" hint="Recommandation AFEP-MEDEF : >50%">
+          <FormField label="Part des administrateurs indépendants (%)" hint="Pour les sociétés cotées se référant au code AFEP-MEDEF : la moitié du conseil, un tiers si la société est contrôlée.">
             <NumberInput value={gov.independent_board_percent} onChange={set('independent_board_percent')} placeholder="Ex: 55" min={0} max={100} />
           </FormField>
         </div>

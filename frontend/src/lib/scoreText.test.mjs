@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { scoreText, ratingText, gaugePercent, NON_NOTE } from './scoreText.mjs'
+import { scoreText, ratingText, gaugePercent, coverageText, NON_NOTE } from './scoreText.mjs'
 
 test('un score absent s\'affiche « — »', () => {
   assert.equal(scoreText(null), NON_NOTE)
@@ -25,4 +25,10 @@ test('jauge : piste vide pour un score absent, bornée sinon', () => {
   assert.equal(gaugePercent(null), 0)
   assert.equal(gaugePercent(130), 100)
   assert.equal(gaugePercent(42), 42)
+})
+
+test("la complétude d'un pilier se lit « notés/total »", () => {
+  assert.equal(coverageText([3, 4]), '3/4 indicateurs notés')
+  assert.equal(coverageText([0, 8]), '0/8 indicateurs notés')  // pilier non noté : 0 affiché
+  assert.equal(coverageText(undefined), '')                     // ancien backend : rien
 })

@@ -51,6 +51,11 @@ def _pillars(g):
             ("gov", TR["ed_gov"], g["g"])]
 
 
+def _cov(g, key):
+    """Complétude de la grille du pilier, imprimée à côté de son score (DETTE § 16)."""
+    return g["cov"][key]
+
+
 def _global_line(g):
     d = _delta(g, "total")
     return f"{g['TR']['note']} {g['rating']}" + (f" · {d}" if d else "")
@@ -119,7 +124,8 @@ def glance_aurora(p: Px, k: Kit, g):
             p.line(x, y0 + 16, x, y0 + h - 16, color="rule", lw=0.6)
         p.text(x + 16, y0 + 30, lab, "body", 10.5, color="muted", track=0.12, upper=True, max_w=cw - 24)
         p.text(x + 16, y0 + 88, score_label(val), "display", 50, color=key)
-        p.text(x + 16, y0 + 112, _delta(g, key) or "/100", "body", 11, color="muted")
+        p.text(x + 16, y0 + 112, (_delta(g, key) or "/100") + " · " + _cov(g, key), "body", 11,
+               color="muted", max_w=cw - 24)
     x = 56 + 3 * cw
     p.rect(x, y0, cw, h, "primary")
     p.text(x + 16, y0 + 30, TR["ed_global"], "body", 10.5, color="accent_on_primary", track=0.12,
@@ -164,7 +170,8 @@ def glance_annuel(p: Px, k: Kit, g):
         p.text(x + cw / 2, y0 + 30, lab, "body", 11, color="muted", align="center", track=0.14,
                upper=True, max_w=cw - 16)
         p.text(x + cw / 2, y0 + 90, score_label(val), "display", 54, color=key, align="center")
-        p.text(x + cw / 2, y0 + 114, _delta(g, key) or "/100", "body", 12, color="muted", align="center")
+        p.text(x + cw / 2, y0 + 114, (_delta(g, key) or "/100") + " · " + _cov(g, key), "body", 12,
+               color="muted", align="center", max_w=cw - 16)
     x = 76 + 3 * cw
     p.rect(x, y0 + 3, cw, h - 6, "primary")
     p.text(x + cw / 2, y0 + 30, TR["ed_global"], "body", 11, color="accent_on_primary",
@@ -191,6 +198,7 @@ def glance_institutionnel(p: Px, k: Kit, g):
         p.cv.setFillColor(k.c[key]); p.cv.circle(p.x(x + 20), p.y(y0 + 27), 3.4, fill=1, stroke=0)
         p.text(x + 30, y0 + 31, lab, "body_b", 12.5, color="ink", max_w=cw - 40)
         p.text(x + 16, y0 + 92, score_label(val), "display", 56, color=key)
+        p.text(x + cw - 14, y0 + 92, _cov(g, key), "body", 10.5, color="muted", align="right")
         d = _delta(g, key)
         if d:
             tw = p.width(d, k.f["body"], 11 * 0.75) / 0.75
@@ -237,14 +245,16 @@ def glance_portrait(p: Px, k: Kit, g):
     cols = (("env", TR["ed_env"], g["e"], g["env_m"]), ("social", TR["ed_soc"], g["s"], g["soc_m"]))
     for i, (key, lab, val, items) in enumerate(cols):
         x = 56 + i * (cw + 40)
-        p.text(x, 628, lab, "display", 20, color="ink")
+        lw = p.text(x, 628, lab, "display", 20, color="ink")
+        p.text(x + lw + 10, 628, _cov(g, key), "body", 11, color="muted")
         p.text(x + cw, 632, score_label(val), "display", 36, color=key, align="right")
         p.rect(x, 644, cw, 2, key)
         _metric_list(p, g, x, 648, cw, items[:3], row_h=42, size=13)
     p.line(56, 836, 738, 836, color="ink", lw=0.8)
     _radar(p, g, 190, 950, 76, stroke="ink", label_size=11, alpha=0.08)
     x = 340
-    p.text(x, 880, TR["ed_gov"], "display", 18, color="ink")
+    lw = p.text(x, 880, TR["ed_gov"], "display", 18, color="ink")
+    p.text(x + lw + 10, 880, _cov(g, "gov"), "body", 11, color="muted")
     p.text(738, 884, score_label(g['g']), "display", 26, color="gov", align="right")
     if g["gov_line"]:
         p.para(x, 896, 398, esc(g["gov_line"]), k.ps("gl", 12.5 * 0.75, color="muted", leading=18 * 0.75))
@@ -269,6 +279,7 @@ def glance_terre(p: Px, k: Kit, g):
         photo_or_tile(p, k, slot, key, lab, x, y0, cw, 190)
         p.text(x + 20, y0 + 232, lab, "body", 12, color=key, track=0.1, upper=True)
         p.text(x + cw - 20, y0 + 240, score_label(val), "display", 44, color=key, align="right")
+        p.text(x + cw - 20, y0 + 262, _cov(g, key), "body", 11, color="muted", align="right")
         d = _delta(g, key)
         if d:
             p.text(x + 20, y0 + 256, d, "body", 12.5, color="muted")
@@ -277,7 +288,8 @@ def glance_terre(p: Px, k: Kit, g):
     p.line(56, 676, 738, 676, color="rule", lw=0.7)
     _radar(p, g, 250, 850, 118)
     x = 500
-    p.text(x, 760, TR["ed_gov"], "body", 12, color="ink", track=0.1, upper=True)
+    lw = p.text(x, 760, TR["ed_gov"], "body", 12, color="ink", track=0.1, upper=True)
+    p.text(x + lw + 10, 760, _cov(g, "gov"), "body", 11, color="muted")
     p.text(738, 764, score_label(g['g']), "display", 32, color="gov", align="right")
     if g["gov_line"]:
         p.para(x, 778, 238, esc(g["gov_line"]), k.ps("gl", 12.5 * 0.75, color="muted", leading=18 * 0.75))
@@ -303,9 +315,10 @@ def glance_galerie(p: Px, k: Kit, g):
     for i, (key, lab, val) in enumerate(_pillars(g)):
         yy = y0 + 22 + i * 34
         p.text(x, yy, lab, "body", 13.5, color="ink", max_w=120)
-        p.rect(x + 130, yy - 6, w - 180, 3, "rule")
+        p.rect(x + 130, yy - 6, w - 250, 3, "rule")
         if val is not None:  # pilier non noté : pas de barre
-            p.rect(x + 130, yy - 6, (w - 180) * max(0, min(100, val)) / 100, 3, key)
+            p.rect(x + 130, yy - 6, (w - 250) * max(0, min(100, val)) / 100, 3, key)
+        p.text(x + w - 44, yy, _cov(g, key), "body", 10.5, color="muted", align="right")
         p.text(x + w, yy, score_label(val), "body_b", 13.5, color="ink", align="right")
     p.line(64, 716, 730, 716, color="ink", lw=0.8)
     _radar(p, g, 210, 880, 110, label_size=13, alpha=0.12)
@@ -477,7 +490,8 @@ def cover_duo(p, k, g):
     for i, (key, lab, val) in enumerate(_pillars(g)):
         x = 56 + i * (cw + 14)
         p.rect(x, 900, cw, 110, f"{key}_soft", radius=3)
-        p.text(x + 18, 930, lab, "body", 11, color=key, track=0.1, upper=True, max_w=cw - 30)
+        p.text(x + 18, 930, lab, "body", 11, color=key, track=0.1, upper=True, max_w=cw - 110)
+        p.text(x + cw - 16, 930, _cov(g, key), "body", 10.5, color="muted", align="right")
         p.text(x + 18, 990, score_label(val), "display", 44, color=key)
     p.text(56, 1050, _cover_meta(g), "body", 10.5, color="muted", max_w=520)
     p.text(738, 1050, g["refs"], "body_b", 10.5, color="accent", align="right")

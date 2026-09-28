@@ -25,7 +25,8 @@ LABELS = {
         "ed_company": "L'entreprise en bref", "ed_report_year": "Rapport de durabilité {y}",
         "ed_pillars": "Environnement · Social · Gouvernance",
         "ed_env": "Environnement", "ed_soc": "Social", "ed_gov": "Gouvernance", "ed_global": "Score global",
-        "ed_vs": "vs {y}", "ed_prev": "Scores {y}", "ed_focus": "Focus", "ed_word": "Le mot de la direction",
+        "ed_vs": "vs {y}", "ed_prev": "Scores {y}",
+        "coverage": "{n}/{t} indicateurs notés", "coverage_short": "{n}/{t} indic.", "ed_focus": "Focus", "ed_word": "Le mot de la direction",
         "ed_initiatives": "Nos initiatives", "ed_employees": "collaborateurs", "ed_revenue": "M€ de chiffre d'affaires",
         "ed_year": "exercice de reporting", "ed_target": "horizon des objectifs", "ed_country": "pays du siège",
         "ed_closing": "Agir aujourd'hui pour un impact durable demain.",
@@ -54,7 +55,7 @@ LABELS = {
         # ── Report types ────────────────────────────────────────
         "rep_white_paper": "Livre Blanc ESG / RSE",
         "rep_full_report": "Rapport ESG Complet",
-        "rep_executive_summary_pdf": "Synthèse Exécutive ESG",
+        "rep_annual_followup": "Suivi annuel ESG",
         "rep_default": "Rapport ESG",
         # ── PPTX / PDF sections ─────────────────────────────────
         "dashboard": "Tableau de Bord ESG",
@@ -119,8 +120,17 @@ LABELS = {
         "quote_kicker": "LE MOT DE LA DIRECTION",
         "consultant_note": "L'ANALYSE DU CONSULTANT",
         "done_head": "Actions engagées depuis le précédent plan",
+        "toc_fu": "Suivi de l'exercice",
+        "fu_s1": "L'exercice en bref", "fu_s2": "Ce qui a changé",
+        "fu_s3": "Le plan d'action précédent", "fu_s4": "Où en sont les cibles",
+        "fu_s5": "Les priorités de l'exercice à venir",
+        "fu_no_prev": "Les indicateurs de l'exercice précédent ne sont pas conservés dans le dossier : "
+                      "l'évolution ne peut être lue qu'à travers les scores ci-dessus. Elle le sera "
+                      "indicateur par indicateur dès le prochain exercice.",
+        "fu_no_done": "Aucune action du plan précédent n'est déclarée engagée à ce jour.",
         "trend_kicker": "TRAJECTOIRE", "trend_title": "Une trajectoire ESG mesurée exercice après exercice",
         "cap_trend": "Évolution pluriannuelle du score ESG (global et par pilier)",
+        "cap_trend_old": " — exercices {years} : scores calculés selon la grille alors en vigueur",
         "mat_initiated": "Initiée", "mat_structuring": "En structuration", "mat_structured": "Structurée", "mat_advanced": "Avancée", "mat_exemplary": "Exemplaire",
         "mat_none": "non évaluée (pas de score global)", "bench_not_rated": "Non noté",
         "conclusion_title": "Conclusion & Engagements",
@@ -147,7 +157,8 @@ LABELS = {
         "score_env_short": "Score Environnemental", "score_soc_short": "Score Social",
         "score_gov_short": "Score Gouvernance", "score_global_short": "Score Global",
         "wp_intro": "Ce livre blanc documente la trajectoire ESG de l'organisation sur le long terme, à partir des indicateurs collectés pour l'exercice. Il constitue un document de travail interne destiné à éclairer les décisions et à situer la maturité extra-financière de l'entreprise. Il ne formule aucun engagement au nom de l'organisation : les objectifs chiffrés restent à définir et à publier par celle-ci.",
-        "wp_horizon": "Horizon {y} — Objectifs ESG cibles",
+        "wp_horizon": "Horizon {y} — objectifs",
+        "wp_targets": "Aucun objectif chiffré n'a été communiqué pour cet horizon. Il revient à l'organisation de les fixer, pilier par pilier, en s'appuyant sur le plan d'action de ce document ; ils seront repris ici une fois définis.",
         # ── KPI labels ──────────────────────────────────────────
         "kpi": {
             "co2_total": "Émissions CO2 totales", "renewable": "Énergie renouvelable",
@@ -198,7 +209,8 @@ LABELS = {
         "ed_company": "The company at a glance", "ed_report_year": "Sustainability report {y}",
         "ed_pillars": "Environmental · Social · Governance",
         "ed_env": "Environmental", "ed_soc": "Social", "ed_gov": "Governance", "ed_global": "Overall score",
-        "ed_vs": "vs {y}", "ed_prev": "{y} scores", "ed_focus": "Focus", "ed_word": "A word from management",
+        "ed_vs": "vs {y}", "ed_prev": "{y} scores",
+        "coverage": "{n}/{t} indicators rated", "coverage_short": "{n}/{t} indic.", "ed_focus": "Focus", "ed_word": "A word from management",
         "ed_initiatives": "Our initiatives", "ed_employees": "employees", "ed_revenue": "€M revenue",
         "ed_year": "reporting year", "ed_target": "target horizon", "ed_country": "headquarters",
         "ed_closing": "Acting today for a lasting impact tomorrow.",
@@ -227,7 +239,7 @@ LABELS = {
         # ── Report types ────────────────────────────────────────
         "rep_white_paper": "ESG / CSR White Paper",
         "rep_full_report": "Full ESG Report",
-        "rep_executive_summary_pdf": "ESG Executive Summary",
+        "rep_annual_followup": "Annual ESG follow-up",
         "rep_default": "ESG Report",
         # ── PPTX / PDF sections ─────────────────────────────────
         "dashboard": "ESG Dashboard",
@@ -288,8 +300,17 @@ LABELS = {
         "quote_kicker": "A WORD FROM MANAGEMENT",
         "consultant_note": "CONSULTANT'S VIEW",
         "done_head": "Actions reported since the previous plan",
+        "toc_fu": "Year in review",
+        "fu_s1": "The year at a glance", "fu_s2": "What has changed",
+        "fu_s3": "The previous action plan", "fu_s4": "Where the targets stand",
+        "fu_s5": "Priorities for the coming year",
+        "fu_no_prev": "The previous year's indicators are not kept in the client file: the change can "
+                      "only be read through the scores above. It will be read indicator by indicator "
+                      "from next year.",
+        "fu_no_done": "No action from the previous plan is reported as under way to date.",
         "trend_kicker": "TRAJECTORY", "trend_title": "An ESG trajectory measured year after year",
         "cap_trend": "Multi-year evolution of the ESG score (overall and per pillar)",
+        "cap_trend_old": " — years {years}: scores computed under the grid then in force",
         "mat_initiated": "Initiated", "mat_structuring": "Structuring", "mat_structured": "Structured", "mat_advanced": "Advanced", "mat_exemplary": "Exemplary",
         "mat_none": "not assessed (no overall score)", "bench_not_rated": "Not rated",
         "conclusion_title": "Conclusion & Commitments",
@@ -316,7 +337,8 @@ LABELS = {
         "score_env_short": "Environmental Score", "score_soc_short": "Social Score",
         "score_gov_short": "Governance Score", "score_global_short": "Overall Score",
         "wp_intro": "This white paper documents the organisation's long-term ESG trajectory, based on the indicators collected for the financial year. It is an internal working document intended to inform decisions and situate the company's extra-financial maturity. It sets out no commitment on behalf of the organisation: quantified targets remain to be defined and disclosed by the company itself.",
-        "wp_horizon": "Horizon {y} — ESG target objectives",
+        "wp_horizon": "Horizon {y} — targets",
+        "wp_targets": "No quantified target has been disclosed for this horizon. It is for the organisation to set them, pillar by pillar, drawing on the action plan in this document; they will be shown here once defined.",
         # ── KPI labels ──────────────────────────────────────────
         "kpi": {
             "co2_total": "Total CO2 emissions", "renewable": "Renewable energy",

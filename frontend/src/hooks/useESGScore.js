@@ -11,17 +11,15 @@ function cleanNumeric(obj) {
   return result
 }
 
-export function useESGScore(form) {
-  const [scores, setScores] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const timerRef = useRef(null)
-
-  const buildPayload = (f) => ({
+/** Corps de requête du backend à partir du formulaire (champs vides -> null). */
+export function buildPayload(f) {
+  return {
     company: cleanNumeric(f.company),
     environmental: cleanNumeric(f.environmental),
     social: cleanNumeric(f.social),
     governance: cleanNumeric(f.governance),
     taxonomy: cleanNumeric(f.taxonomy || {}),
+    targets: cleanNumeric(f.targets || {}),
     presentation_type: f.presentation_type,
     aesthetic_theme: f.aesthetic_theme,
     report_type: f.report_type,
@@ -32,7 +30,13 @@ export function useESGScore(form) {
     custom_colors: f.custom_colors || null,
     report_photos: f.report_photos || null,
     consultant_notes: f.consultant_notes || null,
-  })
+  }
+}
+
+export function useESGScore(form) {
+  const [scores, setScores] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const timerRef = useRef(null)
 
   useEffect(() => {
     if (!form.company?.name) return

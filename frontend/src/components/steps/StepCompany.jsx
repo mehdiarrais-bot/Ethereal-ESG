@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { reportingYears, targetYears } from '../../lib/years.mjs'
 import { FormField, NumberInput, SelectInput, SectionTitle } from '../FormField'
 
 function ImportPanel({ onImport }) {
@@ -81,8 +82,6 @@ const COUNTRIES = [
   'Allemagne', 'Espagne', 'Italie', 'Royaume-Uni', 'Autre',
 ]
 
-const YEARS = [2020, 2021, 2022, 2023, 2024, 2025]
-const TARGET_YEARS = [2027, 2028, 2030, 2035, 2040, 2050]
 
 export default function StepCompany({ form, updateSection, onImport }) {
   const { company } = form
@@ -144,15 +143,15 @@ export default function StepCompany({ form, updateSection, onImport }) {
             <SelectInput
               value={company.reporting_year}
               onChange={(v) => updateSection('company', { reporting_year: parseInt(v) })}
-              options={YEARS.map(y => [y, y.toString()])}
+              options={reportingYears().map(y => [y, y.toString()])}
             />
           </FormField>
 
-          <FormField label="Horizon des objectifs" hint="Année cible pour la trajectoire ESG (CSRD/SBTi)">
+          <FormField label="Horizon des objectifs" hint="Année d'horizon des objectifs et du plan d'action">
             <SelectInput
               value={company.target_year || 2030}
               onChange={(v) => updateSection('company', { target_year: parseInt(v) })}
-              options={TARGET_YEARS.map(y => [y, y.toString()])}
+              options={targetYears(company.reporting_year).map(y => [y, y.toString()])}
             />
           </FormField>
 

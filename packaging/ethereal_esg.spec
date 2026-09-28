@@ -6,7 +6,7 @@
 # double-clic ouvre l'application dans sa propre fenetre (pywebview, moteur
 # WebView2 de Windows). Voir backend/desktop_entry.py.
 import os
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 BACKEND = os.path.join(ROOT, "backend")
@@ -24,12 +24,17 @@ datas += collect_data_files("docx")
 datas += collect_data_files("pptx")
 datas += collect_data_files("matplotlib")
 
-hiddenimports = collect_submodules("uvicorn") + ["clauses", "clauses.fr"]
+# Aperçu du sélecteur de gabarit : pdfium.dll et version.json de pypdfium2_raw.
+datas += collect_data_files("pypdfium2_raw")
+binaries = collect_dynamic_libs("pypdfium2_raw")
+
+hiddenimports = collect_submodules("uvicorn") + ["clauses", "clauses.fr", "preview"]
 
 a = Analysis(
     [os.path.join(BACKEND, "desktop_entry.py")],
     pathex=[BACKEND],
     datas=datas,
+    binaries=binaries,
     hiddenimports=hiddenimports,
     excludes=["tkinter", "pytest", "pyright", "fitz", "pymupdf", "IPython"],
     noarchive=False,

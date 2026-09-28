@@ -15,8 +15,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 OUT = os.path.join(ROOT, "examples")
 
+from models import ReportType  # noqa: E402
 from models import (ESGRequest, CompanyInfo, EnvironmentalData, SocialData,  # noqa: E402
-                    GovernanceData, TaxonomyData, AestheticTheme)
+                    GovernanceData, TaxonomyData, TargetsData, AestheticTheme)
 from esg_calculator import calculate_esg_scores                              # noqa: E402
 from content_generator import generate_esg_content                           # noqa: E402
 from ppt_generator import generate_pptx                                      # noqa: E402
@@ -49,6 +50,10 @@ DEMO = ESGRequest(
         female_board_percent=44),
     taxonomy=TaxonomyData(turnover_aligned_percent=38, capex_aligned_percent=52,
                           opex_aligned_percent=20),
+    # Cible climat déclarée (étape B) : citée comme telle, jamais évaluée
+    targets=TargetsData(climate_reduction_percent=42, climate_base_year=2025,
+                        climate_target_year=2030, climate_scopes="1-2",
+                        renewable_target_percent=60, training_hours_target=30),
     language="fr", aesthetic_theme="aurora",
     include_recommendations=True, include_benchmarks=True,
     # Historique : fait apparaître l'évolution N-1 et la trajectoire
@@ -57,6 +62,20 @@ DEMO = ESGRequest(
         {"year": 2023, "env": 48.0, "social": 46.0, "gov": 55.0, "total": 49.4},
         {"year": 2024, "env": 58.0, "social": 50.0, "gov": 60.0, "total": 55.9},
     ],
+    # Indicateurs 2024 conservés dans le dossier : évolution indicateur par
+    # indicateur, et score 2024 recalculé selon la grille actuelle.
+    previous_data={"year": 2024, "revenue_eur": 45_000_000,
+                   "environmental": {"co2_emissions_tonnes": 8900, "scope1_emissions": 1300,
+                                     "scope2_emissions": 2400, "scope3_emissions": 5200,
+                                     "renewable_energy_percent": 35, "waste_recycled_percent": 58,
+                                     "water_consumption_m3": 115000, "energy_consumption_mwh": 22800},
+                   "social": {"female_employees_percent": 33, "training_hours_per_employee": 18,
+                              "accident_frequency_rate": 8.1, "total_employees": 310,
+                              "employee_turnover_percent": 13},
+                   "governance": {"esg_audit_conducted": False, "sustainability_committee": True,
+                                  "data_breaches": 0, "ethics_violations": 0,
+                                  "independent_board_percent": 45, "board_members": 9,
+                                  "female_board_percent": 44}},
     # Suivi de mission : preuve d'exécution du plan précédent
     completed_actions=[
         {"title": "Créer un comité de durabilité au conseil", "year": 2024},
@@ -90,6 +109,9 @@ def main():
         "Presentation.pptx": generate_pptx(DEMO, scores, content, charts_dark, logo_bytes=logo),
         "Rapport-ESG.docx": generate_word_report(DEMO, scores, content, logo_bytes=logo),
         "Synthese-1-page.pdf": generate_onepager_pdf(DEMO, scores),
+        "Suivi-annuel.pdf": generate_pdf_report(
+            DEMO.model_copy(update={"report_type": ReportType.ANNUAL_FOLLOWUP}), scores, content,
+            charts_light, logo_bytes=logo),
         "Lettre-de-mission.docx": generate_proposal_docx(DEMO, scores),
         "Questionnaire_collecte_Acme_2025.html": generate_questionnaire_html(
             DEMO.company.name, DEMO.company.reporting_year,

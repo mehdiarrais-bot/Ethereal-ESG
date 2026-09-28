@@ -12,7 +12,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas as pdfcanvas
 from reportlab.lib.utils import simpleSplit
 
-from esg_calculator import NON_NOTE, score_label
+from esg_calculator import NON_NOTE, score_label, coverage_text
 from models import ESGRequest, ESGScores
 from i18n import L
 from pdf_kit import Kit, clean as pdf_txt
@@ -101,13 +101,14 @@ def _onepager(request: ESGRequest, scores: ESGScores) -> bytes:
     # Repère sectoriel retiré : il pointait une moyenne inventée (cf. note
     # dans esg_advanced.py). Restent les scores absolus, qui sont vrais.
     txt(M, y0, ("PILLAR SCORES" if en else "SCORES PAR PILIER"), fb, 9, pal["secondary"])
-    bars = [(TR["chart_env"], scores.environmental_score, pal["env"]),
-            (TR["chart_soc"], scores.social_score, pal["social"]),
-            (TR["chart_gov"], scores.governance_score, pal["gov"])]
+    bars = [(TR["chart_env"], scores.environmental_score, pal["env"], "env"),
+            (TR["chart_soc"], scores.social_score, pal["social"], "social"),
+            (TR["chart_gov"], scores.governance_score, pal["gov"], "gov")]
     bw = W - 2 * M - 4.2 * cm
-    for i, (lab, v, col) in enumerate(bars):
+    for i, (lab, v, col, key) in enumerate(bars):
         by = y0 - 0.75 * cm - i * 0.85 * cm
         txt(M, by + 0.06 * cm, lab, fb, 9, pal["text"])
+        txt(M, by - 0.3 * cm, coverage_text(scores, key, TR["coverage"]), f, 7, pal["secondary"])
         bx = M + 3.2 * cm
         c.setFillColor(pal["rule"]); c.roundRect(bx, by, bw, 0.32 * cm, 3, fill=1, stroke=0)
         if v is not None:  # pilier non noté : piste vide et « — »

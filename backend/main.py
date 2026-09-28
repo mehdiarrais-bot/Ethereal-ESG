@@ -5,7 +5,7 @@ import sys
 from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -210,6 +210,22 @@ def designs_endpoint():
                     for theme, d in DESIGNS.items()],
         "photo_slots": list(CLIENT_PHOTO_SLOTS),
     }
+
+
+@app.post("/api/preview")
+def preview_endpoint(request: ESGRequest):
+    """Couverture + « coup d'œil » du gabarit demandé, avec les données du
+    dossier, en PNG : l'aperçu vivant du sélecteur de gabarit."""
+    import preview
+    from report_generator import preview_pdf
+    scores = calculate_esg_scores(request)
+    logo_bytes, _ = build_extras(request)
+    try:
+        image = preview.render(preview_pdf(request, scores, logo_bytes))
+    except preview.PreviewUnavailable:
+        raise HTTPException(status_code=503, detail="Aperçu indisponible sur cette installation")
+    return Response(content=image, media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/calculate")
@@ -513,7 +529,7 @@ def generate_report(request: ESGRequest):
     type_suffix = {
         "white_paper": "Livre_Blanc",
         "full_report": "Rapport_ESG",
-        "executive_summary_pdf": "Synthèse_Exécutive",
+        "annual_followup": "Suivi_Annuel",
     }.get(request.report_type.value, "Rapport")
 
     filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.pdf"
@@ -548,11 +564,8 @@ def generate_word(request: ESGRequest):
     docx_bytes = generate_word_report(request, scores, content,
                                       logo_bytes=logo_bytes, cover_art=art,
                                       charts=adv_charts)
-    type_suffix = {
-        "white_paper": "Livre_Blanc",
-        "full_report": "Rapport_ESG",
-        "executive_summary_pdf": "Synthèse_Exécutive",
-    }.get(request.report_type.value, "Rapport")
+    # Le suivi annuel n'existe qu'en PDF : le Word reste le rapport complet.
+    type_suffix = {"white_paper": "Livre_Blanc"}.get(request.report_type.value, "Rapport_ESG")
     filename = f"{type_suffix}_{safe_name(request.company.name)}_{request.company.reporting_year}.docx"
     return StreamingResponse(
         io.BytesIO(docx_bytes),

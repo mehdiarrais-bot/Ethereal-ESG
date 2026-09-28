@@ -14,7 +14,8 @@ const PRES_TYPES = [
 const REPORT_TYPES = [
   { id: 'full_report', name: 'Rapport ESG Complet', desc: 'Analyse detaillee tous piliers' },
   { id: 'white_paper', name: 'Livre Blanc RSE', desc: 'Document de reference strategique' },
-  { id: 'executive_summary_pdf', name: 'Synthese PDF', desc: 'Resume executif condense' },
+  { id: 'annual_followup', name: 'Suivi annuel', desc: "Évolution, actions réalisées, cibles — PDF de 6 à 9 pages",
+    needsHistory: true },
 ]
 
 // Palette déterministe depuis le nom du client (même logique que le backend :
@@ -36,11 +37,12 @@ function autoBrand(name) {
   return { primary: hsl(hue, 0.42, 0.20), accent: hsl(accentHue, 0.72, 0.55) }
 }
 
-function OptionCard({ item, selected, onClick }) {
+function OptionCard({ item, selected, onClick, disabled = false, disabledNote = '' }) {
   return (
-    <button className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick} type="button">
+    <button className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick} type="button"
+      disabled={disabled} title={disabled ? disabledNote : undefined}>
       <div className="option-name">{item.name}</div>
-      <div className="option-desc">{item.desc}</div>
+      <div className="option-desc">{disabled ? disabledNote : item.desc}</div>
       {selected && <div className="option-check">✓</div>}
     </button>
   )
@@ -65,7 +67,7 @@ function ProgressBar({ progress, loading }) {
   )
 }
 
-export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores, clientId, clientActions, onToggleAction }) {
+export default function StepOutput({ form, setForm, onDownload, loading, progress, downloadLink, onClearLink, scores, clientId, clientActions, onToggleAction, hasPrevious = false }) {
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
   const [showPreview, setShowPreview] = useState(false)
   const busy = loading
@@ -77,7 +79,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
 
         <div className="output-section">
           <div className="output-section-title">🎨 Gabarit du rapport</div>
-          <DesignPicker value={form.aesthetic_theme} onChange={set('aesthetic_theme')} />
+          <DesignPicker value={form.aesthetic_theme} onChange={set('aesthetic_theme')} form={form} />
         </div>
 
         <div className="output-section">
@@ -100,7 +102,9 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           <div className="options-grid">
             {REPORT_TYPES.map(r => (
               <OptionCard key={r.id} item={r} selected={form.report_type === r.id}
-                onClick={() => set('report_type')(r.id)} />
+                onClick={() => set('report_type')(r.id)}
+                disabled={r.needsHistory && !hasPrevious}
+                disabledNote="Disponible dès qu'un exercice antérieur est enregistré dans le dossier" />
             ))}
           </div>
         </div>
@@ -142,10 +146,10 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         </div>
 
         <div className="output-section">
-          <div className="output-section-title">💬 Vos analyses (encarts « L\u2019analyse du consultant »)</div>
+          <div className="output-section-title">💬 Vos analyses (encarts « L’analyse du consultant »)</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-            Facultatif — vos commentaires d\u2019expert, affichés dans des encarts dédiés des livrables.
-            C\u2019est ce qui distingue votre diagnostic d\u2019un rapport automatique.
+            Facultatif — vos commentaires d’expert, affichés dans des encarts dédiés des livrables.
+            C’est ce qui distingue votre diagnostic d’un rapport automatique.
           </div>
           <div className="notes-grid">
             {[['global', 'Synthèse globale'], ['env', 'Environnement'], ['social', 'Social'], ['gov', 'Gouvernance']].map(([k, label]) => (
@@ -157,8 +161,8 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
                   value={form.consultant_notes?.[k] || ''}
                   onChange={e => set('consultant_notes')({ ...(form.consultant_notes || {}), [k]: e.target.value })}
                   placeholder={k === 'global'
-                    ? 'Ex: La priorité 2026 est la fiabilisation du reporting énergie avant l\u2019audit\u2026'
-                    : 'Votre lecture de ce pilier\u2026'}
+                    ? 'Ex: La priorité 2026 est la fiabilisation du reporting énergie avant l’audit…'
+                    : 'Votre lecture de ce pilier…'}
                 />
               </label>
             ))}
@@ -167,7 +171,7 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
 
         {clientId && scores?.recommendations?.length > 0 && (
           <div className="output-section">
-            <div className="output-section-title">✅ Suivi du plan d\u2019action</div>
+            <div className="output-section-title">✅ Suivi du plan d’action</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
               Cochez les actions réalisées : elles apparaîtront comme « acquis » dans les
               prochains livrables (encart vert + mention en synthèse). Sauvegarde immédiate.
@@ -329,17 +333,52 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
           gap: 14px;
         }
-        .design-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-        .design-card {
-          position: relative; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
-          border: 1px solid var(--border); border-radius: var(--radius);
-          background: var(--bg-surface); color: var(--text);
-          transition: border-color var(--fast), background var(--fast);
+        /* Sélecteur de gabarit : liste à gauche, aperçu vivant à droite */
+        .design-chooser { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: start; }
+        .design-list { display: flex; flex-direction: column; gap: 8px; }
+        .design-chip {
+          display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+          padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+          background: var(--bg-surface); color: var(--text); font: inherit;
+          transition: border-color .2s ease, background-color .2s ease, transform .2s ease, box-shadow .2s ease;
         }
-        .design-card img { display: block; width: 100%; aspect-ratio: 610 / 424; object-fit: cover; background: var(--bg-inset); }
-        .design-card:hover { border-color: var(--brand); }
-        .design-card.selected { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-ring); background: var(--brand-soft); }
-        .design-meta { padding: 10px 14px 12px; border-top: 1px solid var(--border); }
+        .design-chip:hover { border-color: var(--brand); transform: translateX(2px); }
+        .design-chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+        .design-chip.selected { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 2px var(--brand-ring); }
+        .design-chip-swatches { display: grid; grid-template-columns: repeat(3, 10px); gap: 3px; flex: none; }
+        .design-chip-swatches span { width: 10px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--border); }
+        .design-chip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .design-chip-name { font-size: 14px; font-weight: 600; }
+        .design-chip-tagline { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+        .design-stage { background: var(--bg-inset); border-radius: var(--radius-lg); padding: 16px; min-height: 320px; overflow: hidden; }
+        .design-stage-inner { animation: stage-in .42s cubic-bezier(.2, .7, .2, 1) both; }
+        @keyframes stage-in {
+          from { opacity: 0; transform: translateY(12px) scale(.985); filter: blur(2px); }
+          to { opacity: 1; transform: none; filter: none; }
+        }
+        .design-stage-frame { position: relative; }
+        .design-stage-frame img { display: block; width: 100%; height: auto; }
+        .design-stage-thumb { border-radius: 4px; }
+        .design-stage-live {
+          position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+          opacity: 0; transform: scale(1.01);
+          transition: opacity .45s ease, transform .45s ease;
+        }
+        .design-stage-live.shown { opacity: 1; transform: none; }
+        .design-stage-spinner {
+          position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; border-radius: 50%;
+          border: 2px solid var(--border); border-top-color: var(--brand); animation: stage-spin .8s linear infinite;
+        }
+        @keyframes stage-spin { to { transform: rotate(360deg); } }
+        .design-stage-caption { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; margin-top: 12px; }
+        .design-stage-name { font-size: 16px; font-weight: 600; }
+        .design-stage-tagline { font-size: 13px; color: var(--text-dim); }
+        .design-stage-status { font-size: 12px; color: var(--muted); text-align: right; max-width: 55%; }
+        @media (prefers-reduced-motion: reduce) {
+          .design-stage-inner, .design-stage-spinner { animation: none; }
+          .design-stage-live, .design-chip { transition: none; }
+          .design-chip:hover { transform: none; }
+        }
         .design-error { font-size: 12px; color: var(--danger); margin-top: 8px; }
         .photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         .photo-slot { display: flex; flex-direction: column; gap: 6px; position: relative; }
@@ -378,6 +417,8 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
           color: var(--text); min-height: 74px;
         }
         .option-card:hover { border-color: var(--brand); background: var(--bg-subtle);  }
+        .option-card:disabled { opacity: 0.5; cursor: not-allowed; }
+        .option-card:disabled:hover { border-color: inherit; background: inherit; }
         .option-card.selected {
           border-color: var(--brand); background: var(--brand-soft);
           box-shadow: none;
@@ -517,7 +558,9 @@ export default function StepOutput({ form, setForm, onDownload, loading, progres
         }
 
         @media (max-width: 900px) {
-          .design-grid { grid-template-columns: repeat(2, 1fr); }
+          .design-chooser { grid-template-columns: 1fr; }
+          .design-list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+          .design-chip { min-width: 200px; }
           .photo-grid { grid-template-columns: repeat(3, 1fr); }
         }
       `}</style>

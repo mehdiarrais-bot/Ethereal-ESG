@@ -6,7 +6,7 @@ consignés ici pour ne pas être perdus. À traiter en bloc, après le socle de
 clauses (`backend/bands.py`, `backend/composer.py`, `backend/clauses/`) et
 la rédaction des clauses elles-mêmes.
 
-## 0. ÉVOLUTION PRIORITAIRE — donner un contenu propre à la section Positionnement
+## 0. ÉVOLUTION PRIORITAIRE — donner un contenu propre à la section Positionnement — **traité le 2026-09-28**
 
 - **Contexte** : la comparaison à une référence sectorielle inventée a été
   retirée (chantier du 2026-09-02). La section « Positionnement » affiche
@@ -19,6 +19,19 @@ la rédaction des clauses elles-mêmes.
   (évolution par pilier, écart au précédent exercice, tendance). Sourcé,
   vrai, et sans doublon. Limite connue : rien à afficher au premier
   exercice — prévoir le repli sur le classement interne actuel.
+- **Traitement (lots A, B, C)** : chaque exercice du dossier conserve ses
+  indicateurs (`client_store.exercise_snapshot`) ; le score N-1 est
+  recalculé selon la grille actuelle quand ils existent, sinon signalé
+  « selon la grille alors en vigueur » ; section « Évolution depuis
+  l'exercice N-1 » (`evolution.py`) en tête du Diagnostic (PDF, Word, notes
+  PPTX) : variation de chaque indicateur présent les deux années, sens lu
+  dans `bands` (grilles et compteurs de pénalité), intensité carbone plutôt
+  que tonnes, indicateurs apparus / disparus. Le classement interne des
+  piliers reste en repli. Bug corrigé en chemin : un exercice dont un pilier
+  n'était pas noté disparaissait de la courbe et de l'évolution N-1.
+  Cause racine d'un défaut de rendu : `pdf_kit.clean` supprime en silence
+  tout caractère hors cp1252 (« − », « → ») — translittérés, et invariant
+  `aucun_caractere_perdu_a_l_impression` au banc.
 
 ## 0bis. ÉTAPE B — collecter les objectifs et engagements du client
 
@@ -50,6 +63,25 @@ de l'étape B, pas les champs eux-mêmes.
 
 **Ordre impératif** : A avant B. Faire B d'abord aurait laissé les
 affirmations fausses en production le temps du chantier de saisie.
+
+**Avancement (2026-09-27)** — périmètre arbitré : lots 1 et 2, lot 3
+(certifications ISO, ODD en multi-sélection) reporté ; aucun référentiel
+de cible (« validée SBTi »…) saisissable pour l'instant (règle 9).
+- **Lot 1, trajectoire climat — FAIT** : `TargetsData` (réduction %, année
+  de référence, année cible, périmètre 1-2 / 1-2-3), `targets.py` (cible
+  complète ou rien, rythme annuel moyen, tonnes si la référence est
+  l'exercice du rapport et le périmètre couvert par le bilan), texte
+  « Objectifs », ligne ESRS E1-4 (« cible déclarée »), livre blanc,
+  6ᵉ étape « Objectifs » du wizard, questionnaire, import CSV.
+  `tests/test_objectifs.py`, invariant `cible_citee_est_la_cible_saisie`.
+- **Lot 2, cibles par indicateur — FAIT (2026-09-28)** : renouvelable, part de
+  femmes, heures de formation, taux de fréquence, à l'horizon
+  `company.target_year`. Écart à la cible (ou « déjà atteinte », ou valeur
+  de l'exercice non renseignée) dans le texte « Objectifs » et en fin de
+  lecture du pilier ; la cible du client **remplace** l'objectif proposé
+  par l'outil dans le point faible (« objectif 50 % »), les recommandations
+  et le plan d'action (titre + colonne Objectif). Invariant
+  `cibles_indicateurs_citees_telles_quelles`.
 
 ## 0ter. Mapping ODD dérivé des indicateurs réellement collectés
 
@@ -935,7 +967,7 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   remplacer les replis par une erreur explicite ou une clé i18n.
 
 
-## 16. « Le silence paie » — aggravé par le § 11 (C1), OUVERT, à arbitrer
+## 16. « Le silence paie » — **traité le 2026-09-27 (option c)**
 
 - **Constat** (test témoin `test_temoin_le_silence_paie`) : un pilier est
   noté dès qu'un seul indicateur de sa grille est renseigné, et chaque
@@ -952,8 +984,21 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   complétude de chaque pilier à côté de son score (CLAUDE.md fait déjà de
   la complétude l'information de pilotage) ; (c) les deux. Toute
   pénalité chiffrée pour absence serait un barème à sourcer.
+- **Traitement (option c)** : un pilier n'est noté qu'à partir de
+  `MIN_INDICATEURS_PILIER` = 3 indicateurs de sa grille
+  (`esg_calculator.GRILLE_INDICATEURS` : 4 / 6 / 8), seuil déclaré interne
+  dans la note méthodologique ; l'intensité carbone et la déclaration du
+  bilan, tirées du même champ, comptent pour un seul indicateur. La
+  complétude « notés/total » (`ESGScores.indicator_coverage`) est imprimée à
+  côté de chaque score de pilier : PDF (six pages « coup d'œil », couverture
+  « duo », chapitres), Word, synthèse une page, PPTX, interface. Aucune
+  pénalité chiffrée. Mesures : A 69,5 (A) inchangé ; B, C, D non notés.
+- **Limite assumée** (test `test_le_tri_des_chiffres_se_voit_dans_la_completude`) :
+  E, qui ne déclare que ses trois meilleurs chiffres par pilier, est notée
+  74,3 (A) et devance A. Aucun barème ne voit ce qui n'est pas déclaré ; le
+  lecteur le voit à la complétude (3/4, 3/6, 3/8 contre 3/4, 4/6, 6/8).
 
-## 17. Donnée absente lue comme « non » — audit et comité, OUVERT
+## 17. Donnée absente lue comme « non » — audit et comité, **traité le 2026-09-27**
 
 - **Constat** : `if not gov.esg_audit_conducted` / `if not
   gov.sustainability_committee` traitent `None` (non renseigné) comme
@@ -966,8 +1011,15 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   absente.
 - **Correction proposée** : `is False` pour tout ce qui affirme un fait ;
   laisser les recommandations et les lacunes telles quelles.
+- **Traitement** : `is False` dans les points faibles (FR/EN), le titre du
+  pilier gouvernance et le risque « Reporting non audité » ; les phrases
+  audit/comité du texte de gouvernance sont omises si la donnée est absente
+  (`_gov_fact`) ; les deux lignes du tableau de couverture passent en
+  « non renseigné » (`na`). Recommandations, lacunes de reporting et
+  signaux de maturité inchangés. `tests/test_booleen_inconnu.py` (trois
+  cas échouent sur l'ancien code).
 
-## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, OUVERT
+## 18. Stade de maturité : « (2/5) » ici, case « 3 » là, **traité le 2026-09-27**
 
 - **Constat** : `esg_maturity` rend un rang de 0 à 4. Le PDF, le Word, la
   synthèse une page et la lettre impriment « Structurée (2/5) » ; la
@@ -977,6 +1029,188 @@ Relevé en découpant `generate_pptx` / `generate_word_report` le 2026-09-25
   `content_generator.maturite_libelle` sert déjà le Word, la synthèse une
   page et la lettre ; restent le PDF (mise en forme propre, deux phrases
   de synthèse dans `deepen_content`) et la diapositive.
+- **Traitement** : `content_generator.maturite_rang` (« stage + 1 »/5), seule
+  source du rang, lue par `maturite_libelle` (Word, synthèse, lettre), les
+  deux phrases de synthèse et le PDF. La diapositive était déjà juste (cases
+  1-5, case `stage + 1` allumée). `tests/test_maturite_rang.py`.
+
+## 19. Livre blanc PDF : plantage sur un pilier non noté, cibles fabriquées — **traité le 2026-09-27**
+
+Relevé pendant le § 16, non corrigé (règle 2).
+
+- **Plantage** : `report_generator._white_paper` calcule `min(100, e + 15)`
+  sans tester `None`. Un rapport de type « livre blanc » dont un pilier
+  n'est pas noté lève `TypeError` : la génération échoue. Préexistant (un
+  pilier vide suffisait), rendu plus fréquent par le seuil du § 16
+  (reproduit : gouvernance à 2 indicateurs sur 8).
+- **Exactitude** : ces mêmes lignes impriment des cibles que le client n'a
+  jamais données (« Score E cible +15 », « +50 % renouvelable », « Parité
+  40 % », « Audit annuel ») — le type d'engagement fabriqué que l'étape A
+  (§ 0bis) a retiré partout ailleurs.
+- **Correction proposée** : retirer ces cibles (« objectifs à définir »,
+  comme les autres livrables) — ce qui supprime aussi le plantage — plus un
+  test « livre blanc avec pilier non noté ».
+- **Traitement** : cibles retirées ; la section dit « Horizon {y} — objectifs
+  à définir » et renvoie au plan d'action (clés `wp_horizon`, `wp_targets`,
+  FR/EN). `tests/test_livre_blanc.py` : génération avec un pilier non noté,
+  aucune cible fabriquée (les 4 cas échouent sur l'ancien code). Les cibles
+  reviendront, saisies par le client, avec l'étape B (§ 0bis).
+
+## 20. Deux listes d'indicateurs notés divergentes — OUVERT
+
+- `narrative._GRADED` ne compte que 3 indicateurs de gouvernance
+  (indépendants, femmes au conseil, budget RSE), `esg_calculator` en note 8
+  (`GRILLE_INDICATEURS`) ; en environnement, `_GRADED` ignore le bilan
+  Scope et compte le CO₂ seul. Deux sources de vérité pour « ce qui entre
+  dans la note ». À réconcilier sur `GRILLE_INDICATEURS`.
+
+## 21. Bilan GES compté deux fois dans la moyenne du pilier — OUVERT, barème
+
+- L'intensité carbone et la déclaration du bilan (`scope_reporting`, 60 ou
+  80) sont deux sous-notes moyennées à part égale avec les autres : le
+  bilan GES pèse double dans le score environnemental. Le § 16 ne les compte
+  que pour un indicateur dans le seuil, mais n'a pas touché la moyenne :
+  la corriger déplacerait le score de tout dossier qui déclare un bilan
+  GES. Barème interne : à arbitrer, pas à corriger en passant.
+
+## 22. Phrases de gouvernance qui affirment des faits non déclarés — **traité le 2026-09-27**
+
+Relevé pendant le § 17, non corrigé (règle 2). Dans `content_generator.py` :
+- `GOV_NO_AUDIT` : « L'intégration d'un auditeur tiers […] est planifiée »,
+  « […] identifiée comme priorité pour le prochain exercice » — le client n'a
+  rien dit de tel ; seul « non » a été déclaré.
+- `GOV_AUDITS` : « L'audit indépendant conduit garantit l'intégrité des
+  données publiées dans ce rapport » — un audit ESG déclaré ne vaut pas
+  vérification de CE rapport.
+- **À faire** : ne garder que des formulations de constat ou de
+  recommandation (même chose pour les équivalents EN et `GOV_*COMMITTEE*`).
+- **Traitement** : revue des 36 listes de `content_generator.py` (252
+  phrases). Réécrites FR/EN : audit (« garantit l'intégrité des données de
+  ce rapport », « un tiers a vérifié », « est planifiée », « engagement
+  inscrit dans la feuille de route »), comité (« permanent », « rend compte
+  directement au Conseil », « supervise l'atteinte des objectifs »),
+  perspective environnementale (« feuille de route », « stratégie
+  pluriannuelle », « engagements de durabilité » du client → levier
+  prioritaire du secteur selon ce diagnostic), Scope 3 « couvrant
+  l'intégralité de la chaîne de valeur », « l'audit ESG positionne » (c'est un
+  diagnostic), ouvertures « stratégie », « engagements ». Retirées :
+  `SOC_STRATEGIES` (politique RH inventée). Replis « en cours de
+  structuration » → « aucun indicateur renseigné ». Conclusion : plus
+  d'engagement prêté au client (« s'engage à amplifier… », « réaffirme son
+  engagement… », « progression régulière » sans historique) ; lecture du
+  niveau sur la grille interne, recommandations « proposées », mise en
+  œuvre laissée aux arbitrages du client. Point fort de repli : constante
+  `AUCUN_POINT_FORT`, exclue des dénombrements (`strengths_count`) — il
+  s'imprimait « un point fort consolidé » dans 48 profils sur 300.
+  Garde-fou : invariant `aucune_affirmation_non_declaree` du banc
+  (formulations entières, § 0quater), vert sur 600 dossiers.
+- **Reste** : le repli dormant du Word (« … réaffirme son engagement vers un
+  modèle d'affaires durable ») relève du § 15.
+
+## 23. Diagnostic d'ensemble : « fragilités concentrées » sur le meilleur pilier — **traité le 2026-09-27**
+
+Relevé en refaisant les captures du README le 2026-09-27, non corrigé.
+
+- **Constat** (dossier d'exemple Acme, `examples/Rapport-ESG.pdf` p. 6 et
+  synthèse une page) : « Les fragilités se concentrent sur le pilier de
+  gouvernance », alors que la gouvernance est le pilier le mieux noté
+  (75/100) et que la synthèse exécutive, juste au-dessus, écrit
+  « Gouvernance domine le profil ESG ». Les deux enjeux retenus (violation
+  de données, données non vérifiées) relèvent bien de la gouvernance, mais
+  la phrase de profil les présente comme la faiblesse du dossier.
+- **Où** : `synthesis.py` (profil « concentré / réparti »), textes dans
+  `synthesis_texts.py`.
+- **À trancher** : formuler le profil en termes d'enjeux (« les enjeux
+  repérés relèvent de la gouvernance ») plutôt que de fragilité du pilier,
+  ou croiser avec le rang du pilier avant d'écrire « fragilités ».
+- **Traitement** : formulation en enjeux (« Les enjeux repérés relèvent
+  surtout du pilier X », FR/EN, profils concentré et réparti) ; invariant
+  `fragilites_pas_sur_le_meilleur_pilier` lu sur le texte, vert sur 600
+  dossiers, rouge sur l'ancienne formulation.
+
+## 24. Risque carbone au seuil fixe, point d'appui au seuil sectoriel — **traité le 2026-09-27**
+
+Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
+`risque_carbone_contre_appui`, xfail strict dans `tests/test_coherence.py`).
+
+- **Constat** : `content_generator.risks_opportunities` inscrit le risque
+  « Intensité carbone élevée : marge exposée à la tarification du carbone »
+  au-delà de **100 t CO₂e/M€, quel que soit le secteur**. La synthèse
+  (`synthesis.strengths`, tranches de `bands.py`) juge la même intensité sur
+  la **grille sectorielle**. Une entreprise de l'énergie à 121 t/M€, ou de
+  l'agroalimentaire à 110, reçoit à la fois le risque et le point d'appui
+  « Une intensité carbone solide pour le secteur ».
+- **Cause** : deux sources de vérité pour un même seuil (CLAUDE.md : « aucun
+  seuil dupliqué entre fichiers »).
+- **À trancher** : lire le risque sur la tranche de `bands.py` (fragile ou
+  pire). Déplace le risque de tous les dossiers hors services : barème, à
+  arbitrer.
+- **Traitement (arbitré le 2026-09-27)** : le risque se lit sur la tranche
+  sectorielle de `bands.classer` (fragile ou critique, `analysis._BAD`).
+  Mesure sur 300 profils : 181 → 168 dossiers exposés ; retiré à 13
+  entreprises de secteurs lourds dont l'intensité est correcte pour leur
+  secteur (dont Acme, 171 t/M€, industrie « satisfaisant ») ; ajouté aux
+  services entre 50 et 100 t/M€, jugés fragiles par leur grille.
+  `test_risque_carbone_sur_la_grille_sectorielle` ; invariant du banc vert.
+
+Le § 23 est lui aussi couvert par le banc (`fragilites_pas_sur_le_meilleur_pilier`).
+
+## 25. Interface : libellés à revoir — **traité le 2026-09-28**
+
+Relevés pendant l'étape B, non corrigés (règle 2).
+- `StepGovernance.jsx` : aide « Recommandation AFEP-MEDEF : >50% ». Le
+  § 0octies a établi : la moitié (≥, pas >), le tiers pour une société
+  contrôlée, et seulement pour une société cotée.
+- `StepCompany.jsx` : aide de l'horizon « Année cible pour la trajectoire
+  ESG (CSRD/SBTi) » — cite deux référentiels sans objet pour ce champ.
+- `StepCompany.jsx` : `YEARS` s'arrête à 2025 alors que le modèle accepte
+  jusqu'à 2035 : l'exercice 2026 n'est pas sélectionnable.
+- `StepOutput.jsx` (l. 149, 151, 152, 174) : `’` écrit dans du texte
+  JSX s'affiche tel quel (« L’analyse du consultant », « Suivi du plan
+  d’action ») ; seul l'échappement dans une chaîne JS (l. 164) est
+  interprété. Relevé le 2026-09-28 en vérifiant le suivi annuel.
+- **Traitement** : aide AFEP-MEDEF reprise du questionnaire (formulation
+  déjà vérifiée, § 0octies) ; aide de l'horizon sans référentiel ; exercices
+  proposés jusqu'à l'année en cours (borne du modèle 2035) et horizons
+  postérieurs à l'exercice (`frontend/src/lib/years.mjs`, testé) ; les six
+  `\uXXXX` remplacés par le caractère, et `lib/sources.test.mjs` refuse
+  toute séquence d'échappement dans les composants (il attrape les six
+  lignes de l'ancienne version).
+
+
+## 26. Titres de pilier qui affirment un dispositif non déclaré — **traité le 2026-09-28**
+
+Relevé en vérifiant la pagination du 2026-09-28 (dossier d'exemple, p. 15),
+non corrigé (règle 2). `content_generator.py` (titres par tranche de score,
+~l. 1785) : « Gouvernance exemplaire : indépendance, **audit** et
+supervision ESG inspirent confiance » s'imprime pour un score de
+gouvernance élevé, alors que l'encart de la même page affiche « Audit ESG :
+Non ». Même classe que le § 22 : un titre déduit d'une tranche de score
+nomme des dispositifs précis. Revue à faire des titres « high / mid / low »
+des trois piliers : ne nommer que ce qui est déclaré, ou rester sur la
+tranche.
+
+**Traitement** : les 24 titres (`_PILLAR_INSIGHT`, 3 piliers × 4 tranches,
+FR/EN) restent sur la tranche (« de premier plan sur la grille du
+diagnostic », « les indicateurs en retrait sur la grille… ») et ne nomment
+plus ni audit, ni assurance externe, ni comité, ni Scope 3, ni sécurité.
+Les titres entrent désormais dans le banc de cohérence (ils n'y étaient
+pas : le garde-fou ne pouvait pas les voir) ; les anciennes formulations
+sont dans `NON_DECLARE`, et le test échoue sur l'ancien code.
+
+## 27. « Synthèse PDF » : rapport complet sous un autre titre — **traité le 2026-09-28**
+
+- **Constat** : le type de rapport « Synthèse PDF — Résumé exécutif
+  condensé » produisait exactement le rapport complet (23 pages mesurées),
+  seul le titre changeait.
+- **Traitement (arbitré)** : remplacé par le **suivi annuel**
+  (`annual_followup`, PDF de 6 à 9 pages : l'exercice en bref, ce qui a
+  changé, le plan d'action précédent, les cibles, les priorités à venir,
+  note méthodologique), grisé dans l'interface sans exercice antérieur. Les
+  dossiers enregistrés avec l'ancienne valeur sont relus en rapport complet.
+  Le Word d'un suivi reste un rapport complet, titré et nommé comme tel.
+  `_compose` découpé (tronc commun + `_body_full` / `_body_followup`) ;
+  rapport complet et livre blanc vérifiés identiques au texte près.
 
 ---
 

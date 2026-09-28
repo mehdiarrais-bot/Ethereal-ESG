@@ -5,6 +5,7 @@ import StepCompany from './components/steps/StepCompany'
 import StepEnvironmental from './components/steps/StepEnvironmental'
 import StepSocial from './components/steps/StepSocial'
 import StepGovernance from './components/steps/StepGovernance'
+import StepTargets from './components/steps/StepTargets'
 import StepOutput from './components/steps/StepOutput'
 import ResultsPanel from './components/ResultsPanel'
 import MiniScorebar from './components/MiniScorebar'
@@ -13,6 +14,7 @@ import PortfolioView from './components/PortfolioView'
 import { useESGScore } from './hooks/useESGScore'
 import { DEMO_DATA } from './demoData'
 import { sessionAfter, mayDiscard } from './lib/formSession.mjs'
+import { hasPreviousExercise } from './lib/followup.mjs'
 import './App.css'
 
 const STEPS = [
@@ -20,6 +22,7 @@ const STEPS = [
   { id: 'environmental', label: 'Environnement', icon: '🌍' },
   { id: 'social', label: 'Social', icon: '👥' },
   { id: 'governance', label: 'Gouvernance', icon: '⚖️' },
+  { id: 'targets', label: 'Objectifs', icon: '🎯' },
   { id: 'output', label: 'Livrables', icon: '📊' },
 ]
 
@@ -27,6 +30,8 @@ const EMPTY_FORM = {
   company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024,
     target_year: 2030, presenter_name: '', presenter_title: '', logo_base64: null, key_initiatives: '', ceo_quote: '' },
   taxonomy: { turnover_aligned_percent: '', capex_aligned_percent: '', opex_aligned_percent: '' },
+  targets: { climate_reduction_percent: '', climate_base_year: '', climate_target_year: '', climate_scopes: '',
+    renewable_target_percent: '', female_employees_target_percent: '', training_hours_target: '', accident_rate_target: '' },
   environmental: {
     co2_emissions_tonnes: '', energy_consumption_mwh: '', renewable_energy_percent: '',
     water_consumption_m3: '', waste_generated_tonnes: '', waste_recycled_percent: '',
@@ -254,6 +259,8 @@ export default function App() {
       const prev = (clientHistory || []).filter(h => h.year < year).pop()
       if (prev) {
         payload.previous_scores = { year: prev.year, ...prev.scores }
+        // Indicateurs saisis de l'exercice précédent (sauvegardes depuis le 2026-09-28)
+        if (prev.data) payload.previous_data = { year: prev.year, ...prev.data }
       }
       // Trajectoire pluriannuelle : historique complet du dossier
       if (clientHistory?.length) {
@@ -311,6 +318,7 @@ export default function App() {
     <StepEnvironmental {...stepProps} />,
     <StepSocial {...stepProps} />,
     <StepGovernance {...stepProps} />,
+    <StepTargets {...stepProps} />,
     <StepOutput
       {...stepProps}
       onDownload={handleDownload}
@@ -319,6 +327,7 @@ export default function App() {
       downloadLink={downloadLink}
       onClearLink={() => setDownloadLink(null)}
       scores={scores} clientId={clientId} clientActions={clientActions} onToggleAction={toggleAction}
+      hasPrevious={hasPreviousExercise(clientHistory, form.company?.reporting_year)}
     />,
   ]
 

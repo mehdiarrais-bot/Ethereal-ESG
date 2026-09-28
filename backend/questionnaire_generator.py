@@ -21,6 +21,7 @@ SECTION_META = {
     "social": ("Social", "Effectifs, formation, sécurité et relations parties prenantes."),
     "governance": ("Gouvernance", "Conseil, éthique, contrôle et supervision ESG."),
     "taxonomy": ("Taxonomie européenne", "Part des activités durables — laissez vide si non évaluée."),
+    "targets": ("Objectifs", "Uniquement une cible que l'entreprise a effectivement fixée — sinon laissez vide."),
 }
 
 # clé interne -> (libellé lisible, unité, aide)
@@ -71,6 +72,15 @@ FIELD_META = {
     "turnover_aligned_percent": ("Chiffre d'affaires aligné Taxonomie", "%", ""),
     "capex_aligned_percent": ("Investissements (CapEx) alignés", "%", ""),
     "opex_aligned_percent": ("Dépenses (OpEx) alignées", "%", ""),
+
+    "climate_reduction_percent": ("Réduction visée des émissions", "%", "Par rapport à l'année de référence."),
+    "climate_base_year": ("Année de référence de la cible", "", "Ex. : 2024."),
+    "climate_target_year": ("Année cible de la réduction", "", "Ex. : 2030."),
+    "climate_scopes": ("Périmètre de la cible", "", "« 1-2 » (scopes 1 et 2) ou « 1-2-3 » (scopes 1, 2 et 3)."),
+    "renewable_target_percent": ("Part d'énergie renouvelable visée", "%", "À l'horizon des objectifs."),
+    "female_employees_target_percent": ("Part de femmes dans l'effectif visée", "%", "À l'horizon des objectifs."),
+    "training_hours_target": ("Heures de formation par salarié visées", "h", "À l'horizon des objectifs."),
+    "accident_rate_target": ("Taux de fréquence des accidents visé", "", "À l'horizon des objectifs."),
 }
 
 
@@ -80,6 +90,7 @@ SECTION_META_EN = {
     "social": ("Social", "Workforce, training, safety and stakeholder relations."),
     "governance": ("Governance", "Board, ethics, controls and ESG oversight."),
     "taxonomy": ("EU Taxonomy", "Share of sustainable activities. Leave blank if not assessed."),
+    "targets": ("Targets", "Only a target the company has actually set — otherwise leave blank."),
 }
 
 UI = {

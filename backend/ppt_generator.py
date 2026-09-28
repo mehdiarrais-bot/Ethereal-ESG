@@ -9,7 +9,7 @@ from pptx.dml.color import RGBColor
 from pptx.slide import Slide
 from pptx.shapes.autoshape import Shape
 from pptx.enum.text import PP_ALIGN
-from esg_calculator import NON_NOTE, score_label
+from esg_calculator import NON_NOTE, score_label, coverage_text
 from models import ESGRequest, ESGScores, AestheticTheme, PresentationType
 from visual_kit import pillar_hero, icon_png, ring_png
 from i18n import L
@@ -369,7 +369,7 @@ def add_notes(slide, paragraphs) -> None:
 
 
 def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
-                       title, subtitle, score, kpis, t, insight=""):
+                       title, subtitle, score, coverage, kpis, t, insight=""):
     """Slide de pilier en infographie : héros illustré à gauche + chips KPI.
 
     kpis : liste de (icon_name, value_str, label). 6 max affichés.
@@ -407,7 +407,8 @@ def pillar_infographic(prs, blank_layout, theme, style, pillar_key,
             pass
     add_text(slide, score_label(score), Inches(1.4), Inches(5.28), Inches(1.75), Inches(0.7),
              font_size=38, bold=True, color=white, align=PP_ALIGN.CENTER, font=ft)
-    add_text(slide, t["score_100_caps"], Inches(1.0), Inches(6.65), Inches(2.55), Inches(0.4),
+    add_text(slide, f'{t["score_100_caps"]} · {coverage.upper()}', Inches(0.6), Inches(6.65),
+             Inches(3.35), Inches(0.4),
              font_size=11, bold=True, color=white, align=PP_ALIGN.CENTER, font=fb)
 
     # ── En-tête droite ─────────────────────────────────────────────
@@ -706,15 +707,18 @@ def _dashboard_detail(d: _Deck, slide: Slide) -> None:
     # ── Détail : barres piliers (gauche) + radar (droite) ───────────
     add_text(slide, t["pillars_caption"], RX, Inches(3.5), Inches(4), Inches(0.4),
              font_size=12, bold=True, color=theme["muted"], font=d.fb)
-    bars = [(t["chart_env"], scores.environmental_score, theme["env"]),
-            (t["chart_soc"], scores.social_score, theme["social"]),
-            (t["chart_gov"], scores.governance_score, theme["gov"])]
+    bars = [(t["chart_env"], scores.environmental_score, theme["env"], "env"),
+            (t["chart_soc"], scores.social_score, theme["social"], "social"),
+            (t["chart_gov"], scores.governance_score, theme["gov"], "gov")]
     track = RGBColor(0x3A, 0x40, 0x4A) if dark else RGBColor(0xE2, 0xE8, 0xF0)
     bar_w = Inches(3.4)
-    for i, (label, sc, col) in enumerate(bars):
+    for i, (label, sc, col, key) in enumerate(bars):
         y = Inches(4.05) + i * Inches(0.92)
         add_text(slide, label, RX, y, Inches(3.4), Inches(0.32),
                  font_size=12.5, bold=True, color=theme["text_dark"], font=d.fb)
+        add_text(slide, coverage_text(scores, key, t["coverage_short"]), RX + bar_w - Inches(2.35), y,
+                 Inches(1.7), Inches(0.32), font_size=10, color=theme["muted"],
+                 align=PP_ALIGN.RIGHT, font=d.fb)
         add_text(slide, score_label(sc), RX + bar_w - Inches(0.6), y, Inches(0.6), Inches(0.32),
                  font_size=13, bold=True, color=col, align=PP_ALIGN.RIGHT, font=d.ft)
         add_shape(slide, ROUNDED_RECT, RX, y + Inches(0.36), bar_w, Inches(0.17), fill=track)
@@ -929,7 +933,8 @@ def _slide_pillar(d: _Deck, pillar: str) -> None:
             "gov": d.request.governance}[pillar]
     pillar_infographic(d.prs, d.layout, d.theme, d.style, pillar,
                        d.t[label_key], d.headlines[pillar],
-                       getattr(d.scores, score_attr), kpis_of(data, d.t["kpi"]), d.t,
+                       getattr(d.scores, score_attr), coverage_text(d.scores, pillar, d.t["coverage_short"]),
+                       kpis_of(data, d.t["kpi"]), d.t,
                        d.insights[pillar])
     paras = NR.pillar_paragraphs(d.request, d.scores, pillar)
     if d.request.include_recommendations:
@@ -1099,8 +1104,9 @@ def _slide_strategic(d: _Deck) -> None:
     import narrative as NR
     theme, t, request, scores, dark = d.theme, d.t, d.request, d.scores, d.dark
     slide = d.content_slide(d.section_heads["strategic"], kicker=t["strategic"])
-    add_notes(slide, [NR.act1_intro(request, scores, d.gaps, d.ro["risks"]), NR.bench_intro(request),
-                      NR.gaps_intro(request, d.gaps, d.ref)])
+    import evolution as EV
+    add_notes(slide, [NR.act1_intro(request, scores, d.gaps, d.ro["risks"]), EV.paragraph(request),
+                      NR.bench_intro(request), NR.gaps_intro(request, d.gaps, d.ref)])
     red = RGBColor(0xE7, 0x4C, 0x3C)
     panel_shape = ROUNDED_RECT if d.style["card"] != "flat" else RECT
     for (px, pw, ptitle, pcolor, items) in [

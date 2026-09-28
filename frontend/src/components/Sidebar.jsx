@@ -18,9 +18,12 @@ function MiniGauge({ score, color }) {
   )
 }
 
-const STEP_SCORE_MAP = [null, 'environmental_score', 'social_score', 'governance_score', 'total_esg_score']
+// Par identifiant d'étape (pas par rang : l'étape « Objectifs » s'insère avant les livrables).
+const STEP_SCORE_MAP = { environmental: 'environmental_score', social: 'social_score',
+  governance: 'governance_score', output: 'total_esg_score' }
 // Couleurs prises aux jetons de piliers (index.css), jamais recopiées en dur.
-const STEP_COLORS = [null, 'var(--env-on-nav)', 'var(--social-on-nav)', 'var(--gov-on-nav)', 'var(--brand-mark)']
+const STEP_COLORS = { environmental: 'var(--env-on-nav)', social: 'var(--social-on-nav)',
+  governance: 'var(--gov-on-nav)', output: 'var(--brand-mark)' }
 
 export default function Sidebar({ steps, current, onChange, scores }) {
   return (
@@ -28,9 +31,9 @@ export default function Sidebar({ steps, current, onChange, scores }) {
       <nav className="sidebar-nav">
         <div className="sidebar-label">Saisie des données</div>
         {steps.map((step, i) => {
-          const scoreKey = STEP_SCORE_MAP[i]
+          const scoreKey = STEP_SCORE_MAP[step.id]
           const score = scores && scoreKey ? scores[scoreKey] : null
-          const color = STEP_COLORS[i]
+          const color = STEP_COLORS[step.id]
           return (
             <button
               key={step.id}

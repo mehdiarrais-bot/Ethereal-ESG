@@ -1637,23 +1637,30 @@ def test_temoin_le_silence_paie():
       C = 77,0 (AA)  (inchange)
       D = aucun score, aucune note (etait 50,0 BB : une note sans donnee)
     Le « silence paie » s'AGGRAVE pour B : DETTE § 16.
+
+    Mis a jour le 2026-09-27 (DETTE § 16, option c : un pilier n'est note
+    qu'a partir de MIN_INDICATEURS_PILIER = 3 indicateurs de la grille ; la
+    completude est imprimee a cote de chaque score) :
+      A = 69,5 (A)   (inchange : 3, 4 et 6 indicateurs)
+      B = aucun score (etait 75,4 AA : 1, 0 et 1 indicateur)
+      C = aucun score (etait 77,0 AA : 1, 1 et 1 indicateur)
+      D = aucun score (inchange)
+    Reste possible : ne declarer que ses meilleurs chiffres (dossier E,
+    test_le_tri_des_chiffres_se_voit_dans_la_completude).
     """
     for dossier, total, note in ((dossier_a_transparente(), 69.5, "A"),
-                                 (dossier_b_silencieuse(), 75.4, "AA"),
-                                 (dossier_c_un_chiffre_honnete(), 77.0, "AA"),
+                                 (dossier_b_silencieuse(), None, None),
+                                 (dossier_c_un_chiffre_honnete(), None, None),
                                  (dossier_vide(), None, None)):
         s = calculate_esg_scores(dossier)
         assert (s.total_esg_score, s.rating) == (total, note)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "Defaut connu, corrige par le traitement T2/T1 : le silence est gratuit "
-    "(une donnee absente sort de la moyenne) et produit un jugement "
-    "(if not scores: return 50.0). Voir DETTE.md."))
 def test_le_silence_ne_doit_pas_surpasser_la_transparence():
-    """INVARIANT CIBLE, aujourd'hui faux.
+    """INVARIANT, vrai depuis le 2026-09-27 (DETTE § 16). Il etait marque
+    `xfail(strict=True)` tant que le defaut existait.
 
-    POURQUOI `xfail(strict=True)` EST ICI LE BON OUTIL, alors qu'il etait le
+    Historique -- POURQUOI `xfail(strict=True)` ETAIT LE BON OUTIL, alors qu'il etait le
     MAUVAIS en passe 3 : la-bas, l'echec attendu etait une ValidationError
     Pydantic sur un champ inexistant -- un xfail non strict l'aurait avalee
     et aurait affiche un vert qui ne mesure rien. Ici l'echec attendu est une
@@ -1666,15 +1673,51 @@ def test_le_silence_ne_doit_pas_surpasser_la_transparence():
     # plus mediocre (sous la moyenne nationale de 16,0) et A devance B par
     # hasard de donnees. Le dossier garde donc son intention d'origine --
     # des chiffres honnetes et MOYENS -- avec un TF au-dessus de la moyenne
-    # nationale. Le defaut (l'absence sort de la moyenne) est intact.
+    # nationale.
     transparente = dossier_a_transparente()
     transparente.social.accident_frequency_rate = 20
     a = calculate_esg_scores(transparente).total_esg_score
     b = calculate_esg_scores(dossier_b_silencieuse()).total_esg_score
-    assert a is not None and b is not None
-    assert a > b, (
+    assert a is not None
+    # Sous le seuil d'indicateurs, la PME silencieuse n'est pas notee : un
+    # score absent ne surpasse rien.
+    assert b is None or a > b, (
         f"la PME transparente ({a}) ne devance pas la PME silencieuse ({b}) : "
         f"declarer ses chiffres coute des points.")
+
+
+def dossier_e_selective():
+    """(E) La meme, qui ne declare que ses trois meilleurs chiffres par pilier."""
+    return _dossier(
+        EnvironmentalData(co2_emissions_tonnes=8200, renewable_energy_percent=42,
+                          waste_recycled_percent=63),
+        SocialData(female_employees_percent=34, accident_frequency_rate=6.2,
+                   training_hours_per_employee=22, total_employees=320),
+        GovernanceData(sustainability_committee=True, ethics_violations=0,
+                       female_board_percent=44))
+
+
+def test_le_tri_des_chiffres_se_voit_dans_la_completude():
+    """Limite ASSUMEE du seuil (DETTE § 16) : E, qui trie ses chiffres, est
+    notee et devance A. Aucun bareme ne peut savoir ce qui n'est pas declare ;
+    le garde-fou est la completude imprimee a cote de chaque score, qui doit
+    donc montrer E moins complete que A sur chaque pilier."""
+    a = calculate_esg_scores(dossier_a_transparente())
+    e = calculate_esg_scores(dossier_e_selective())
+    assert (e.total_esg_score, e.rating) == (74.3, "A")
+    assert e.indicator_coverage == {"env": [3, 4], "social": [3, 6], "gov": [3, 8]}
+    assert all(e.indicator_coverage[p][0] <= a.indicator_coverage[p][0]
+               for p in ("env", "social", "gov"))
+
+
+def test_un_champ_ghg_ne_compte_que_pour_un_indicateur():
+    """Le total CO2 produit deux sous-notes (intensite, declaration du bilan) :
+    elles ne doivent pas faire franchir le seuil a elles seules."""
+    from esg_calculator import calculate_environmental_score
+    s, details = calculate_environmental_score(
+        EnvironmentalData(co2_emissions_tonnes=8200, renewable_energy_percent=42),
+        48_000_000, "Industrie manufacturière")
+    assert s is None and details["indicators"] == 2
 
 
 # ── Lot 0 : la couche des derives sait s'abstenir ─────────────────────────

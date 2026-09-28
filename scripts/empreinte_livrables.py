@@ -67,7 +67,7 @@ def _cas() -> list:
                                                      presentation_type=PresentationType.INVESTOR_DECK)),
         ("rapport-annuel-en", make_request("en", presentation_type=PresentationType.ANNUAL_REPORT)),
         ("livre-blanc-fr", make_request("fr", report_type=ReportType.WHITE_PAPER)),
-        ("synthese-en", make_request("en", report_type=ReportType.EXECUTIVE_SUMMARY_PDF)),
+        ("suivi-en", make_request("en", report_type=ReportType.ANNUAL_FOLLOWUP)),
         ("vide-fr", ESGRequest(company={"name": "Vide", "sector": "Services", "country": "France",
                                         "reporting_year": 2025},
                                environmental={}, social={}, governance={}, language="fr")),

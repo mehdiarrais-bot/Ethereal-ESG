@@ -5,7 +5,9 @@ lexicale déterministe (seed basé sur le nom) + contexte sectoriel.
 """
 import hashlib
 from models import ESGRequest, ESGScores
-from esg_calculator import TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE, GRILLE_MIXITE_EFFECTIF
+import targets as TG
+from esg_calculator import (TF_STRENGTH_MAX, TF_WEAKNESS_MIN, TF_SOURCE, MIXITE_EFFECTIF_REPERE,
+                            GRILLE_MIXITE_EFFECTIF, MIN_INDICATEURS_PILIER, strengths_count)
 
 
 def _seed(name: str) -> int:
@@ -109,13 +111,13 @@ def _ctx(sector: str) -> tuple[str, str]:
     return ("son secteur d'activité", "l'amélioration continue de ses pratiques ESG")
 
 EXEC_OPENINGS = [
-    "{n} présente son rapport ESG {y}, affirmant sa position dans {ctx}.",
-    "Dans le cadre de son engagement extra-financier, {n} publie son bilan ESG {y} pour {ctx}.",
+    '{n} présente son rapport ESG {y}, affirmant sa position dans {ctx}.',
+    'Dans le cadre de sa démarche extra-financière, {n} publie son bilan ESG {y} pour {ctx}.',
     "{n} consolide pour l'exercice {y} son reporting de durabilité, ancré dans les réalités de {ctx}.",
-    "L'exercice {y} marque une étape structurante dans la trajectoire ESG de {n}, acteur de {ctx}.",
-    "Ce rapport ESG {y} reflète la stratégie de développement durable de {n} au sein de {ctx}.",
-    "En qualité d'acteur de {ctx}, {n} rend compte pour {y} de ses engagements extra-financiers.",
-    "La démarche RSE de {n} atteint en {y} un niveau de maturité documenté dans ce rapport ({ctx}).",
+    "L'exercice {y} fait l'objet, pour {n}, acteur de {ctx}, d'un diagnostic ESG complet.",
+    "Ce rapport ESG {y} dresse l'état des indicateurs extra-financiers de {n} au sein de {ctx}.",
+    "En qualité d'acteur de {ctx}, {n} rend compte pour {y} de ses indicateurs extra-financiers.",
+    'Le niveau de maturité de la démarche RSE de {n} en {y} est documenté dans ce rapport ({ctx}).',
 ]
 
 EXEC_SCORE_PHRASES = [
@@ -123,8 +125,8 @@ EXEC_SCORE_PHRASES = [
     "L'analyse multi-piliers positionne {n} à {sc}/100 ({r}), traduisant une {p}.",
     "La notation ESG consolidée s'établit à {sc}/100 ({r}), reflet d'une {p}.",
     "Avec {sc}/100 et une note {r}, {n} affiche une {p} sur l'ensemble du périmètre extra-financier.",
-    "Le score composite {sc}/100 ({r}) valide pour {n} une {p} sur les critères E, S et G.",
-    "L'audit ESG positionne {n} à {sc}/100 (notation {r}), soit une {p}.",
+    'Le score composite {sc}/100 ({r}) traduit pour {n} une {p} sur les critères E, S et G.',
+    'Le diagnostic ESG positionne {n} à {sc}/100 (notation {r}), soit une {p}.',
     "Le niveau {sc}/100 ({r}) reflète une {p}, confirmé par l'analyse des trois piliers.",
 ]
 
@@ -139,13 +141,13 @@ EXEC_PILLAR_PHRASES = [
 ]
 
 ENV_INTROS = [
-    "Sur le volet environnemental, {n} enregistre {sc}/100.",
-    "La performance climatique et environnementale de {n} atteint {sc}/100.",
-    "{n} obtient {sc}/100 sur la dimension environnementale de son reporting.",
-    "L'empreinte écologique de {n} est évaluée à {sc}/100.",
+    'Sur le volet environnemental, {n} enregistre {sc}/100.',
+    'La performance climatique et environnementale de {n} atteint {sc}/100.',
+    '{n} obtient {sc}/100 sur la dimension environnementale de son reporting.',
+    'La performance environnementale de {n} est évaluée à {sc}/100.',
     "En matière d'environnement et de climat, {n} se positionne à {sc}/100.",
-    "Le bilan environnemental de {n} aboutit à un score de {sc}/100.",
-    "{sc}/100 — telle est la performance environnementale mesurée pour {n} cet exercice.",
+    'Le bilan environnemental de {n} aboutit à un score de {sc}/100.',
+    '{sc}/100 — telle est la performance environnementale mesurée pour {n} cet exercice.',
 ]
 
 ENV_LIAISONS = [
@@ -159,21 +161,19 @@ ENV_LIAISONS = [
 ]
 
 ENV_SCOPE_PHRASES = [
-    "bilan carbone Scope 1/2/3 ({s1:,.0f} / {s2:,.0f} / {s3:,.0f} t CO₂e) couvrant l'intégralité de la chaîne de valeur",
-    "décomposition carbone ({s1:,.0f} t directes, {s2:,.0f} t énergie, {s3:,.0f} t indirectes)",
-    "émissions ventilées Scope 1 ({s1:,.0f} t) / Scope 2 ({s2:,.0f} t) / Scope 3 ({s3:,.0f} t CO₂e)",
-    "reporting carbone complet : opérationnel {s1:,.0f} t, énergie {s2:,.0f} t, chaîne de valeur {s3:,.0f} t",
-    "empreinte carbone totale ({s1:,.0f} + {s2:,.0f} + {s3:,.0f} t CO₂e) sur les trois périmètres",
+    'bilan carbone Scope 1/2/3 ({s1:,.0f} / {s2:,.0f} / {s3:,.0f} t CO₂e), Scope 3 compris',
+    'décomposition carbone ({s1:,.0f} t directes, {s2:,.0f} t énergie, {s3:,.0f} t indirectes)',
+    'émissions ventilées Scope 1 ({s1:,.0f} t) / Scope 2 ({s2:,.0f} t) / Scope 3 ({s3:,.0f} t CO₂e)',
+    'reporting carbone sur les trois scopes : opérationnel {s1:,.0f} t, énergie {s2:,.0f} t, chaîne de valeur {s3:,.0f} t',
+    'empreinte carbone totale ({s1:,.0f} + {s2:,.0f} + {s3:,.0f} t CO₂e) sur les trois périmètres',
 ]
 
 ENV_OUTLOOK = [
-    "La trajectoire de décarbonation s'articule autour de {p} pour les prochains exercices.",
-    "L'axe de progrès prioritaire porte sur {p}, identifié comme tel dans la feuille de route.",
-    "Les efforts à venir se concentrent sur {p}, levier d'amélioration identifié dans la feuille de route.",
-    "Le plan environnemental vise en priorité {p}, conformément aux engagements de durabilité.",
-    "La feuille de route environnementale cible {p} comme priorité opérationnelle.",
-    "{p} constitue la priorité environnementale inscrite dans la stratégie pluriannuelle.",
-    "Le programme environnemental pluriannuel place {p} au premier rang des objectifs à horizon 3 ans.",
+    'Pour ce secteur, le diagnostic retient {p} comme levier environnemental prioritaire.',
+    'Le levier environnemental prioritaire retenu pour ce secteur est {p}.',
+    'Les progrès à venir passent en premier lieu par {p}, levier propre au secteur.',
+    'Au regard du secteur, {p} constitue le premier levier environnemental à examiner.',
+    '{p} est, pour ce secteur, le levier environnemental à examiner en priorité.',
 ]
 
 SOC_INTROS = [
@@ -196,15 +196,6 @@ SOC_LIAISONS = [
     "Les métriques sociales documentées englobent : ",
 ]
 
-SOC_STRATEGIES = [
-    "La politique RH cible l'attractivité des talents, la mixité et la prévention des risques professionnels.",
-    "L'ambition sociale articule développement des compétences, équité et qualité de vie au travail.",
-    "La stratégie humaine repose sur la fidélisation, la promotion de la diversité et la réduction de l'accidentologie.",
-    "Le modèle social privilégie l'investissement formation, l'égalité professionnelle et l'engagement communautaire.",
-    "La démarche sociale combine montée en compétences, dialogue social renforcé et inclusion durable.",
-    "La vision sociale intègre l'épanouissement des collaborateurs, la sécurité et la contribution territoriale.",
-    "L'organisation place la performance sociale au cœur de sa marque employeur et de son ancrage territorial.",
-]
 
 GOV_INTROS = [
     "Le pilier Gouvernance de {n} s'établit à {sc}/100.",
@@ -227,63 +218,61 @@ GOV_LIAISONS = [
 ]
 
 GOV_AUDITS = [
-    "Un audit ESG indépendant renforce la crédibilité et la transparence du reporting extra-financier.",
-    "La vérification externe des données ESG assure la fiabilité et la comparabilité du reporting.",
-    "L'audit indépendant conduit garantit l'intégrité des données publiées dans ce rapport.",
-    "La certification externe des indicateurs ESG témoigne de la rigueur du dispositif de reporting.",
-    "Un tiers indépendant a vérifié la cohérence et l'exactitude des données extra-financières présentées.",
-    "La vérification tierce des données ESG consolide la confiance des investisseurs et des parties prenantes.",
+    'Un audit ESG indépendant renforce la crédibilité et la transparence du reporting extra-financier.',
+    'La vérification externe des données ESG renforce la fiabilité et la comparabilité du reporting.',
+    "L'entreprise déclare avoir conduit un audit ESG indépendant, gage de crédibilité pour son reporting.",
+    'Le recours déclaré à un audit ESG indépendant renforce la rigueur du dispositif de reporting.',
+    "Un audit ESG indépendant a été conduit, selon les données déclarées par l'entreprise.",
+    'La vérification tierce des données ESG consolide la confiance des investisseurs et des parties prenantes.',
     "L'assurance externe du reporting ESG constitue un gage de qualité et de transparence pour l'ensemble des parties.",
 ]
 
 GOV_NO_AUDIT = [
-    "Le recours à un audit ESG indépendant est recommandé pour renforcer la crédibilité du reporting.",
-    "La mise en place d'une vérification externe est identifiée comme priorité pour le prochain exercice.",
-    "L'intégration d'un auditeur tiers pour valider les données extra-financières est planifiée.",
-    "Une assurance externe sur les données ESG consoliderait la confiance des parties prenantes.",
+    'Le recours à un audit ESG indépendant est recommandé pour renforcer la crédibilité du reporting.',
+    'Une vérification externe du reporting ESG reste à mettre en place.',
+    "Aucun audit ESG indépendant n'est déclaré : le reporting repose sur les seules données internes.",
+    'Une assurance externe sur les données ESG consoliderait la confiance des parties prenantes.',
     "Le déploiement d'une certification ESG externe constitue un axe de progrès à court terme.",
-    "La vérification indépendante du reporting ESG est un engagement inscrit dans la feuille de route.",
-    "Le recours à une tierce partie indépendante renforcera la robustesse du dispositif de reporting.",
+    'La vérification indépendante du reporting ESG est une piste à inscrire dans la feuille de route.',
+    'Le recours à une tierce partie indépendante renforcera la robustesse du dispositif de reporting.',
 ]
 
 GOV_COMMITTEES = [
-    "Un comité de durabilité opérationnel au niveau du Conseil assure la supervision stratégique des enjeux ESG.",
+    'Un comité de durabilité au niveau du Conseil porte la supervision des enjeux ESG.',
     "La gouvernance ESG bénéficie d'un comité dédié, garant de l'intégration de la durabilité au plus haut niveau.",
-    "Le comité RSE du Conseil d'Administration pilote la stratégie de durabilité et en suit l'exécution.",
-    "Un organe de gouvernance spécialisé supervise la trajectoire ESG et l'atteinte des objectifs.",
-    "La dimension ESG est portée par un comité de durabilité actif, ancré dans la structure de gouvernance.",
-    "La supervision ESG est assurée par un comité dédié qui rend compte directement au Conseil.",
-    "Le Conseil dispose d'un comité de durabilité permanent, garant de la cohérence de la stratégie ESG.",
+    "Le Conseil s'est doté d'un comité dédié aux enjeux de durabilité.",
+    'Un comité de durabilité existe au niveau du Conseil : les enjeux ESG ont une instance dédiée.',
+    'Un comité de durabilité, ancré dans la structure de gouvernance, porte la dimension ESG.',
+    "Les enjeux ESG disposent d'une instance dédiée au niveau du Conseil.",
+    "Un comité de durabilité est déclaré au niveau du Conseil, point d'ancrage de la stratégie ESG.",
 ]
 
 GOV_NO_COMMITTEE = [
     "La création d'un comité de durabilité au niveau du Conseil est fortement recommandée.",
     "L'institution d'une instance de gouvernance ESG dédiée est un levier prioritaire d'amélioration.",
-    "Le renforcement de la supervision ESG par un organe dédié est identifié comme action structurante.",
+    'Le renforcement de la supervision ESG par un organe dédié est identifié comme action structurante.',
     "La mise en place d'un comité RSE au sein du Conseil constitue une recommandation prioritaire.",
     "Une gouvernance ESG renforcée passe par la création d'un comité de durabilité au niveau exécutif.",
-    "L'absence de comité dédié est un axe de progrès documenté dans la feuille de route de gouvernance.",
-    "La constitution d'un comité de durabilité est planifiée pour renforcer l'ancrage stratégique de l'ESG.",
+    "Aucun comité dédié n'est déclaré : c'est un axe de progrès de la gouvernance.",
+    "La constitution d'un comité de durabilité renforcerait l'ancrage stratégique de l'ESG.",
 ]
 
 CONCLUSION_HIGH = [
-    ("témoigne d'une démarche ESG mature et structurée", "Fort de ces acquis,", "entend consolider ses avancées tout en accélérant sur ses axes d'amélioration"),
-    ("confirme son engagement dans une stratégie de durabilité ambitieuse", "Sur cette base solide,", "se donne les moyens de franchir un cap supplémentaire dans sa performance extra-financière"),
-    ("illustre la maturité croissante de sa démarche de développement durable", "Capitalisant sur ces résultats,", "s'engage à amplifier ses efforts sur les axes prioritaires identifiés"),
-    ("témoigne d'un engagement structuré sur les trois piliers", "Dans cette dynamique positive,", "poursuit l'intégration de la durabilité dans l'ensemble de ses décisions stratégiques"),
-    ("valide la pertinence de la stratégie ESG engagée ces dernières années", "Renforcée par ces résultats,", "accélère la mise en œuvre de sa feuille de route long-terme"),
+    ('présente un profil ESG avancé sur la grille de ce diagnostic', 'Pour la suite,'),
+    ('se situe dans le haut de la grille de notation interne', 'Pour consolider ces acquis,'),
+    ('affiche une démarche ESG structurée sur les piliers notés', 'Dans cette perspective,'),
 ]
 
 CONCLUSION_MID = [
-    ("s'est engagée résolument dans la transformation de ses pratiques ESG", "À partir de ce socle,", "accélère la mise en œuvre de sa feuille de route de durabilité"),
-    ("amorce une dynamique positive sur l'ensemble des piliers ESG", "Portée par ces premiers résultats,", "structure une trajectoire de progrès sur les prochains exercices"),
-    ("démontre une progression mesurée et régulière sur ses indicateurs clés", "Dans cette continuité,", "intensifie ses efforts pour atteindre ses objectifs à horizon 3 ans"),
+    ('présente un profil ESG intermédiaire, entre acquis et marges de progrès', 'Pour progresser,'),
+    ('se situe au milieu de la grille de notation interne', 'Dans cette perspective,'),
+    ('affiche des résultats contrastés selon les piliers', 'Pour la suite,'),
 ]
 
 CONCLUSION_LOW = [
-    ("a initié une réflexion ESG structurée qui appelle désormais à passer à l'acte", "Consciente de ces marges de progression,", "s'engage dans une démarche de transformation ambitieuse"),
-    ("se trouve à un moment charnière de sa trajectoire ESG", "Face à ces enjeux,", "mobilise ses ressources pour accélérer sa transformation durable"),
-    ("prend acte des axes de progrès significatifs identifiés dans ce rapport", "Avec détermination,", "s'engage à structurer un plan d'action ESG concret et mesurable"),
+    ('présente un profil ESG en construction sur la grille de ce diagnostic', 'Pour progresser,'),
+    ('se situe dans le bas de la grille de notation interne', 'Pour la suite,'),
+    ('fait apparaître des axes de progrès significatifs', 'Dans cette perspective,'),
 ]
 
 # Ne revendique QUE le referentiel effectivement vise (CSRD/ESRS ou VSME,
@@ -565,7 +554,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 "advanced": "advanced", "exemplary": "exemplary"}
     if en:
         content["executive_summary"] += (
-            (f" Overall, ESG maturity is assessed as {stage_en[mat['key']]} ({mat['stage']}/5). "
+            (f" Overall, ESG maturity is assessed as {stage_en[mat['key']]} ({maturite_rang(mat)}). "
              if mat["stage"] is not None else
              " ESG maturity is not assessed, as there is no overall score. ")
             + (f"Closing the priority reporting gaps — notably {gaps[0]} — is the fastest lever to "
@@ -575,7 +564,7 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
         )
     else:
         content["executive_summary"] += (
-            (f" Au global, la maturité ESG est évaluée comme {stage_fr[mat['key']]} ({mat['stage']}/5). "
+            (f" Au global, la maturité ESG est évaluée comme {stage_fr[mat['key']]} ({maturite_rang(mat)}). "
              if mat["stage"] is not None else
              " La maturité ESG n'est pas évaluée, faute de score global. ")
             + (f"Combler les lacunes de reporting prioritaires — au premier rang desquelles "
@@ -607,6 +596,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 move = f"{'gains' if dt > 0 else 'loses'} {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
             content["executive_summary"] += (
                 f" Versus fiscal year {prev['year']}, the overall score {move}{detail}.")
+            if not prev.get("recalculated"):
+                content["executive_summary"] += (
+                    f" The {prev['year']} score is shown as computed at the time, under the grid "
+                    f"then in force.")
         else:
             if abs(dt) < 0.5:
                 move = "est stable"
@@ -614,6 +607,10 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
                 move = f"{'progresse' if dt > 0 else 'recule'} de {abs(dt):.0f} point{'s' if abs(dt) >= 1.5 else ''}"
             content["executive_summary"] += (
                 f" Par rapport à l'exercice {prev['year']}, le score global {move}{detail}.")
+            if not prev.get("recalculated"):
+                content["executive_summary"] += (
+                    f" Le score {prev['year']} est repris tel qu'il a été calculé à l'époque, selon "
+                    f"la grille alors en vigueur.")
 
     # ── 4quater. Suivi du plan d'action (actions déclarées engagées) ─────
     # Formulation volontairement en retrait : l'outil reporte une case cochée
@@ -691,10 +688,14 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"anchored on the national rate published by the French Health Insurance (16.0 in 2024, "
             f"all sectors; {TF_SOURCE}). The overall score "
             f"is the weighted average of the rated pillars (weights 40/35/25, rescaled when a pillar "
-            f"is not rated); a pillar with no scoring-grid indicator is not rated rather than given a "
-            f"default score, and with fewer than two rated pillars there is neither an overall score "
+            f"is not rated); a pillar is rated only from {MIN_INDICATEURS_PILIER} indicators of its "
+            f"scoring grid (an internal threshold of this tool) — below that it is not rated rather "
+            f"than given a score, and the number of rated indicators is shown next to each score; "
+            f"with fewer than two rated pillars there is neither an overall score "
             f"nor a letter rating. A year-on-year change compares overall scores that may rest on "
-            f"different pillars. The letter rating (internal AAA-CCC "
+            f"different pillars; when a past year's indicators are kept in the client file, its "
+            f"score is recomputed under the current grid, otherwise it is shown as computed at the "
+            f"time, under the grid then in force. The letter rating (internal AAA-CCC "
             f"scale) is indicative — it does not constitute a rating-agency assessment. The report "
             f"contains no comparison against an external sector reference: the positioning shown is "
             f"internal, comparing the three pillars with one another. No external data transfer "
@@ -726,10 +727,13 @@ def deepen_content(request: ESGRequest, scores: ESGScores, content: dict) -> dic
             f"est ancrée sur le taux national publié par l'Assurance Maladie (16,0 en 2024, tous "
             f"secteurs ; {TF_SOURCE}). Le score global est la moyenne "
             f"pondérée des piliers notés (pondérations 40/35/25, renormalisées quand un pilier n'est pas "
-            f"noté) ; un pilier sans aucun indicateur de la grille n'est pas noté plutôt que de recevoir "
-            f"un score par défaut, et sous deux piliers notés il n'y a ni score global ni notation "
+            f"noté) ; un pilier n'est noté qu'à partir de {MIN_INDICATEURS_PILIER} indicateurs de sa "
+            f"grille (seuil interne à l'outil) — en deçà, il n'est pas noté plutôt que de recevoir un "
+            f"score, et le nombre d'indicateurs notés figure à côté de chaque score ; sous deux piliers notés il n'y a ni score global ni notation "
             f"lettrée. Une évolution d'un exercice à l'autre compare des scores globaux qui peuvent "
-            f"reposer sur des piliers différents. La notation lettrée (échelle interne AAA-CCC) est indicative — "
+            f"reposer sur des piliers différents ; quand les indicateurs d'un exercice passé sont "
+            f"conservés dans le dossier, son score est recalculé selon la grille actuelle, sinon il "
+            f"est repris tel qu'il a été calculé à l'époque, selon la grille alors en vigueur. La notation lettrée (échelle interne AAA-CCC) est indicative — "
             f"elle ne constitue pas une notation d'agence. Le rapport ne comporte aucune comparaison à un "
             f"référentiel sectoriel externe : le positionnement présenté est interne, il compare les trois "
             f"piliers entre eux. Aucun transfert de données externe n'a lieu — l'ensemble du "
@@ -800,6 +804,14 @@ def _environnement_par_clauses(request: ESGRequest, scores: ESGScores):
     }
     return composer_paragraphe("environmental", donnees, CLAUSES,
                                contexte=contexte, secteur=company.sector) or None
+
+
+def _gov_fact(s, slot: int, value: bool | None, if_yes: list, if_no: list) -> str:
+    """Phrase sur un dispositif de gouvernance ; aucune si non renseigné.
+    Un booléen inconnu n'est jamais lu comme « non » (DETTE § 17)."""
+    if value is None:
+        return ""
+    return _pick(s, slot, if_yes if value else if_no)
 
 
 def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
@@ -875,12 +887,7 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if env_items:
         env_detail = _pick(s, 5, ENV_LIAISONS) + " ; ".join(env_items) + "."
     else:
-        no_data_opts = [
-            "Le périmètre environnemental est en cours de structuration.",
-            "La collecte des données environnementales est en déploiement progressif.",
-            "Les indicateurs environnementaux sont en cours de formalisation.",
-        ]
-        env_detail = _pick(s, 5, no_data_opts)
+        env_detail = "Aucun indicateur environnemental n'est renseigné pour cet exercice."
 
     env_outlook = _pick(s, 6, ENV_OUTLOOK).format(p=sector_priority)
     if environmental is None:  # section pas encore rédigée : ancien texte
@@ -924,10 +931,10 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if soc_items:
         soc_detail = _pick(s, 8, SOC_LIAISONS) + " ; ".join(soc_items) + "."
     else:
-        soc_detail = "Les indicateurs sociaux sont en cours de formalisation."
+        soc_detail = "Aucun indicateur social n'est renseigné pour cet exercice."
 
-    soc_strategy = _pick(s, 9, SOC_STRATEGIES)
-    social = f"{soc_intro} {soc_detail} {soc_strategy}"
+    # Plus de phrase « stratégie sociale » : aucune donnée ne la fondait (DETTE § 22).
+    social = f"{soc_intro} {soc_detail}"
 
     # ── Gouvernance ────────────────────────────────────────────────────────
     gov_intro = (PILIER_NON_NOTE["fr"]["gov"] if scores.governance_score is None
@@ -967,14 +974,14 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     if gov_items:
         gov_detail = _pick(s, 1, GOV_LIAISONS) + " ; ".join(gov_items) + "."
     else:
-        gov_detail = "La structure de gouvernance est en cours de documentation."
+        gov_detail = "Aucun indicateur de gouvernance n'est renseigné pour cet exercice."
 
-    audit_sent = _pick(s, 2, GOV_AUDITS if gov.esg_audit_conducted else GOV_NO_AUDIT)
-    committee_sent = _pick(s, 3, GOV_COMMITTEES if gov.sustainability_committee else GOV_NO_COMMITTEE)
-    governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
+    audit_sent = _gov_fact(s, 2, gov.esg_audit_conducted, GOV_AUDITS, GOV_NO_AUDIT)
+    committee_sent = _gov_fact(s, 3, gov.sustainability_committee, GOV_COMMITTEES, GOV_NO_COMMITTEE)
+    governance = " ".join(p for p in (gov_intro, gov_detail, audit_sent, committee_sent) if p)
 
     # ── Conclusion ─────────────────────────────────────────────────────────
-    n_s = len(scores.strengths)
+    n_s = strengths_count(scores)
     n_w = len(scores.weaknesses)
     n_r = len(scores.recommendations)
 
@@ -986,12 +993,12 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
     else:
         traj_list = CONCLUSION_LOW
 
-    trajectory, bridge, forward = _pick(s, 4, traj_list)
+    trajectory, bridge = _pick(s, 4, traj_list)
     trajectory = trajectory.replace("{n}", name)
     ref = _pick(s, 5, CONCLUSION_REFS)
 
-    s_txt = _agree(n_s, "point fort consolidé", "points forts consolidés") if n_s else "des points forts émergents"
-    w_txt = _agree(n_w, "axe d'amélioration prioritaire", "axes d'amélioration prioritaires") if n_w else "des axes de progrès identifiés"
+    s_txt = _agree(n_s, "point fort consolidé", "points forts consolidés") if n_s else "aucun point fort marqué"
+    w_txt = _agree(n_w, "axe d'amélioration prioritaire", "axes d'amélioration prioritaires") if n_w else "aucun axe d'amélioration prioritaire"
 
     if total is None:
         # Sans score global, aucune trajectoire n'est qualifiée.
@@ -999,17 +1006,17 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
             f"{SANS_SCORE_GLOBAL['fr'].format(n=name)} "
             f"L'analyse met en lumière {s_txt} et {w_txt}. "
             f"Compléter la collecte des piliers non notés est le préalable à toute lecture chiffrée ; "
-            f"les {n_r} recommandations formulées en constituent la feuille de route opérationnelle. "
-            f"L'organisation réaffirme son engagement envers un reporting transparent et rigoureux, {ref}"
+            f"les {n_r} recommandations formulées en constituent la feuille de route proposée. "
+            f"Ce diagnostic est établi {ref}"
         )
     else:
         conclusion = (
-            f"Fort d'un score ESG de {total:.1f}/100 ({scores.rating}), "
+            f"Avec un score ESG de {total:.1f}/100 ({scores.rating}), "
             f"{name} {trajectory}. "
             f"L'analyse met en lumière {s_txt} et {w_txt}. "
-            f"{bridge} {name} {forward}, "
-            f"en s'appuyant sur les {n_r} recommandations formulées comme feuille de route opérationnelle. "
-            f"L'organisation réaffirme son engagement envers un reporting transparent et rigoureux, {ref}"
+            f"{bridge} les {n_r} recommandations formulées constituent la feuille de route proposée ; "
+            f"leur mise en œuvre relève des arbitrages de {name}. "
+            f"Ce diagnostic est établi {ref}"
         )
 
     # ── Cartographie de priorisation des enjeux ────────────────────────────
@@ -1056,6 +1063,9 @@ def _generate_fr(request: ESGRequest, scores: ESGScores) -> dict:
         "fixées — leur absence, documentée comme telle, relève de cette même exigence de "
         "transparence."
     )
+    # Étape B (DETTE § 0bis) : une cible DÉCLARÉE par le client remplace le
+    # constat d'absence ; citée comme telle, jamais évaluée.
+    targets_txt = TG.targets_paragraph(request) or targets_txt
 
     # ── Taxonomie UE ───────────────────────────────────────────────────────
     taxonomy = None
@@ -1148,22 +1158,22 @@ PERF_DESC_EN = {
 }
 
 EXEC_OPENINGS_EN = [
-    "{n} presents its {y} ESG report, asserting its position within {ctx}.",
-    "As part of its extra-financial commitment, {n} publishes its {y} ESG review for {ctx}.",
-    "{n} consolidates its {y} sustainability reporting, rooted in the realities of {ctx}.",
-    "The {y} fiscal year marks a structuring step in the ESG trajectory of {n}, a player in {ctx}.",
-    "This {y} ESG report reflects the sustainability strategy of {n} within {ctx}.",
-    "As a player in {ctx}, {n} reports on its {y} extra-financial commitments.",
-    "The CSR approach of {n} reaches a documented level of maturity in {y} ({ctx}).",
+    '{n} presents its {y} ESG report, asserting its position within {ctx}.',
+    'As part of its extra-financial approach, {n} publishes its {y} ESG review for {ctx}.',
+    '{n} consolidates its {y} sustainability reporting, rooted in the realities of {ctx}.',
+    'For {n}, a player in {ctx}, the {y} fiscal year is the subject of a full ESG diagnostic.',
+    'This {y} ESG report sets out the extra-financial indicators of {n} within {ctx}.',
+    'As a player in {ctx}, {n} reports on its {y} extra-financial indicators.',
+    'The maturity of the CSR approach of {n} in {y} is documented in this report ({ctx}).',
 ]
 EXEC_SCORE_EN = [
-    "The extra-financial assessment results in an overall score of {sc}/100, rating {r} — {p}.",
-    "The multi-pillar analysis positions {n} at {sc}/100 ({r}), reflecting {p}.",
-    "The consolidated ESG rating stands at {sc}/100 ({r}), a mark of {p}.",
-    "With {sc}/100 and a {r} rating, {n} shows {p} across the full extra-financial scope.",
-    "The composite score of {sc}/100 ({r}) confirms {p} on the E, S and G criteria.",
-    "The ESG assessment places {n} at {sc}/100 (rating {r}), i.e. {p}.",
-    "The {sc}/100 level ({r}) reflects {p}, confirmed by the analysis of the three pillars.",
+    'The extra-financial assessment results in an overall score of {sc}/100, rating {r} — {p}.',
+    'The multi-pillar analysis positions {n} at {sc}/100 ({r}), reflecting {p}.',
+    'The consolidated ESG rating stands at {sc}/100 ({r}), a mark of {p}.',
+    'With {sc}/100 and a {r} rating, {n} shows {p} across the full extra-financial scope.',
+    'The composite score of {sc}/100 ({r}) reflects {p} on the E, S and G criteria.',
+    'The ESG assessment places {n} at {sc}/100 (rating {r}), i.e. {p}.',
+    'The {sc}/100 level ({r}) reflects {p}, confirmed by the analysis of the three pillars.',
 ]
 EXEC_PILLAR_EN = [
     "The {bn} pillar ({bs}/100) is the cornerstone; the {wn} pillar ({ws}/100) remains the main lever for progress.",
@@ -1175,13 +1185,13 @@ EXEC_PILLAR_EN = [
     "In terms of balance, {bn} leads ({bs}/100) and {wn} ({ws}/100) requires priority attention.",
 ]
 ENV_INTROS_EN = [
-    "On the environmental front, {n} scores {sc}/100.",
-    "The climate and environmental performance of {n} reaches {sc}/100.",
-    "{n} achieves {sc}/100 on the environmental dimension of its reporting.",
-    "The ecological footprint of {n} is assessed at {sc}/100.",
-    "On environment and climate, {n} stands at {sc}/100.",
-    "The environmental review of {n} results in a score of {sc}/100.",
-    "{sc}/100 — that is the environmental performance measured for {n} this year.",
+    'On the environmental front, {n} scores {sc}/100.',
+    'The climate and environmental performance of {n} reaches {sc}/100.',
+    '{n} achieves {sc}/100 on the environmental dimension of its reporting.',
+    'The environmental performance of {n} is assessed at {sc}/100.',
+    'On environment and climate, {n} stands at {sc}/100.',
+    'The environmental review of {n} results in a score of {sc}/100.',
+    '{sc}/100 — that is the environmental performance measured for {n} this year.',
 ]
 ENV_LIAISONS_EN = [
     "The reported indicators cover: ", "The reporting scope includes: ",
@@ -1190,13 +1200,11 @@ ENV_LIAISONS_EN = [
     "The main environmental indicators are: ",
 ]
 ENV_OUTLOOK_EN = [
-    "The decarbonisation pathway centres on {p} for the coming years.",
-    "The priority area for progress is {p}, in line with sector expectations.",
-    "Upcoming efforts focus on {p}, an improvement lever set out in the roadmap.",
-    "The environmental plan prioritises {p}, in line with sustainability commitments.",
-    "The environmental roadmap targets {p} as an operational priority.",
-    "{p} is the environmental priority embedded in the multi-year strategy.",
-    "The multi-year environmental programme places {p} at the top of its 3-year objectives.",
+    'For this sector, the diagnostic identifies {p} as the priority environmental lever.',
+    'The priority environmental lever identified for this sector is {p}.',
+    'Future progress runs first through {p}, a lever specific to the sector.',
+    'Given the sector, {p} is the first environmental lever to examine.',
+    '{p} is, for this sector, the environmental lever to examine first.',
 ]
 SOC_INTROS_EN = [
     "The social dimension of {n} stands at {sc}/100.",
@@ -1212,15 +1220,6 @@ SOC_LIAISONS_EN = [
     "The disclosed human and social data include: ", "The social review shows: ",
     "The reported HR and social indicators include: ", "Social performance translates into: ",
     "The documented social metrics encompass: ",
-]
-SOC_STRATEGIES_EN = [
-    "HR policy targets talent attractiveness, gender balance and occupational risk prevention.",
-    "The social ambition combines skills development, equity and quality of working life.",
-    "The people strategy rests on retention, diversity promotion and lower accident rates.",
-    "The social model prioritises training investment, professional equality and community engagement.",
-    "The social approach blends upskilling, strengthened social dialogue and lasting inclusion.",
-    "The social vision integrates employee fulfilment, safety and regional contribution.",
-    "The organisation places social performance at the heart of its employer brand and local roots.",
 ]
 GOV_INTROS_EN = [
     "The Governance pillar of {n} stands at {sc}/100.",
@@ -1238,57 +1237,55 @@ GOV_LIAISONS_EN = [
     "The documented governance pillars are: ",
 ]
 GOV_AUDITS_EN = [
-    "An independent ESG audit reinforces the credibility and transparency of extra-financial reporting.",
-    "External assurance of ESG data ensures the reliability and comparability of reporting.",
-    "The independent audit conducted guarantees the integrity of the data published in this report.",
-    "External certification of ESG indicators demonstrates the rigour of the reporting process.",
-    "An independent third party has verified the consistency and accuracy of the extra-financial data.",
-    "Third-party assurance of ESG data strengthens the confidence of investors and stakeholders.",
-    "External assurance of ESG reporting is a mark of quality and transparency for all stakeholders.",
+    'An independent ESG audit reinforces the credibility and transparency of extra-financial reporting.',
+    'External assurance of ESG data strengthens the reliability and comparability of reporting.',
+    'The company reports having conducted an independent ESG audit, a mark of credibility for its reporting.',
+    'The reported use of an independent ESG audit strengthens the rigour of the reporting process.',
+    'An independent ESG audit has been conducted, according to the data reported by the company.',
+    'Third-party assurance of ESG data strengthens the confidence of investors and stakeholders.',
+    'External assurance of ESG reporting is a mark of quality and transparency for all stakeholders.',
 ]
 GOV_NO_AUDIT_EN = [
-    "An independent ESG audit is recommended to strengthen the credibility of reporting.",
-    "Introducing external assurance is identified as a priority for the next reporting cycle.",
-    "Engaging a third-party auditor to validate extra-financial data is planned.",
-    "External assurance of ESG data would strengthen stakeholder confidence.",
-    "Rolling out external ESG certification is a short-term area for progress.",
-    "Independent verification of ESG reporting is a commitment set out in the roadmap.",
-    "Engaging an independent third party will strengthen the robustness of the reporting process.",
+    'An independent ESG audit is recommended to strengthen the credibility of reporting.',
+    'External assurance of ESG reporting has yet to be put in place.',
+    'No independent ESG audit is reported: the reporting rests on internal data alone.',
+    'External assurance of ESG data would strengthen stakeholder confidence.',
+    'Rolling out external ESG certification is a short-term area for progress.',
+    'Independent verification of ESG reporting is a track to include in the roadmap.',
+    'Engaging an independent third party will strengthen the robustness of the reporting process.',
 ]
 GOV_COMMITTEES_EN = [
-    "A sustainability committee operating at Board level ensures strategic oversight of ESG issues.",
-    "ESG governance benefits from a dedicated committee, guaranteeing sustainability integration at the highest level.",
-    "The Board's CSR committee steers the sustainability strategy and monitors its execution.",
-    "A specialised governance body oversees the ESG trajectory and the achievement of objectives.",
-    "The ESG dimension is driven by an active sustainability committee anchored in the governance structure.",
-    "ESG oversight is provided by a dedicated committee reporting directly to the Board.",
-    "The Board has a permanent sustainability committee ensuring the consistency of the ESG strategy.",
+    'A sustainability committee at Board level carries the oversight of ESG issues.',
+    'ESG governance benefits from a dedicated committee, guaranteeing sustainability integration at the highest level.',
+    'The Board has set up a committee dedicated to sustainability issues.',
+    'A sustainability committee exists at Board level: ESG issues have a dedicated body.',
+    'A sustainability committee, anchored in the governance structure, carries the ESG dimension.',
+    'ESG issues have a dedicated body at Board level.',
+    'A sustainability committee is reported at Board level, an anchor for the ESG strategy.',
 ]
 GOV_NO_COMMITTEE_EN = [
-    "Creating a sustainability committee at Board level is strongly recommended.",
-    "Establishing a dedicated ESG governance body is a priority improvement lever.",
-    "Strengthening ESG oversight through a dedicated body is identified as a structuring action.",
-    "Setting up a CSR committee within the Board is a priority recommendation.",
-    "Strengthened ESG governance requires creating a sustainability committee at executive level.",
-    "The absence of a dedicated committee is a documented area for progress in the governance roadmap.",
-    "Establishing a sustainability committee is planned to strengthen the strategic anchoring of ESG.",
+    'Creating a sustainability committee at Board level is strongly recommended.',
+    'Establishing a dedicated ESG governance body is a priority improvement lever.',
+    'Strengthening ESG oversight through a dedicated body is identified as a structuring action.',
+    'Setting up a CSR committee within the Board is a priority recommendation.',
+    'Strengthened ESG governance requires creating a sustainability committee at executive level.',
+    'No dedicated committee is reported: this is an area for progress in governance.',
+    'Establishing a sustainability committee would strengthen the strategic anchoring of ESG.',
 ]
 CONCLUSION_HIGH_EN = [
-    ("demonstrates a mature and structured ESG approach", "Building on these achievements,", "intends to consolidate its progress while accelerating on its improvement areas"),
-    ("confirms its commitment to an ambitious sustainability strategy", "On this solid foundation,", "is equipped to take a further step in its extra-financial performance"),
-    ("illustrates the growing maturity of its sustainability approach", "Capitalising on these results,", "commits to amplifying its efforts on the identified priority areas"),
-    ("positions {n} among the responsible players in its sector", "In this positive momentum,", "continues to embed sustainability across all its strategic decisions"),
-    ("validates the relevance of the ESG strategy pursued in recent years", "Strengthened by these results,", "accelerates the delivery of its long-term roadmap"),
+    ("shows an advanced ESG profile on this diagnostic's grid", 'Going forward,'),
+    ('sits at the top of the internal scoring grid', 'To consolidate these gains,'),
+    ('shows a structured ESG approach across the rated pillars', 'With this in view,'),
 ]
 CONCLUSION_MID_EN = [
-    ("has resolutely engaged in transforming its ESG practices", "From this foundation,", "accelerates the delivery of its sustainability roadmap"),
-    ("is building positive momentum across all ESG pillars", "Driven by these early results,", "is structuring a path of progress for the coming years"),
-    ("shows measured, steady progress on its key indicators", "In this continuity,", "intensifies its efforts to reach its 3-year objectives"),
+    ('shows an intermediate ESG profile, between gains and room for progress', 'To progress,'),
+    ('sits in the middle of the internal scoring grid', 'With this in view,'),
+    ('shows mixed results across pillars', 'Going forward,'),
 ]
 CONCLUSION_LOW_EN = [
-    ("has initiated a structured ESG reflection that now calls for action", "Aware of this room for progress,", "is committing to an ambitious transformation approach"),
-    ("stands at a pivotal moment in its ESG trajectory", "Faced with these challenges,", "mobilises its resources to accelerate its sustainable transformation"),
-    ("acknowledges the significant areas for progress identified in this report", "With determination,", "commits to structuring a concrete, measurable ESG action plan"),
+    ("shows an ESG profile still under construction on this diagnostic's grid", 'To progress,'),
+    ('sits at the bottom of the internal scoring grid', 'Going forward,'),
+    ('reveals significant areas for progress', 'With this in view,'),
 ]
 # See the FR block: only the reporting framework actually targeted.
 CONCLUSION_REFS_EN = [
@@ -1357,7 +1354,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
     if env.biodiversity_initiatives:
         items.append(_agree(env.biodiversity_initiatives,
                             "biodiversity initiative", "biodiversity initiatives", en=True))
-    env_detail = (_pick(s, 5, ENV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The environmental scope is being structured."
+    env_detail = (_pick(s, 5, ENV_LIAISONS_EN) + "; ".join(items) + ".") if items else "No environmental indicator is reported for this year."
     environmental = f"{env_intro} {env_detail} {_pick(s, 6, ENV_OUTLOOK_EN).format(p=sector_priority)}"
 
     # Social
@@ -1385,8 +1382,8 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         items.append(f"customer satisfaction {soc.customer_satisfaction_score:.1f}/10")
     if soc.disabled_employees_percent is not None:
         items.append(f"{soc.disabled_employees_percent:.1f}% employees with disabilities")
-    soc_detail = (_pick(s, 8, SOC_LIAISONS_EN) + "; ".join(items) + ".") if items else "Social indicators are being formalised."
-    social = f"{soc_intro} {soc_detail} {_pick(s, 9, SOC_STRATEGIES_EN)}"
+    soc_detail = (_pick(s, 8, SOC_LIAISONS_EN) + "; ".join(items) + ".") if items else "No social indicator is reported for this year."
+    social = f"{soc_intro} {soc_detail}"
 
     # Governance
     gov_intro = (PILIER_NON_NOTE["en"]["gov"] if scores.governance_score is None
@@ -1413,10 +1410,11 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         items.append("zero corruption cases recorded" if gov.corruption_cases == 0
                      else _agree(gov.corruption_cases, "corruption case recorded",
                                  "corruption cases recorded", en=True))
-    gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "The governance structure is being documented."
-    audit_sent = _pick(s, 2, GOV_AUDITS_EN if gov.esg_audit_conducted else GOV_NO_AUDIT_EN)
-    committee_sent = _pick(s, 3, GOV_COMMITTEES_EN if gov.sustainability_committee else GOV_NO_COMMITTEE_EN)
-    governance = f"{gov_intro} {gov_detail} {audit_sent} {committee_sent}"
+    gov_detail = (_pick(s, 1, GOV_LIAISONS_EN) + "; ".join(items) + ".") if items else "No governance indicator is reported for this year."
+    audit_sent = _gov_fact(s, 2, gov.esg_audit_conducted, GOV_AUDITS_EN, GOV_NO_AUDIT_EN)
+    committee_sent = _gov_fact(s, 3, gov.sustainability_committee, GOV_COMMITTEES_EN,
+                               GOV_NO_COMMITTEE_EN)
+    governance = " ".join(p for p in (gov_intro, gov_detail, audit_sent, committee_sent) if p)
 
     # CSRD sections
     # Voir la note du bloc FR équivalent : décrire le calcul réel, nommer
@@ -1446,6 +1444,7 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
                         "quantified reduction pathway. ")
     targets_txt += ("ESRS E1-4 requires disclosing whether and how reduction targets have been set — "
                     "their absence, documented as such, falls under that same transparency requirement.")
+    targets_txt = TG.targets_paragraph(request) or targets_txt
 
     taxonomy = None
     tx = request.taxonomy
@@ -1485,25 +1484,27 @@ def _generate_en(request: ESGRequest, scores: ESGScores) -> dict:
         traj_list = CONCLUSION_MID_EN
     else:
         traj_list = CONCLUSION_LOW_EN
-    trajectory, bridge, forward = _pick(s, 4, traj_list)
+    trajectory, bridge = _pick(s, 4, traj_list)
     trajectory = trajectory.replace("{n}", name)
     ref = _pick(s, 5, CONCLUSION_REFS_EN)
-    s_txt = _agree(len(scores.strengths), "consolidated strength", "consolidated strengths", en=True) if scores.strengths else "emerging strengths"
-    w_txt = _agree(len(scores.weaknesses), "priority area for improvement", "priority areas for improvement", en=True) if scores.weaknesses else "identified areas for progress"
+    s_txt = (_agree(strengths_count(scores), "consolidated strength", "consolidated strengths", en=True)
+             if strengths_count(scores) else "no marked strength")
+    w_txt = (_agree(len(scores.weaknesses), "priority area for improvement", "priority areas for improvement", en=True)
+             if scores.weaknesses else "no priority area for improvement")
     if total is None:
         # No overall score: no trajectory is characterised.
         conclusion = (
             f"{SANS_SCORE_GLOBAL['en'].format(n=name)} The analysis highlights {s_txt} and {w_txt}. "
             f"Completing data collection for the unrated pillars is the prerequisite for any scored "
-            f"reading; the {n_r} recommendations set out form the operational roadmap. The organisation "
-            f"reaffirms its commitment to transparent, rigorous reporting, {ref}"
+            f"reading; the {n_r} recommendations set out form the proposed roadmap. This diagnostic "
+            f"is established {ref}"
         )
     else:
         conclusion = (
             f"With an ESG score of {total:.1f}/100 ({scores.rating}), {name} {trajectory}. "
-            f"The analysis highlights {s_txt} and {w_txt}. {bridge} {name} {forward}, drawing on the "
-            f"{n_r} recommendations set out as an operational roadmap. The organisation reaffirms its "
-            f"commitment to transparent, rigorous reporting, {ref}"
+            f"The analysis highlights {s_txt} and {w_txt}. {bridge} the {n_r} recommendations set out "
+            f"form the proposed roadmap; implementing them is for {name} to decide. This diagnostic "
+            f"is established {ref}"
         )
 
     return {
@@ -1600,16 +1601,20 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
         effort, impact = _REC_PRIORITY.get(k, (5, 5))
         own_fr, own_en = _REC_OWNERS.get(k, ("Direction RSE", "CSR"))
         obj_fr, obj_en = _REC_OBJECTIVES.get(k, ("", ""))
+        lang = "en" if en else "fr"
+        # Cible déclarée par le client : elle remplace l'objectif proposé (étape B).
+        title = TG.recommendation_title(request, k, lang) or (ten if en else tfr)
+        objective = TG.recommendation_objective(request, k, lang) or (obj_en if en else obj_fr)
         out.append({
             "key": k,
-            "title": ten if en else tfr,
+            "title": title,
             "detail": den if en else dfr,
             "pillar": pillar,
             "horizon": hen if en else hfr,
             "effort": effort,
             "impact": impact,
             "owner": own_en if en else own_fr,
-            "objective": obj_en if en else obj_fr,
+            "objective": objective,
         })
     return out
 
@@ -1681,13 +1686,18 @@ def priority_reading(request: ESGRequest, scores: ESGScores) -> str:
 # Abstention (DETTE § 11) : un pilier sans indicateur noté n'a pas de score,
 # et sans deux piliers notés il n'y a ni score global ni note lettrée. Le
 # texte le dit au lieu d'imprimer un chiffre par défaut.
+# Sous le seuil de notation (DETTE § 16) : zéro, un ou deux indicateurs.
+_SOUS_SEUIL = {
+    "fr": f"moins de {MIN_INDICATEURS_PILIER} indicateurs de sa grille de notation sont renseignés.",
+    "en": f"fewer than {MIN_INDICATEURS_PILIER} indicators of its scoring grid are reported.",
+}
 PILIER_NON_NOTE = {
-    "fr": {"env": "Le pilier environnemental n'est pas noté : aucun indicateur de la grille de notation n'est renseigné.",
-           "social": "Le pilier social n'est pas noté : aucun indicateur de la grille de notation n'est renseigné.",
-           "gov": "Le pilier gouvernance n'est pas noté : aucun indicateur de la grille de notation n'est renseigné."},
-    "en": {"env": "The environmental pillar is not rated: none of the scoring-grid indicators is reported.",
-           "social": "The social pillar is not rated: none of the scoring-grid indicators is reported.",
-           "gov": "The governance pillar is not rated: none of the scoring-grid indicators is reported."},
+    "fr": {"env": "Le pilier environnemental n'est pas noté : " + _SOUS_SEUIL["fr"],
+           "social": "Le pilier social n'est pas noté : " + _SOUS_SEUIL["fr"],
+           "gov": "Le pilier gouvernance n'est pas noté : " + _SOUS_SEUIL["fr"]},
+    "en": {"env": "The environmental pillar is not rated: " + _SOUS_SEUIL["en"],
+           "social": "The social pillar is not rated: " + _SOUS_SEUIL["en"],
+           "gov": "The governance pillar is not rated: " + _SOUS_SEUIL["en"]},
 }
 POSITIONNEMENT_IMPOSSIBLE = {
     "fr": "Le positionnement interne compare les piliers notés entre eux : il suppose au moins deux piliers notés.",
@@ -1757,45 +1767,50 @@ def _band(score: float | None) -> str | None:
     return "low"
 
 
+# Titre de pilier choisi par TRANCHE de score : il ne nomme aucun dispositif
+# (audit, comité, assurance, Scope 3…) que la tranche ne garantit pas —
+# « Gouvernance exemplaire : indépendance, audit… » s'imprimait à côté de
+# « Audit ESG : Non » (DETTE § 26). Le détail vient de la lecture des
+# indicateurs, écrite depuis les données juste en dessous.
 _PILLAR_INSIGHT = {
     "fr": {
         "env": {
-            "high": "Performance environnementale de premier plan : la maîtrise du carbone et de l'énergie constitue un actif différenciant.",
-            "good": "Performance environnementale solide ; l'intensité carbone reste le principal levier de création de valeur durable.",
-            "mid": "Trajectoire environnementale engagée mais inégale : la décarbonation et la mesure Scope 3 conditionnent la qualité du reporting climat.",
+            "high": "Performance environnementale de premier plan sur la grille du diagnostic : un actif différenciant à documenter et à défendre.",
+            "good": "Performance environnementale solide ; les indicateurs les moins bien placés sur la grille sont les prochains leviers.",
+            "mid": "Performance environnementale inégale : les indicateurs en retrait sur la grille conditionnent la qualité du reporting climat.",
             "low": "Performance environnementale en retrait : la transition bas-carbone doit devenir une priorité stratégique à court terme.",
         },
         "social": {
-            "high": "Capital humain valorisé et sécurisé : un atout de marque employeur et de résilience opérationnelle.",
-            "good": "Socle social solide ; la diversité et la formation sont les leviers pour transformer la conformité en avantage compétitif.",
-            "mid": "Performance sociale en construction : parité et sécurité au travail appellent des objectifs chiffrés pour fidéliser les talents.",
+            "high": "Performance sociale de premier plan sur la grille du diagnostic : un atout de marque employeur et de résilience opérationnelle.",
+            "good": "Socle social solide ; les indicateurs les moins bien placés sur la grille sont les leviers pour transformer la conformité en avantage.",
+            "mid": "Performance sociale en construction : les indicateurs en retrait sur la grille appellent un suivi chiffré pour fidéliser les talents.",
             "low": "Performance sociale à renforcer : le risque de rétention et de conformité justifie un plan d'action RH immédiat.",
         },
         "gov": {
-            "high": "Gouvernance exemplaire : indépendance, audit et supervision ESG inspirent confiance aux investisseurs.",
-            "good": "Gouvernance robuste ; l'assurance externe et le comité de durabilité consolident la crédibilité du reporting.",
-            "mid": "Gouvernance à structurer : l'audit indépendant et un comité dédié sont attendus par les marchés financiers.",
-            "low": "Gouvernance insuffisante : l'absence de contrôle ESG expose l'entreprise à un risque réputationnel et réglementaire.",
+            "high": "Gouvernance de premier plan sur la grille du diagnostic : un gage de confiance pour les investisseurs.",
+            "good": "Gouvernance robuste ; les dispositifs encore absents ou non renseignés sont les prochains leviers de crédibilité.",
+            "mid": "Gouvernance à structurer : les dispositifs de contrôle et de supervision ESG sont les premiers leviers.",
+            "low": "Gouvernance insuffisante sur la grille du diagnostic : le risque réputationnel et réglementaire justifie un plan de gouvernance prioritaire.",
         },
     },
     "en": {
         "env": {
-            "high": "Leading environmental performance: carbon and energy control is a differentiating asset.",
-            "good": "Solid environmental performance; carbon intensity remains the main lever for sustainable value creation.",
-            "mid": "Environmental trajectory engaged but uneven: decarbonisation and Scope 3 measurement drive the quality of climate reporting.",
+            "high": "Leading environmental performance on this diagnostic's grid: a differentiating asset to document and defend.",
+            "good": "Solid environmental performance; the indicators placed lowest on the grid are the next levers.",
+            "mid": "Uneven environmental performance: the indicators lagging on the grid drive the quality of climate reporting.",
             "low": "Lagging environmental performance: the low-carbon transition must become a near-term strategic priority.",
         },
         "social": {
-            "high": "Human capital valued and protected: an asset for employer brand and operational resilience.",
-            "good": "Solid social foundation; diversity and training are the levers to turn compliance into a competitive edge.",
-            "mid": "Social performance under construction: gender balance and workplace safety call for quantified targets to retain talent.",
+            "high": "Leading social performance on this diagnostic's grid: an asset for employer brand and operational resilience.",
+            "good": "Solid social foundation; the indicators placed lowest on the grid are the levers to turn compliance into a competitive edge.",
+            "mid": "Social performance under construction: the indicators lagging on the grid call for quantified tracking to retain talent.",
             "low": "Social performance to strengthen: retention and compliance risk warrants an immediate HR action plan.",
         },
         "gov": {
-            "high": "Exemplary governance: independence, audit and ESG oversight inspire investor confidence.",
-            "good": "Robust governance; external assurance and a sustainability committee reinforce reporting credibility.",
-            "mid": "Governance to structure: independent audit and a dedicated committee are expected by financial markets.",
-            "low": "Insufficient governance: the lack of ESG control exposes the company to reputational and regulatory risk.",
+            "high": "Leading governance on this diagnostic's grid: a mark of confidence for investors.",
+            "good": "Robust governance; the arrangements still missing or not reported are the next levers of credibility.",
+            "mid": "Governance to structure: ESG control and oversight arrangements are the first levers.",
+            "low": "Insufficient governance on this diagnostic's grid: reputational and regulatory risk warrants a priority governance plan.",
         },
     },
 }
@@ -1885,11 +1900,18 @@ def pillar_insights(request: ESGRequest, scores: ESGScores) -> dict:
     return out
 
 
+def maturite_rang(mat: dict) -> str:
+    """« 3/5 » : rang affiché de 1 à 5. `stage` va de 0 à 4 ; l'imprimer tel
+    quel donnait « Structurée (2/5) » quand la diapositive allume la case 3,
+    et « Initiée (0/5) » au premier stade (DETTE § 18)."""
+    return f'{mat["stage"] + 1}/5'
+
+
 def maturite_libelle(mat: dict, TR: dict) -> str:
-    """« Structurée (2/5) » ; « non évaluée (pas de score global) » en abstention."""
+    """« Structurée (3/5) » ; « non évaluée (pas de score global) » en abstention."""
     if mat.get("stage") is None:
         return TR["mat_none"]
-    return f'{TR.get("mat_" + mat["key"], "")} ({mat["stage"]}/5)'
+    return f'{TR.get("mat_" + mat["key"], "")} ({maturite_rang(mat)})'
 
 
 def score_verdict(request: ESGRequest, scores: ESGScores):
@@ -1990,10 +2012,10 @@ def pillar_headline(request: ESGRequest, scores: ESGScores) -> dict:
         if bi is not None and bi >= 50:
             return (f"An independent board ({num(bi)}%) strengthens governance" if en
                     else f"Un conseil indépendant ({num(bi)} %) renforce la gouvernance")
-        if not gov.esg_audit_conducted:
+        if gov.esg_audit_conducted is False:  # non renseigné n'est pas « non » (DETTE § 17)
             return ("Independent ESG assurance is the governance priority" if en
                     else "L'assurance ESG indépendante, priorité de la gouvernance")
-        if not gov.sustainability_committee:
+        if gov.sustainability_committee is False:
             return ("A board-level sustainability committee is the missing link" if en
                     else "Un comité de durabilité au conseil, le maillon manquant")
         return None
@@ -2101,7 +2123,7 @@ def section_headlines(request: ESGRequest, scores: ESGScores) -> dict:
             tax_items.append((tx.opex_aligned_percent, "des dépenses (OpEx)" if not en else "of OpEx"))
     tax_top = max(tax_items, key=lambda x: x[0]) if tax_items else None
 
-    ns, nw = len(scores.strengths), len(scores.weaknesses)
+    ns, nw = strengths_count(scores), len(scores.weaknesses)
 
     if en:
         materiality = f"{top_topic} is the top-priority ESG issue"
@@ -2261,11 +2283,16 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
         # plupart des clients (CSRD_CHAMP).
         risks.append(T("Scope 3 non mesuré : empreinte carbone incomplète au regard de l'ESRS E1", "Fiabilité",
                        "Scope 3 not measured: carbon footprint incomplete against ESRS E1", "Reliability", "H", "H"))
-    if not gov.esg_audit_conducted:
+    if gov.esg_audit_conducted is False:  # un risque affirme un fait (DETTE § 17)
         risks.append(T("Reporting non audité : crédibilité limitée auprès des investisseurs", "Fiabilité",
                        "Unaudited reporting: limited credibility with investors", "Assurance", "H", "H"))
     ci = (env.co2_emissions_tonnes / rev * 1e6) if (env.co2_emissions_tonnes and rev) else None
-    if ci is not None and ci > 100:
+    # Tranche de la grille SECTORIELLE (bands.py), comme le point d'appui de
+    # la synthèse ; jusqu'au 2026-09-27, seuil fixe de 100 t/M€ quel que soit
+    # le secteur (DETTE § 24).
+    from analysis import _BAD
+    from bands import classer
+    if ci is not None and classer("co2_emissions_tonnes", round(ci), request.company.sector) in _BAD:
         risks.append(T("Intensité carbone élevée : marge exposée à la tarification du carbone", "Transition",
                        "High carbon intensity: margin exposed to carbon pricing", "Transition", "H", "M"))
     elif env.renewable_energy_percent is not None and env.renewable_energy_percent < 50:
@@ -2317,6 +2344,15 @@ def risks_opportunities(request: ESGRequest, scores: ESGScores) -> dict:
                       "Early ESG structuring: easier answers to customer and lender requests", "Market"))
 
     return {"risks": risks[:4], "opportunities": opps[:4]}
+
+
+def _oui_non(value: bool | None) -> str:
+    """Statut d'une ligne oui/non : « na » si non renseigné (DETTE § 17)."""
+    return "na" if value is None else ("ok" if value else "no")
+
+
+def _constat(value: bool | None, oui: str, non: str, inconnu: str) -> str:
+    return inconnu if value is None else (oui if value else non)
 
 
 def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
@@ -2372,16 +2408,20 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
 
     # Vérification tierce
     R("Vérification du reporting par un tiers", "Third-party assurance of reporting", "CSRD (assurance limitée)",
-      "ok" if gov.esg_audit_conducted else "no",
-      "Audit ESG indépendant réalisé" if gov.esg_audit_conducted else "Aucune assurance externe à date",
-      "Independent ESG audit performed" if gov.esg_audit_conducted else "No external assurance to date",
+      _oui_non(gov.esg_audit_conducted),
+      _constat(gov.esg_audit_conducted, "Audit ESG indépendant réalisé", "Aucune assurance externe à date",
+               "Donnée non renseignée"),
+      _constat(gov.esg_audit_conducted, "Independent ESG audit performed", "No external assurance to date",
+               "Not reported"),
       vsme_out_of_scope=True)
 
     # Gouvernance durabilité
     R("Supervision de la durabilité par la gouvernance", "Sustainability oversight by governance", "ESRS 2 GOV-1",
-      "ok" if gov.sustainability_committee else "no",
-      "Comité de durabilité en place" if gov.sustainability_committee else "Pas de comité dédié",
-      "Sustainability committee in place" if gov.sustainability_committee else "No dedicated committee")
+      _oui_non(gov.sustainability_committee),
+      _constat(gov.sustainability_committee, "Comité de durabilité en place", "Pas de comité dédié",
+               "Donnée non renseignée"),
+      _constat(gov.sustainability_committee, "Sustainability committee in place", "No dedicated committee",
+               "Not reported"))
 
     # (supprime) Ligne « Mixite des effectifs (cible 40 %) », reference
     # « Index egalite / ESRS S1-9 ». Ce tableau analyse les ECARTS
@@ -2431,11 +2471,16 @@ def compliance_assessment(request: ESGRequest, scores: ESGScores) -> list:
     # des qu'un total CO2 etait saisi, sur la foi d'un objectif que l'outil
     # avait lui-meme invente) — et jamais « non conforme » non plus, ce qui
     # preterait a l'entreprise un manquement qu'on ne peut pas constater.
-    R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
-      "na",
-      "Cibles climatiques non documentées dans ce reporting",
-      "Climate targets not documented in this reporting",
-      nature=GS.NON_COUVERT)
+    declared = TG.compliance_note(request)
+    if declared:  # cible déclarée par le client (étape B) : documentée dans ce reporting
+        R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
+          "ok", declared[0], declared[1])
+    else:
+        R("Objectifs climatiques chiffrés", "Quantified climate targets", "ESRS E1-4",
+          "na",
+          "Cibles climatiques non documentées dans ce reporting",
+          "Climate targets not documented in this reporting",
+          nature=GS.NON_COUVERT)
 
     return rows
 
