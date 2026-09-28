@@ -1155,7 +1155,7 @@ Trouvé par le banc de cohérence (`tests/coherence.py`, invariant
 
 Le § 23 est lui aussi couvert par le banc (`fragilites_pas_sur_le_meilleur_pilier`).
 
-## 25. Interface : trois libellés à revoir — OUVERT
+## 25. Interface : libellés à revoir — **traité le 2026-09-28**
 
 Relevés pendant l'étape B, non corrigés (règle 2).
 - `StepGovernance.jsx` : aide « Recommandation AFEP-MEDEF : >50% ». Le
@@ -1169,6 +1169,14 @@ Relevés pendant l'étape B, non corrigés (règle 2).
   JSX s'affiche tel quel (« L’analyse du consultant », « Suivi du plan
   d’action ») ; seul l'échappement dans une chaîne JS (l. 164) est
   interprété. Relevé le 2026-09-28 en vérifiant le suivi annuel.
+- **Traitement** : aide AFEP-MEDEF reprise du questionnaire (formulation
+  déjà vérifiée, § 0octies) ; aide de l'horizon sans référentiel ; exercices
+  proposés jusqu'à l'année en cours (borne du modèle 2035) et horizons
+  postérieurs à l'exercice (`frontend/src/lib/years.mjs`, testé) ; les six
+  `\uXXXX` remplacés par le caractère, et `lib/sources.test.mjs` refuse
+  toute séquence d'échappement dans les composants (il attrape les six
+  lignes de l'ancienne version).
+
 
 ## 26. Titres de pilier qui affirment un dispositif non déclaré — **traité le 2026-09-28**
 
