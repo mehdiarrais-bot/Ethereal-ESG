@@ -125,6 +125,16 @@ def main(exe):
                 if not ok:
                     failures.append(f"{label} : statut {status}, {len(out)} octets")
 
+        # Apercu du selecteur de gabarit : pypdfium2 et pdfium.dll embarques
+        try:
+            status, ctype, out = request("POST", "/api/preview", dict(PAYLOAD, language="fr"))
+            ok = status == 200 and out[:4] == b"\x89PNG"
+        except urllib.error.HTTPError as e:
+            ok, status, out = False, e.code, b""
+        print(f"  {'OK ' if ok else 'KO '} {'apercu gabarit':<18} {len(out):>9} octets")
+        if not ok:
+            failures.append(f"apercu gabarit : statut {status} (pdfium non embarque ?)")
+
         _, _, out = request("POST", "/api/clients", {"form": dict(PAYLOAD, language="fr")})
         cid = json.loads(out)["id"]
         if not os.path.isfile(os.path.join(data_dir, f"{cid}.json")):
