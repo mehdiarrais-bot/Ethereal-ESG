@@ -532,6 +532,28 @@ def _toc_parts(TR):
     ]
 
 
+def _type_label(request, TR) -> str:
+    return {"white_paper": TR["rep_white_paper"], "full_report": TR["rep_full_report"],
+            "annual_followup": TR["rep_annual_followup"]}.get(request.report_type.value, TR["rep_default"])
+
+
+def preview_pdf(request: ESGRequest, scores: ESGScores, logo_bytes: bytes | None = None) -> bytes:
+    """Couverture et page « ESG en un coup d'œil » SEULES, avec les données
+    du dossier : l'aperçu du sélecteur de gabarit. Mêmes dessins que le
+    rapport (pdf_pages), sans ses passes de pagination — une fraction de
+    seconde au lieu de plusieurs."""
+    k = Kit(request)
+    if logo_bytes:
+        k.logo = logo_bytes
+    TR = L(request.language)
+    g = page_context(request, scores, TR, _type_label(request, TR))
+    buf = io.BytesIO()
+    doc = BaseDocTemplate(buf, pagesize=A4)
+    doc.addPageTemplates([PageTemplate("full", [Frame(0, 0, PAGE_W, PAGE_H, 0, 0, 0, 0, id="full")])])
+    doc.build([FullPage(k, PG.cover_page, g), FullPage(k, PG.glance_page, g)])
+    return buf.getvalue()
+
+
 def generate_pdf_report(request: ESGRequest, scores: ESGScores, content: dict,
                         chart_images: dict, logo_bytes: bytes | None = None) -> bytes:
     return compose_report(request, scores, content, chart_images, logo_bytes)[0]
@@ -627,9 +649,7 @@ def _compose(request, scores, content, chart_images, logo_bytes, pages_in, ancho
     S = build_styles(k)
     TR = L(request.language)
     lang = request.language
-    type_label = {"white_paper": TR["rep_white_paper"], "full_report": TR["rep_full_report"],
-                  "annual_followup": TR["rep_annual_followup"]
-                  }.get(request.report_type.value, TR["rep_default"])
+    type_label = _type_label(request, TR)
     g = page_context(request, scores, TR, type_label)
     buf = io.BytesIO()
 

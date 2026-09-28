@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDesigns } from '../hooks/useDesigns'
+import { usePreview } from '../hooks/usePreview'
 
 const SLOT_LABELS = {
   cover: 'Couverture',
@@ -32,22 +33,84 @@ function downscale(file) {
   })
 }
 
-export function DesignPicker({ value, onChange }) {
-  const { designs, error } = useDesigns()
-  if (error) return <p className="design-error">Gabarits indisponibles : le serveur ne répond pas.</p>
+// Pastilles de palette lues dans les jetons du gabarit (/api/designs) :
+// aucune couleur de livrable n'est recopiée dans le frontend.
+const SWATCHES = ['paper', 'primary', 'accent', 'env', 'social', 'gov']
+
+function DesignStage({ design, form }) {
+  const { url, loading, unavailable } = usePreview(design.id, form)
+  const [liveShown, setLiveShown] = useState(false)
+  useEffect(() => { setLiveShown(false) }, [url])
+  const status = unavailable ? 'Aperçu générique (rendu indisponible sur cette installation)'
+    : !form?.company?.name ? "Aperçu générique — saisissez le nom de l'entreprise pour voir vos données"
+    : loading ? 'Rendu avec vos données…'
+    : url ? 'Aperçu avec vos données : couverture et « ESG en un coup d’œil »' : ''
   return (
-    <div className="design-grid">
-      {designs.map(d => (
-        <button key={d.id} type="button" onClick={() => onChange(d.id)}
-          className={`design-card ${value === d.id ? 'selected' : ''}`}>
-          <img src={`/designs/${d.id}.jpg`} alt={`Aperçu du gabarit ${d.label.fr}`} loading="lazy" />
-          <div className="design-meta">
-            <div className="option-name">{d.label.fr}</div>
-            <div className="option-desc">{d.tagline.fr}</div>
+    <div className="design-stage" aria-live="polite">
+      {/* key : chaque gabarit remonte le bloc, ce qui rejoue l'animation d'entrée */}
+      <div key={design.id} className="design-stage-inner">
+        <div className="design-stage-frame">
+          <img className="design-stage-thumb" src={`/designs/${design.id}.jpg`}
+            alt={`Aperçu du gabarit ${design.label.fr}`} />
+          {url && (
+            <img className={`design-stage-live ${liveShown ? 'shown' : ''}`} src={url}
+              alt={`Couverture et page « coup d’œil » au gabarit ${design.label.fr}, avec vos données`}
+              onLoad={() => setLiveShown(true)} />
+          )}
+          {loading && <div className="design-stage-spinner" aria-hidden="true" />}
+        </div>
+        <div className="design-stage-caption">
+          <div>
+            <div className="design-stage-name">{design.label.fr}</div>
+            <div className="design-stage-tagline">{design.tagline.fr}</div>
           </div>
-          {value === d.id && <div className="option-check">✓</div>}
-        </button>
-      ))}
+          <div className="design-stage-status">{status}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function DesignPicker({ value, onChange, form }) {
+  const { designs, error } = useDesigns()
+  const listRef = useRef(null)
+  if (error) return <p className="design-error">Gabarits indisponibles : le serveur ne répond pas.</p>
+  if (!designs.length) return null
+  const current = designs.find(d => d.id === value) || designs[0]
+
+  // Flèches du clavier : parcourir les gabarits comme un groupe de boutons radio.
+  const onKeyDown = (e) => {
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const i = designs.findIndex(d => d.id === current.id)
+    const next = designs[(i + step + designs.length) % designs.length]
+    onChange(next.id)
+    listRef.current?.querySelector(`[data-design="${next.id}"]`)?.focus()
+  }
+
+  return (
+    <div className="design-chooser">
+      <div className="design-list" role="radiogroup" aria-label="Gabarit du rapport"
+        ref={listRef} onKeyDown={onKeyDown}>
+        {designs.map(d => {
+          const selected = d.id === current.id
+          return (
+            <button key={d.id} type="button" role="radio" aria-checked={selected}
+              tabIndex={selected ? 0 : -1} data-design={d.id}
+              className={`design-chip ${selected ? 'selected' : ''}`} onClick={() => onChange(d.id)}>
+              <span className="design-chip-swatches" aria-hidden="true">
+                {SWATCHES.map(k => <span key={k} style={{ background: d.colors[k] }} />)}
+              </span>
+              <span className="design-chip-text">
+                <span className="design-chip-name">{d.label.fr}</span>
+                <span className="design-chip-tagline">{d.tagline.fr}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <DesignStage design={current} form={form} />
     </div>
   )
 }

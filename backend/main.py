@@ -5,7 +5,7 @@ import sys
 from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -210,6 +210,22 @@ def designs_endpoint():
                     for theme, d in DESIGNS.items()],
         "photo_slots": list(CLIENT_PHOTO_SLOTS),
     }
+
+
+@app.post("/api/preview")
+def preview_endpoint(request: ESGRequest):
+    """Couverture + « coup d'œil » du gabarit demandé, avec les données du
+    dossier, en PNG : l'aperçu vivant du sélecteur de gabarit."""
+    import preview
+    from report_generator import preview_pdf
+    scores = calculate_esg_scores(request)
+    logo_bytes, _ = build_extras(request)
+    try:
+        image = preview.render(preview_pdf(request, scores, logo_bytes))
+    except preview.PreviewUnavailable:
+        raise HTTPException(status_code=503, detail="Aperçu indisponible sur cette installation")
+    return Response(content=image, media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/calculate")
