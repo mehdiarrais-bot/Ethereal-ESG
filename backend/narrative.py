@@ -243,7 +243,10 @@ def pillar_paragraphs(request, scores, pillar: str) -> list[str]:
     """Deux paragraphes : lecture chiffrée, puis faits et données manquantes."""
     first = " ".join([score_position(request, scores, pillar)]
                      + indicator_readings(request, pillar))
-    second = " ".join(_FACTS[pillar](request) + [missing_sentence(request, pillar)])
+    from targets import indicators_sentence  # import local : targets importe narrative
+    cibles = indicators_sentence(request, pillar)
+    second = " ".join(_FACTS[pillar](request) + [missing_sentence(request, pillar)]
+                      + ([cibles] if cibles else []))
     return [first, second]
 
 

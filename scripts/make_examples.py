@@ -51,7 +51,8 @@ DEMO = ESGRequest(
                           opex_aligned_percent=20),
     # Cible climat déclarée (étape B) : citée comme telle, jamais évaluée
     targets=TargetsData(climate_reduction_percent=42, climate_base_year=2025,
-                        climate_target_year=2030, climate_scopes="1-2"),
+                        climate_target_year=2030, climate_scopes="1-2",
+                        renewable_target_percent=60, training_hours_target=30),
     language="fr", aesthetic_theme="aurora",
     include_recommendations=True, include_benchmarks=True,
     # Historique : fait apparaître l'évolution N-1 et la trajectoire

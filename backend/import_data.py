@@ -63,6 +63,10 @@ FIELD_SPECS = [
     ("targets", "climate_base_year", "int", ["annee de reference de la cible", "annee de reference", "climate_base_year"]),
     ("targets", "climate_target_year", "int", ["annee cible de la reduction", "annee cible climat", "climate_target_year"]),
     ("targets", "climate_scopes", "str", ["perimetre de la cible", "scopes de la cible", "climate_scopes"]),
+    ("targets", "renewable_target_percent", "num", ["part d'energie renouvelable visee", "cible energie renouvelable", "renewable_target_percent"]),
+    ("targets", "female_employees_target_percent", "num", ["part de femmes visee", "cible mixite", "female_employees_target_percent"]),
+    ("targets", "training_hours_target", "num", ["heures de formation visees", "cible formation", "training_hours_target"]),
+    ("targets", "accident_rate_target", "num", ["taux de frequence vise", "cible taux de frequence", "accident_rate_target"]),
 ]
 
 
@@ -246,6 +250,7 @@ def template_csv() -> str:
         "opex_aligned_percent": "29",
         "climate_reduction_percent": "42", "climate_base_year": "2024",
         "climate_target_year": "2030", "climate_scopes": "1-2",
+        "renewable_target_percent": "60", "training_hours_target": "35",
     }
     out = io.StringIO()
     w = csv.writer(out, delimiter=";")

@@ -61,7 +61,14 @@ de cible (« validée SBTi »…) saisissable pour l'instant (règle 9).
   « Objectifs », ligne ESRS E1-4 (« cible déclarée »), livre blanc,
   6ᵉ étape « Objectifs » du wizard, questionnaire, import CSV.
   `tests/test_objectifs.py`, invariant `cible_citee_est_la_cible_saisie`.
-- **Lot 2, cibles par indicateur — À FAIRE.**
+- **Lot 2, cibles par indicateur — FAIT (2026-09-28)** : renouvelable, part de
+  femmes, heures de formation, taux de fréquence, à l'horizon
+  `company.target_year`. Écart à la cible (ou « déjà atteinte », ou valeur
+  de l'exercice non renseignée) dans le texte « Objectifs » et en fin de
+  lecture du pilier ; la cible du client **remplace** l'objectif proposé
+  par l'outil dans le point faible (« objectif 50 % »), les recommandations
+  et le plan d'action (titre + colonne Objectif). Invariant
+  `cibles_indicateurs_citees_telles_quelles`.
 
 ## 0ter. Mapping ODD dérivé des indicateurs réellement collectés
 

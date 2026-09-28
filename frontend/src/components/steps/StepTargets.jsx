@@ -53,6 +53,28 @@ export default function StepTargets({ form, updateSection }) {
         </div>
       </div>
 
+      <div className="form-section">
+        <SectionTitle icon="📈">Cibles par indicateur — horizon {company.target_year}</SectionTitle>
+        <div className="form-grid">
+          <FormField label="Part d'énergie renouvelable visée (%)">
+            <NumberInput value={targets.renewable_target_percent} onChange={set('renewable_target_percent')}
+              placeholder="Ex: 60" min={0} max={100} />
+          </FormField>
+          <FormField label="Part de femmes dans l'effectif visée (%)">
+            <NumberInput value={targets.female_employees_target_percent} onChange={set('female_employees_target_percent')}
+              placeholder="Ex: 40" min={0} max={100} />
+          </FormField>
+          <FormField label="Heures de formation par salarié visées">
+            <NumberInput value={targets.training_hours_target} onChange={set('training_hours_target')}
+              placeholder="Ex: 30" min={0} />
+          </FormField>
+          <FormField label="Taux de fréquence des accidents visé" hint="Accidents avec arrêt par million d'heures travaillées">
+            <NumberInput value={targets.accident_rate_target} onChange={set('accident_rate_target')}
+              placeholder="Ex: 5" min={0} />
+          </FormField>
+        </div>
+      </div>
+
       <div className="tip-box">
         <strong>💡 Conseil :</strong> Renseigner uniquement une cible que l'entreprise a effectivement
         fixée. Le rapport la cite comme déclarée par l'entreprise ; il n'en évalue pas l'alignement sur

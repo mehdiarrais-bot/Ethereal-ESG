@@ -116,11 +116,16 @@ class TaxonomyData(BaseModel):
 class TargetsData(BaseModel):
     """Objectifs DÉCLARÉS par le client (DETTE § 0bis, étape B). L'outil les
     cite comme tels et n'en évalue jamais l'alignement sur un référentiel.
-    Lot 1 : trajectoire de réduction des émissions."""
+    Lot 1 : trajectoire de réduction des émissions ; lot 2 : cibles par indicateur."""
     climate_reduction_percent: Optional[float] = Field(default=None, ge=0, le=100)
     climate_base_year: Optional[int] = Field(default=None, ge=2000, le=2035)
     climate_target_year: Optional[int] = Field(default=None, ge=2025, le=2060)
     climate_scopes: Optional[str] = Field(default=None, pattern=r'^(1-2|1-2-3)$')
+    # Lot 2 : cibles par indicateur, à l'horizon company.target_year.
+    renewable_target_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    female_employees_target_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    training_hours_target: Optional[float] = Field(default=None, ge=0, le=10_000)
+    accident_rate_target: Optional[float] = Field(default=None, ge=0, le=10_000)
 
     @field_validator('climate_scopes', mode='before')
     @classmethod
@@ -133,9 +138,11 @@ class TargetsData(BaseModel):
 
     @model_validator(mode='after')
     def check_years(self):
-        v = self.climate_reduction_percent
-        if v is not None and not math.isfinite(v):
-            self.climate_reduction_percent = None
+        for f in ('climate_reduction_percent', 'renewable_target_percent',
+                  'female_employees_target_percent', 'training_hours_target', 'accident_rate_target'):
+            v = getattr(self, f)
+            if v is not None and not math.isfinite(v):
+                setattr(self, f, None)
         b, t = self.climate_base_year, self.climate_target_year
         if b is not None and t is not None and t <= b:
             raise ValueError("Cible climat : l'année cible doit suivre l'année de référence")

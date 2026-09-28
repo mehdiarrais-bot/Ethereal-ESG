@@ -29,7 +29,8 @@ const EMPTY_FORM = {
   company: { name: '', sector: 'Industrie', country: 'France', revenue_eur: '', reporting_year: 2024,
     target_year: 2030, presenter_name: '', presenter_title: '', logo_base64: null, key_initiatives: '', ceo_quote: '' },
   taxonomy: { turnover_aligned_percent: '', capex_aligned_percent: '', opex_aligned_percent: '' },
-  targets: { climate_reduction_percent: '', climate_base_year: '', climate_target_year: '', climate_scopes: '' },
+  targets: { climate_reduction_percent: '', climate_base_year: '', climate_target_year: '', climate_scopes: '',
+    renewable_target_percent: '', female_employees_target_percent: '', training_hours_target: '', accident_rate_target: '' },
   environmental: {
     co2_emissions_tonnes: '', energy_consumption_mwh: '', renewable_energy_percent: '',
     water_consumption_m3: '', waste_generated_tonnes: '', waste_recycled_percent: '',

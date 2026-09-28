@@ -98,7 +98,11 @@ def _cible(rng) -> TargetsData:
     base = rng.choice([2019, 2022, 2025])
     return TargetsData(climate_reduction_percent=rng.choice([None, 25, 42, 55.5]),
                        climate_base_year=base, climate_target_year=rng.choice([2030, 2035, 2050]),
-                       climate_scopes=rng.choice([None, "1-2", "1-2-3"]))
+                       climate_scopes=rng.choice([None, "1-2", "1-2-3"]),
+                       renewable_target_percent=rng.choice([None, 30, 60, 100]),
+                       female_employees_target_percent=rng.choice([None, 40, 50]),
+                       training_hours_target=rng.choice([None, 20, 35.5]),
+                       accident_rate_target=rng.choice([None, 0, 5]))
 
 
 class Dossier:
@@ -306,11 +310,31 @@ def cible_citee_est_la_cible_saisie(d: Dossier) -> list[str]:
             if attendu not in t.replace(chr(160), " ") or str(c.target_year) not in t]
 
 
+def cibles_indicateurs_citees_telles_quelles(d: Dossier) -> list[str]:
+    """Chaque cible par indicateur saisie est citée avec sa valeur ; aucune
+    phrase de cibles sans saisie."""
+    import targets as TG
+    cibles = TG.indicator_targets(d.r)
+    textes = [t.replace(chr(160), " ") for t in d.textes()]
+    marque = ("Cibles déclarées par l'entreprise", "Targets reported by the company")
+    cite = [t for t in textes if any(m in t for m in marque)]
+    if not cibles:
+        return [f"cibles citées sans saisie : {t[:80]}…" for t in cite]
+    out = []
+    for it in cibles:
+        v = TG.fmt_value(it.key, it.target, d.r.language).replace(chr(160), " ")
+        label = TG.LIBELLES[d.r.language][it.key]
+        if not any(f"{label}: {v}" in t or f"{label} : {v}" in t for t in cite):
+            out.append(f"cible « {label} » = {v} jamais citée")
+    return out
+
+
 INVARIANTS = [fragilites_pas_sur_le_meilleur_pilier, enjeu_et_appui_exclusifs,
               point_fort_pas_point_faible, scores_cites_exacts,
               pilier_dominant_est_le_meilleur, aucun_artefact, faible_contre_appui,
               fort_contre_enjeu, risque_carbone_contre_appui,
-              aucune_affirmation_non_declaree, cible_citee_est_la_cible_saisie]
+              aucune_affirmation_non_declaree, cible_citee_est_la_cible_saisie,
+              cibles_indicateurs_citees_telles_quelles]
 
 
 def violations(n: int, invariant, langs=("fr", "en")) -> list[str]:

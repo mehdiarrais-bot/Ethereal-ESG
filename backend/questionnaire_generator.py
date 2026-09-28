@@ -77,6 +77,10 @@ FIELD_META = {
     "climate_base_year": ("Année de référence de la cible", "", "Ex. : 2024."),
     "climate_target_year": ("Année cible de la réduction", "", "Ex. : 2030."),
     "climate_scopes": ("Périmètre de la cible", "", "« 1-2 » (scopes 1 et 2) ou « 1-2-3 » (scopes 1, 2 et 3)."),
+    "renewable_target_percent": ("Part d'énergie renouvelable visée", "%", "À l'horizon des objectifs."),
+    "female_employees_target_percent": ("Part de femmes dans l'effectif visée", "%", "À l'horizon des objectifs."),
+    "training_hours_target": ("Heures de formation par salarié visées", "h", "À l'horizon des objectifs."),
+    "accident_rate_target": ("Taux de fréquence des accidents visé", "", "À l'horizon des objectifs."),
 }
 
 

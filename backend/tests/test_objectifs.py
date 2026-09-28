@@ -131,3 +131,57 @@ def test_import_csv_et_questionnaire_portent_la_cible():
     assert "Reduction visee des emissions;42" in template_csv()
     for lang, libelle in (("fr", "Périmètre de la cible"), ("en", "Target scope")):
         assert libelle in generate_questionnaire_html("X", 2025, lang=lang)
+
+
+# ── Lot 2 : cibles par indicateur ─────────────────────────────────────────
+
+INDICATEURS: dict[str, Any] = dict(renewable_target_percent=60, female_employees_target_percent=30,
+                                   training_hours_target=30, accident_rate_target=4.5)
+
+
+@pytest.mark.parametrize("lang,attendus", [
+    ("fr", ("Aucune trajectoire de réduction des émissions", "part d'énergie renouvelable : 60 %",
+            "42 % sur l'exercice, soit 18 points à gagner d'ici 2030", "cible déjà atteinte",
+            "22 h sur l'exercice, soit 8 h à gagner", "1,7 de baisse à obtenir")),
+    ("en", ("No emissions reduction pathway", "share of renewable energy: 60%",
+            "42% this year, i.e. 18 points to gain by 2030", "target already met",
+            "22 h this year, i.e. 8 h to gain", "a reduction of 1.7 to achieve")),
+])
+def test_cibles_par_indicateur_et_ecart(lang, attendus):
+    r = _dossier(lang, **INDICATEURS)
+    texte = generate_esg_content(r, calculate_esg_scores(r))["targets"].replace("\xa0", " ")
+    for a in attendus:
+        assert a in texte, (lang, a, texte)
+
+
+def test_valeur_de_l_exercice_absente():
+    r = _dossier(renewable_target_percent=60)
+    r.environmental = r.environmental.model_copy(update={"renewable_energy_percent": None})
+    assert "valeur de l'exercice non renseignée" in (TG.targets_paragraph(r) or "")
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_la_cible_client_remplace_l_objectif_propose(lang):
+    from content_generator import enriched_recommendations
+    r = _dossier(lang, renewable_target_percent=60)
+    s = calculate_esg_scores(r)
+    tout = " ".join(s.recommendations + s.weaknesses).replace("\xa0", " ")
+    assert "50%" not in tout, tout                        # plus d'objectif proposé à 50 %
+    assert ("60 %" if lang == "fr" else "60%") in tout
+    reco = next(x for x in enriched_recommendations(r, s) if x["key"] == "renewable")
+    assert "60" in reco["title"] and "2030" in reco["objective"]
+
+
+def test_sans_cible_l_objectif_propose_reste():
+    s = calculate_esg_scores(_dossier())
+    assert any("50%" in x for x in s.recommendations)
+
+
+def test_lecture_du_pilier_cite_ses_cibles():
+    import narrative as NR
+    r = _dossier(**INDICATEURS)
+    s = calculate_esg_scores(r)
+    env = NR.pillar_paragraphs(r, s, "env")[1]
+    soc = NR.pillar_paragraphs(r, s, "social")[1]
+    assert "énergie renouvelable" in env and "formation" not in env.split("cibles suivantes")[-1]
+    assert "heures de formation" in soc and "énergie renouvelable" not in soc.split("cibles suivantes")[-1]

@@ -58,4 +58,8 @@ FIELD_META_EN = {
     "climate_base_year": ("Target base year", "", "E.g. 2024."),
     "climate_target_year": ("Target year", "", "E.g. 2030."),
     "climate_scopes": ("Target scope", "", "\"1-2\" (Scopes 1 and 2) or \"1-2-3\" (Scopes 1, 2 and 3)."),
+    "renewable_target_percent": ("Targeted renewable-energy share", "%", "At the target horizon."),
+    "female_employees_target_percent": ("Targeted share of women in the workforce", "%", "At the target horizon."),
+    "training_hours_target": ("Targeted training hours per employee", "h", "At the target horizon."),
+    "accident_rate_target": ("Targeted accident frequency rate", "", "At the target horizon."),
 }

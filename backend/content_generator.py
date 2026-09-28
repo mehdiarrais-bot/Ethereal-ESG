@@ -1589,16 +1589,20 @@ def enriched_recommendations(request: ESGRequest, scores: ESGScores) -> list:
         effort, impact = _REC_PRIORITY.get(k, (5, 5))
         own_fr, own_en = _REC_OWNERS.get(k, ("Direction RSE", "CSR"))
         obj_fr, obj_en = _REC_OBJECTIVES.get(k, ("", ""))
+        lang = "en" if en else "fr"
+        # Cible déclarée par le client : elle remplace l'objectif proposé (étape B).
+        title = TG.recommendation_title(request, k, lang) or (ten if en else tfr)
+        objective = TG.recommendation_objective(request, k, lang) or (obj_en if en else obj_fr)
         out.append({
             "key": k,
-            "title": ten if en else tfr,
+            "title": title,
             "detail": den if en else dfr,
             "pillar": pillar,
             "horizon": hen if en else hfr,
             "effort": effort,
             "impact": impact,
             "owner": own_en if en else own_fr,
-            "objective": obj_en if en else obj_fr,
+            "objective": objective,
         })
     return out
 
