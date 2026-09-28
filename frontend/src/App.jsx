@@ -258,6 +258,8 @@ export default function App() {
       const prev = (clientHistory || []).filter(h => h.year < year).pop()
       if (prev) {
         payload.previous_scores = { year: prev.year, ...prev.scores }
+        // Indicateurs saisis de l'exercice précédent (sauvegardes depuis le 2026-09-28)
+        if (prev.data) payload.previous_data = { year: prev.year, ...prev.data }
       }
       // Trajectoire pluriannuelle : historique complet du dossier
       if (clientHistory?.length) {

@@ -2,7 +2,9 @@
 Gestion des dossiers clients — stockage 100 % local (JSON sur disque).
 
 Chaque dossier : {id, name, sector, created_at, updated_at, form,
-score_history: [{year, saved_at, scores{env,social,gov,total,rating}}]}.
+score_history: [{year, saved_at, scores{env,social,gov,total,rating}, data}]}.
+`data` (depuis le 2026-09-28) : copie des indicateurs saisis pour l'exercice,
+seule trace qui survit à l'écrasement de `form` par l'exercice suivant.
 L'historique est indexé par exercice (reporting_year) : une sauvegarde
 du même exercice remplace l'entrée, un nouvel exercice s'ajoute —
 ce qui permet le suivi année après année d'un même client.
@@ -190,6 +192,17 @@ def get_client(client_id: str) -> dict:
         return json.load(f)
 
 
+SNAPSHOT_SECTIONS = ("environmental", "social", "governance", "taxonomy", "targets")
+
+
+def exercise_snapshot(form: dict) -> dict:
+    """Indicateurs d'un exercice, sans identité ni mise en page (quelques Ko)."""
+    company = form.get("company", {}) or {}
+    snap: dict = {k: dict(form.get(k) or {}) for k in SNAPSHOT_SECTIONS}
+    snap["revenue_eur"] = company.get("revenue_eur")
+    return snap
+
+
 def save_client(form: dict, scores: dict, client_id: str | None = None) -> dict:
     """Crée ou met à jour un dossier ; l'historique de scores est mis à
     jour pour l'exercice courant (remplacement) ou complété (nouvel exercice)."""
@@ -208,7 +221,7 @@ def save_client(form: dict, scores: dict, client_id: str | None = None) -> dict:
     d["updated_at"] = now
     d["form"] = form
 
-    entry = {"year": year, "saved_at": now, "scores": scores}
+    entry = {"year": year, "saved_at": now, "scores": scores, "data": exercise_snapshot(form)}
     hist = [h for h in d.get("score_history", []) if h["year"] != year]
     hist.append(entry)
     hist.sort(key=lambda h: h["year"])

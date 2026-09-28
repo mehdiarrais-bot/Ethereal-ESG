@@ -345,14 +345,17 @@ def page_context(request, scores, TR, type_label):
     band = _band(scores.total_esg_score) or "none"  # sans score global : aucun jugement
     prev = getattr(request, "previous_scores", None) or None
     delta = prev_vals = prev_year = None
-    if prev and all(prev.get(x) is not None for x in ("env", "social", "gov", "total")):
+    if prev:
+        # Écart pilier par pilier : un pilier non noté d'un côté n'efface plus
+        # les autres écarts (_ecart rend None pour ce seul pilier).
         prev_year = prev.get("year")
         from content_generator import _ecart
-        delta = {"env": _ecart(scores.environmental_score, prev["env"]),
-                 "social": _ecart(scores.social_score, prev["social"]),
-                 "gov": _ecart(scores.governance_score, prev["gov"]),
-                 "total": _ecart(scores.total_esg_score, prev["total"])}
-        prev_vals = [prev["env"], prev["social"], prev["gov"]]
+        delta = {"env": _ecart(scores.environmental_score, prev.get("env")),
+                 "social": _ecart(scores.social_score, prev.get("social")),
+                 "gov": _ecart(scores.governance_score, prev.get("gov")),
+                 "total": _ecart(scores.total_esg_score, prev.get("total"))}
+        if all(prev.get(x) is not None for x in ("env", "social", "gov")):
+            prev_vals = [prev["env"], prev["social"], prev["gov"]]  # radar N-1 : trois sommets
     return {
         "TR": TR, "lang": lang, "company": request.company, "name": request.company.name,
         "year": request.company.reporting_year, "type_label": type_label,

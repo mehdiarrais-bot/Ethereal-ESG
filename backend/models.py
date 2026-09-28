@@ -302,6 +302,13 @@ class ESGRequest(BaseModel):
     completed_actions: Optional[list] = None
 
     @model_validator(mode='after')
+    def check_previous_year(self):
+        p = self.previous_data
+        if p is not None and p.year >= self.company.reporting_year:
+            raise ValueError("Exercice précédent : son année doit précéder l'exercice du rapport")
+        return self
+
+    @model_validator(mode='after')
     def check_target_base_year(self):
         b = self.targets.climate_base_year
         if b is not None and b > self.company.reporting_year:
@@ -390,34 +397,51 @@ class ESGRequest(BaseModel):
     # Historique complet des exercices du dossier client (trajectoire
     # pluriannuelle) : [{year, env, social, gov, total}, ...]
     score_history: Optional[list] = None
+    # Données saisies de l'exercice précédent, si le dossier les a conservées
+    # (sauvegardes depuis le 2026-09-28) : comparaison indicateur par indicateur.
+    previous_data: Optional["ExerciseData"] = None
 
     @field_validator('score_history', mode='before')
     @classmethod
     def check_history(cls, v):
         if not v:
             return None
-        out = []
-        for h in v:
-            try:
-                out.append({"year": int(h["year"]), "env": float(h["env"]),
-                            "social": float(h["social"]), "gov": float(h["gov"]),
-                            "total": float(h["total"])})
-            except (KeyError, TypeError, ValueError):
-                continue  # entrée incomplète ignorée
+        out = [e for e in (_exercise_scores(h) for h in v) if e is not None]
         out.sort(key=lambda h: h["year"])
         return out[:15] or None
 
     @field_validator('previous_scores', mode='before')
     @classmethod
     def check_previous(cls, v):
-        if not v:
+        return _exercise_scores(v) if v else None
+
+
+def _exercise_scores(h) -> dict | None:
+    """{year, env, social, gov, total} d'un exercice passé. Un pilier non noté
+    reste None (« — ») : jusqu'au 2026-09-28, float(None) faisait écarter
+    l'exercice ENTIER, en silence, de la courbe et de l'évolution N-1."""
+    def score(v):
+        if v is None:
             return None
-        try:
-            return {"year": int(v["year"]), "env": float(v["env"]),
-                    "social": float(v["social"]), "gov": float(v["gov"]),
-                    "total": float(v["total"])}
-        except (KeyError, TypeError, ValueError):
-            return None  # historique incomplet : ignoré silencieusement
+        f = float(v)
+        return f if math.isfinite(f) and 0 <= f <= 100 else None
+    try:
+        return {"year": int(h["year"]), **{k: score(h.get(k)) for k in ("env", "social", "gov", "total")}}
+    except (KeyError, TypeError, ValueError):
+        return None  # année absente ou illisible : entrée ignorée
+
+
+class ExerciseData(BaseModel):
+    """Données saisies d'un exercice passé (dossier client), pour la
+    comparaison d'un exercice à l'autre. Mêmes validations que l'exercice
+    courant : ce sont les mêmes sous-modèles."""
+    year: int = Field(..., ge=2000, le=2035)
+    revenue_eur: Optional[float] = Field(default=None, ge=0, le=1e13)
+    environmental: EnvironmentalData = Field(default_factory=lambda: EnvironmentalData())
+    social: SocialData = Field(default_factory=lambda: SocialData())
+    governance: GovernanceData = Field(default_factory=lambda: GovernanceData())
+    taxonomy: TaxonomyData = Field(default_factory=lambda: TaxonomyData())
+    targets: TargetsData = Field(default_factory=lambda: TargetsData())
 
 
 class ESGScores(BaseModel):
